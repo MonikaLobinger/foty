@@ -74,7 +74,7 @@ class FotyError extends Error {
   }
 }
 
-/** User Error thrown from Setting class tree */
+/** User Error thrown from Setting tree */
 class SettingError extends FotyError {
   constructor(section = "Setting", ...params) {
     super(...params);
@@ -92,9 +92,10 @@ class CodingError extends FotyError {
   }
 }
 
-/** Class for unit tests */
-class TestSuite { // Runs unit tests
-	static ok  = "\u2713";
+/** Runs unit tests */
+class TestSuite { 
+  //#region member variables
+  static ok = "\u2713";
 	static nok = "\u2718";
 	#name;
   #outputObj = undefined;
@@ -103,6 +104,8 @@ class TestSuite { // Runs unit tests
 	#fname = "";
 	#asserts = 0;
 	#cases = 0;
+  get name() {return this.#name}
+  //#endregion member variables
 
 	/** Sets up the suite
 	 * @param {String} name - name of the suite
@@ -112,6 +115,7 @@ class TestSuite { // Runs unit tests
 		this.#name = name ? name : "Unknown";
     this.#outputObj = outputObj;
 	}
+  toString() { return " °°" + this.constructor.name + " " + this.name }
 
 	/** Shows results; resets
 	 */
@@ -167,7 +171,7 @@ class TestSuite { // Runs unit tests
 	 *     let result = asynchronousFunction(funame).then( () => {
 	 *       _.assert( 1, _check, result);
 	 *       _.assert( 2, _check, result);
-	 *       // destruct result; (In use case it might be class instance)
+	 *       // destruct result; (In use case it might be instance)
 	 *       resolve("IN" + funame + ": Result " + result + " destructed");
 	 *     });
 	 *   });
@@ -276,19 +280,117 @@ class TestSuite { // Runs unit tests
 	}
 }
 
-/** Class for unit test Errors */
-class TestError extends Error { // Error class to be usee in unit tests
+/** Error used for unit test  */
+class TestError extends Error {
 	constructor(message, ...params) {
 		super(message, ...params);
 		this.name = "TestError";
 	}
 }
 //#endregion debug,test and error
+//#region helper classes
+/** Events that Dispatcher stores and dispatches to listeners
+ * 
+ */
+class Event {
+  //#region member variables
+  name
+  callbacks
+  //#endregion member variables
+
+  constructor(name) {
+    this.name = name;
+    this.callbacks = [];
+  }
+  toString() { return " °°" + this.constructor.name + " " + this.name }
+  registerCallback(callback, instance) {
+    this.callbacks.push([callback, instance]);
+  }
+  //#region Event tests
+  static _ = null;
+  static test(outputObj) {
+    Event._ = new TestSuite("class Event", outputObj);
+    Event._.run(Event.constructorTest);
+    Event._.destruct();
+    Event._ = null;
+  }
+  static constructorTest() {
+    Event._.assert(1, Event._tryConstruct, undefined);
+    Event._.assert(2, Event._tryConstruct, "myName");
+  }
+  static _tryConstruct(arg1) {
+    let event = new Event(arg1);
+  }
+  //#endregion Event tests}
+}
+
+/** Event manager
+ * 
+ */
+class Dispatcher {
+  //#region member variables
+  events
+  //#endregion member variables
+  constructor() {
+    this.events = {};
+  }
+  toString() { return " °°" + this.constructor.name}
+  registerEvent(eventName) {
+    var event = new Event(eventName);
+    this.events[eventName] = event;
+  }
+  dispatchEvent(eventName, eventArgs) {
+    this.events[eventName].callbacks.forEach((arr) => {
+      let callback = arr[0]
+      let instance = arr[1]
+      callback(instance, eventArgs);
+    });
+  }
+  addListener(eventName, callback, instance) {
+    this.events[eventName].registerCallback(callback, instance);
+  }
+  //#region Dispatcher tests
+  static _ = null;
+  static test(outputObj) {
+    Dispatcher._ = new TestSuite("class Dispatcher", outputObj);
+    Dispatcher._.run(Dispatcher.constructorTest);
+    Dispatcher._.destruct();
+    Dispatcher._ = null;
+    Event.test(outputObj)
+  }
+  static constructorTest() {
+    Dispatcher._.assert(1, Dispatcher._tryConstruct, undefined);
+    Dispatcher._.assert(2, Dispatcher._tryConstruct, "myName");
+  }
+  static _tryConstruct(arg1) {
+    let dispatcher = new Dispatcher(arg1);
+  }
+  //#endregion Dispatcher tests
+}
+//#endregion helper classes
 //#region code 
+/** Base class for all settings classes */
+class BreadCrumbs {
+  //#region member variables
+  #key
+  get key() {return this.#key}
+  //#endregion member variables
+  constructor(key) {
+    this.#key = key;
+  }
+  toString() { return "°°°" + this.constructor.name + " " + this.key }
+}
+
 /** Main class
  * 
  */
-class Setting {
+class Setting extends BreadCrumbs {
+  //#region member variables
+  static #ROOT = "/"
+  //#endregion member variables
+  constructor(key) {
+    super(key === undefined ? Setting.#ROOT : key)
+  }
   //#region Setting tests
   static _ = null;
   static test(outputObj) {
@@ -298,10 +400,11 @@ class Setting {
     Setting._ = null;
   }
   static constructorTest() {
-    Setting._.assert( 1, Setting._tryConstruct);
+    Setting._.assert( 1, Setting._tryConstruct, undefined);
+    Setting._.assert( 2, Setting._tryConstruct, "myName");
   }
-  static _tryConstruct() {
-    let settings = new Setting();
+  static _tryConstruct(arg1) {
+    let settings = new Setting(arg1);
   }
   //#endregion Setting tests
 }
@@ -312,6 +415,7 @@ class Setting {
 function test(outputObj) {
   if(TESTING) 
     Setting.test(outputObj)
+    Dispatcher.test(outputObj)
 }
 
 /** exported function
@@ -354,6 +458,15 @@ async function main(tp, app) {
     __targetFile: tp.config.target_file.path,
     __templateFile: tp.config.template_file.path,
   }
+
+  let developCheck = false
+  if(developCheck) {
+    let developProps = {}
+    let e = new Setting("xx")
+    developProps = {"DEV" : "keys" in e}
+    return developProps
+  }
+
   if (!DEBUG) dbgProps = undefined 
   return Object.assign({}, dbgProps, testProps)
 }
