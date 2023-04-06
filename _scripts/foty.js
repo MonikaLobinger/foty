@@ -65,7 +65,7 @@ function vaut(vn, v, b="yellow", c="red") {
 class Base {
 
 }
-/** Base class for all Foty Errors (but not unit test Errors) */
+/** superclass for all Foty Errors (but not unit test Errors) */
 class FotyError extends Error {
   constructor(...params) {
     super(...params);
@@ -109,11 +109,12 @@ class TestSuite {
   #fname = "";
   #asserts = 0;
   #cases = 0;
-  o = this.o;
+  o = this.#outputObj;
   f = "___failed";
   s = "succeeded";
   d = "__details"
   get name() { return this.#name }
+  e = "none"
   //#endregion member variables
 
   /** Sets up the suite
@@ -123,9 +124,9 @@ class TestSuite {
   constructor(name, outputObj) {
     this.#name = name ? name : "Unknown";
     this.o = outputObj;
-    if(this.o[this.f] == undefined) this.o[this.f] = "";
-    if(this.o[this.s] == undefined) this.o[this.s] = "";
-    if(this.o[this.d] == undefined) this.o[this.d] = "";
+    if(this.o[this.f] == undefined) this.o[this.f] = this.e;
+    if(this.o[this.s] == undefined) this.o[this.s] = this.e;
+    if(this.o[this.d] == undefined) this.o[this.d] = this.e;
   }
   toString() { return " °°" + this.constructor.name + " " + this.name }
 
@@ -139,7 +140,6 @@ class TestSuite {
     } else {
       this.#praut(this.f, `Suite "${this.#name}": ${this.#failed} ${failStr} failed, ${this.#succeeded} succeeded`);
     }
-    if(this.#praut(this.f) == "") delete this.#praut(this.f);
     this.#name = null;
     this.o = null;
     this.#succeeded = 0;
@@ -285,7 +285,7 @@ class TestSuite {
     if (key != this.s && key != this.f && key != this.d) {
       let errstr = "%c" + key;
       console.log(errstr, "background: rgba(255, 99, 71, 0.5);");
-    } else if (this.o[key] == "") {
+    } else if (this.o[key] == this.e) {
       this.o[key] = str;
     } else if (str[0] == TestSuite.nok) {
       this.o[key] = str.substring(1) + "\n          " + this.o[key];
@@ -325,7 +325,7 @@ class Event {
   //#region Event tests
   static _ = null;
   static test(outputObj) {
-    Event._ = new TestSuite("class Event", outputObj);
+    Event._ = new TestSuite("Event", outputObj);
     Event._.run(Event.constructorTest);
     Event._.run(Event.toStringTest);
     Event._.run(Event.registerCallbackTest);
@@ -335,6 +335,8 @@ class Event {
   static constructorTest() {
     Event._.assert(1, Event._tryConstruct, undefined);
     Event._.assert(2, Event._tryConstruct, "eventname");
+    let event = new Event()
+    Event._.bassert(3, event.constructor == Event, "the constructor property is not Event")
   }
   static toStringTest() {
     let str = new Event("eventname").toString()
@@ -384,7 +386,7 @@ class Dispatcher {
   //#region Dispatcher tests
   static _ = null;
   static test(outputObj) {
-    Dispatcher._ = new TestSuite("class Dispatcher", outputObj);
+    Dispatcher._ = new TestSuite("Dispatcher", outputObj);
     Dispatcher._.run(Dispatcher.constructorTest);
     Dispatcher._.run(Dispatcher.toStringTest);
     Dispatcher._.run(Dispatcher.registerEventTest);
@@ -396,6 +398,8 @@ class Dispatcher {
   }
   static constructorTest() {
     Dispatcher._.assert(1, Dispatcher._tryConstruct);
+    let dispatcher = new Dispatcher
+    Dispatcher._.bassert(2, dispatcher.constructor == Dispatcher, "the constructor property is not Dispatcher")
   }
   static toStringTest() {
     let str = new Dispatcher().toString()
@@ -432,7 +436,7 @@ class Dispatcher {
 }
 //#endregion helper classes
 //#region code 
-/** Base class for all settings classes */
+/** superclass for all settings classes */
 class BreadCrumbs {
   //#region member variables
   #key
@@ -445,7 +449,7 @@ class BreadCrumbs {
   //#region BreadCrumbs tests
   static _ = null;
   static test(outputObj) {
-    BreadCrumbs._ = new TestSuite("class BreadCrumbs", outputObj);
+    BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj);
     BreadCrumbs._.run(BreadCrumbs.constructorTest);
     BreadCrumbs._.run(BreadCrumbs.toStringTest);
     BreadCrumbs._.run(BreadCrumbs.getKeyTest);
@@ -457,10 +461,12 @@ class BreadCrumbs {
     BreadCrumbs._.assert(2, BreadCrumbs._tryConstruct, "myName");
     let breadcrumbs = new BreadCrumbs()
     BreadCrumbs._.bassert(3, breadcrumbs instanceof Object, "`BreadCrumbs` has to be an instance of `Object`");
+    BreadCrumbs._.bassert(3, breadcrumbs instanceof BreadCrumbs, "`BreadCrumbs` has to be an instance of `BreadCrumbs`");
+    BreadCrumbs._.bassert(4, breadcrumbs.constructor == BreadCrumbs, "the constructor property is not BreadCrumbs")
   }
   static toStringTest() {
     let str = new BreadCrumbs("my name").toString()
-    BreadCrumbs._.bassert(1, str.contains("my name"), "`toString` result does not contain name given on construction ");
+    BreadCrumbs._.bassert(1, str.contains("my name"), "`toString` result does not contain name given on construction ")
   }
   static getKeyTest() {
     let breadcrumbs = new BreadCrumbs("my name")
@@ -472,7 +478,7 @@ class BreadCrumbs {
   //#endregion BreadCrumbs tests
 }
 
-/** Main class
+/** most elaborated subclass 
  * 
  */
 class Setting extends BreadCrumbs {
@@ -500,6 +506,7 @@ class Setting extends BreadCrumbs {
     Setting._.assert(5, Setting._tryConstruct, Symbol('a'));   
     let setting = new Setting()
     Setting._.bassert(6, setting instanceof BreadCrumbs, "`Setting` has to be an instance of `BreadCrumbs`");
+    Setting._.bassert(7, setting.constructor == Setting, "the constructor property is not Setting")
 
   }
   static toStringTest() {
@@ -507,6 +514,7 @@ class Setting extends BreadCrumbs {
     Setting._.bassert(1, str.contains(Setting.#ROOT), "`toString` result does not contain root string");
     str = new Setting("my Name").toString()
     Setting._.bassert(2, str.contains("my Name"), "`toString` result does not contain Setting key");
+    let setting = new Setting("my Name")
   }
   static _tryConstruct(arg1) {
     let settings = new Setting(arg1);
@@ -566,10 +574,13 @@ async function main(tp, app) {
 
   let developCheck = false
   if(developCheck) {
+    let setting = new Setting()
     let developProps = {}
-    let e = new Setting("xx")
-    developProps = {"DEV" : "keys"}
-    developProps = {"DEV" : "pre" + developProps["DEV"]}
+    let e = new Event()
+    e["key"] = "val"
+    let d = Object.hasOwn(e, "addListener")
+    developProps = { "DEV": d }
+    console.log(d)
     return developProps
   }
 
