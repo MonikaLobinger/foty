@@ -1,0 +1,15 @@
+/_resources_unused/
+/_resources/
+*-platzeins.*
+*-platzeinsu.*
+*Kopie von*
+*
+!LICENSE.html
+!.gitignore
+!/_vorlagen
+!/_vorlagen/atest_Vorlage.md
+!/_vorlagen/One_Vorlage.md
+!/_scripts
+!/_scripts/foty.js
+!/_scripts/onne.js
+
