@@ -1,5 +1,5 @@
 module.exports = main; // templater call: "await tp.user.foty(tp, app)"
-/** Script for obsidian, 
+/** Script for obsidian, TEST
  * templater extension needed
  * 
  * Usage: Different parts of codes are in different regions.
