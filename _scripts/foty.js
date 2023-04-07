@@ -93,6 +93,9 @@ module.exports = main; // templater call: "await tp.user.foty(tp, app)"
   //#endregion USER CONFIGURATION
   //#region test configurations
   const TEST = {
+    
+  }
+  const TEST2 = {
     audio: { marker: "{a}", pict: "a.jpg", frontmatter: { private: true, },},
     plant: { frontmatter: {kind: "", seed: "", } },
   }
@@ -554,6 +557,7 @@ class BreadCrumbs {
     this.throwIfUndefined(key, "key")
   }
   toString() { return "°°°" + this.constructor.name + " " + this.key }
+  
   toBreadCrumbs() {
     let breadcrumbs = ""
     let sep = ""
@@ -582,7 +586,10 @@ class BreadCrumbs {
     BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj);
     BreadCrumbs._.run(BreadCrumbs.constructorTest);
     BreadCrumbs._.run(BreadCrumbs.toStringTest);
+    BreadCrumbs._.run(BreadCrumbs.toBreadCrumbsTest);
     BreadCrumbs._.run(BreadCrumbs.getKeyTest);
+    BreadCrumbs._.run(BreadCrumbs.getLiteralTest);
+    BreadCrumbs._.run(BreadCrumbs.getCrumbTest);
     BreadCrumbs._.destruct();
     BreadCrumbs._ = null;
   }
@@ -592,15 +599,36 @@ class BreadCrumbs {
     let breadcrumbs = new BreadCrumbs(undefined,"TEST KEY")
     BreadCrumbs._.bassert(3, breadcrumbs instanceof Object, "`BreadCrumbs` has to be an instance of `Object`");
     BreadCrumbs._.bassert(4, breadcrumbs instanceof BreadCrumbs, "`BreadCrumbs` has to be an instance of `BreadCrumbs`");
-    BreadCrumbs._.bassert(5, breadcrumbs.constructor == BreadCrumbs, "the constructor property is not BreadCrumbs")
+    BreadCrumbs._.bassert(5, breadcrumbs.constructor == BreadCrumbs, "the constructor property is not `BreadCrumbs`")
   }
   static toStringTest() {
-    let str = new BreadCrumbs({}, "my name").toString()
-    BreadCrumbs._.bassert(1, str.contains("my name"), "`toString` result does not contain name given on construction ")
+    let str = new BreadCrumbs(undefined, "my name").toString()
+    BreadCrumbs._.bassert(1, str.contains("my name"), "result does not contain name given on construction ")
+  }
+  static toBreadCrumbsTest() {
+    let parent = new BreadCrumbs(undefined, "parent")
+    let child = new BreadCrumbs(undefined, "child", parent)
+    let grandChild = new BreadCrumbs(undefined, "grandChild", child)
+    let parentStr = parent.toBreadCrumbs()
+    let childStr = child.toBreadCrumbs()
+    let grandChildStr = grandChild.toBreadCrumbs()
+    BreadCrumbs._.bassert(1, parentStr == "parent", "breadCrumbs: `" + parentStr + "` are wrong")
+    BreadCrumbs._.bassert(2, childStr == "parent.child", "breadCrumbs: `" + childStr + "` are wrong")
+    BreadCrumbs._.bassert(3, grandChildStr == "parent.child.grandChild", "breadCrumbs: `" + grandChildStr + "` are wrong")
   }
   static getKeyTest() {
     let breadcrumbs = new BreadCrumbs({}, "my name")
-    BreadCrumbs._.bassert(1, breadcrumbs.key == "my name", "`key` does not return name given on construction ");
+    BreadCrumbs._.bassert(1, breadcrumbs.key == "my name", "does not return name given on construction ");
+  }
+  static getLiteralTest() {
+    const sym = Symbol("Symbol Descriptor");
+    let breadcrumbs = new BreadCrumbs({sym: 87673}, "my name")
+    BreadCrumbs._.bassert(1, breadcrumbs.literal.sym == 87673, "does not return literal given on construction ");
+  }
+  static getCrumbTest() {
+    let parent = new BreadCrumbs(undefined, "parent")
+    let breadcrumbs = new BreadCrumbs({}, "my name", parent)
+    BreadCrumbs._.bassert(1, breadcrumbs.crumb == parent, "does not return parent given on construction ");
   }
   static _tryConstruct(arg1, arg2) {
     let breadcrumbs = new BreadCrumbs(arg1, arg2);
@@ -630,14 +658,14 @@ class Setting extends BreadCrumbs {
     Setting._ = null;
   }
   static constructorTest() {
-    Setting._.assert(1, Setting._tryConstruct, {}, undefined);
+    Setting._.shouldAssert(1, Setting._tryConstruct, undefined);
     Setting._.assert(2, Setting._tryConstruct, {}, "myName");
     Setting._.assert(3, Setting._tryConstruct, {}, "my Name");
     Setting._.assert(4, Setting._tryConstruct, {}, 22);
     Setting._.assert(5, Setting._tryConstruct, {}, Symbol('a'));   
     let setting = new Setting({},"myName")
     Setting._.bassert(6, setting instanceof BreadCrumbs, "`Setting` has to be an instance of `BreadCrumbs`");
-    Setting._.bassert(7, setting.constructor == Setting, "the constructor property is not Setting")
+    Setting._.bassert(7, setting.constructor == Setting, "the constructor property is not `Setting`")
 
   }
   static toStringTest() {
