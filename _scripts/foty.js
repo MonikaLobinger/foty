@@ -1,15 +1,103 @@
 module.exports = main; // templater call: "await tp.user.foty(tp, app)"
-/** Script for obsidian, TEST
- * templater extension needed
+/** Script for obsidian, templater extension needed
+ * Creates new notes with frontmatter and text skeleton based on note types
  * 
- * Usage: Different parts of codes are in different regions.
+ * Basics
+ * ======
+ * Obsidian creates a new note as empty note.
+ * Notes of given kinds have some text in it in common. This text can be
+ * inserted automatically with a template. One has to write the templates 
+ * for the kinds of notes one uses, choose the correct one on new note 
+ * creation and the skeleton will be inserted. 
+ * Code can also be written in javascript in case templater extension is 
+ * installed. This can be done within the template in specific code sections.
+ * With templater parts of javascript code can be written in javascript files
+ * which each export a function. This function can be called from within the
+ * code section. 
+ *
+ * Problem description
+ * ===================
+ * For each kind of note another template is needed. If needs change, the
+ * template has to be changed. If general needs change, all templates have
+ * to be changed. Elaborated Templates are difficult to maintain. Not all
+ * users of obsidian can write javascript.
+ * 
+ * Intention of foty
+ * =================
+ * Let user needs be configurable and write a full note skeleton from given
+ * configuration.
+ * For changing needs only configuration should have to be changed.
+ * 
+ * Presumptions
+ * ============
+ * Note skeleton will contain a frontmatter header and a rendered part. 
+ * Frontmatter header has frontmatter entries. Rendered part has plain text
+ * and text based on variable output, e.g. date or links to resources. 
+ *
+ * On new unnamed note creation note name will be created. Some kinds of
+ * notes have a marker in its names, which do not belong to the semantic
+ * title.
+ * 
+ * This all has to be configurable based on kind of note. Different kinds
+ * of notes in foty are called `types`. The configuration of a type should
+ * lead to expected output, after foty has identified the type and the 
+ * (semantic) title.
+ * 
+ * Note types can be bound to folders.
+ * 
+ * Realization
+ * ===========
+ * foty consists of two parts: This javascript file and the template file,
+ * which calls this script.
+ * 
+ * The script will return a list of key/value entries. One of the keys
+ * is `____`. Before this key all entries are frontmatter entries, entries
+ * after this keys are variables to be used in render part.
+ * 
+ * The template will write out all frontmatter entries in notes frontmatter
+ * header section. Then it will write the render section depending on 
+ * variables. 
+ * 
+ * Connection between script and template is tight, the template has to know
+ * the names of the variables.
+ * 
+ * One could have realized it the way, that all the output is created from 
+ * script file, but than changes in rendering only would require javascript
+ * editing.
+ * 
+ * Usage
+ * =====
+ * Different parts of codes are in different regions.
  * A region starts with //#region REGIONNAME or //# regionname
  * and it ends with //#endregion REGIONNAME or //#endregion regionname
  * Regions can be nested.
  * Using Visual Studio Code (and perhaps other source code editors) regions
  * marked this way can be folded for convenience.
  * 
+ * Some settings for the script can be adapted to user needs. Those are in
+ * region USER CONFIGURATION.
  */
+//#region CONFIGURATION
+  // This region simulates a configuration dialog
+  // It contains a configuration defining section, which user would never
+  // see in a configuration dialog, so it is named DONTTOUCH.
+  // And it contains the value section, which user can edit, so it is
+  // named USER CONFIGURATION.
+  //
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // Only make changes in region USER CONFIGURATION
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  //#region DONTTOUCH
+  //#endregion DONTTOUCH
+  //#region USER CONFIGURATION
+  //#endregion USER CONFIGURATION
+  //#region test configurations
+  const TEST = {
+    audio: { marker: "{a}", pict: "a.jpg", frontmatter: { private: true, },},
+    plant: { frontmatter: {kind: "", seed: "", } },
+  }
+  //#endregion test configurations
+//#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true;
 const TESTING = true;
@@ -110,9 +198,9 @@ class TestSuite {
   #asserts = 0;
   #cases = 0;
   o = this.#outputObj;
-  f = "___failed";
-  s = "succeeded";
-  d = "__details"
+  f = "failing";
+  s = "success";
+  d = "details"
   get name() { return this.#name }
   e = "none"
   //#endregion member variables
@@ -492,7 +580,7 @@ class Setting extends BreadCrumbs {
   static _ = null;
   static test(outputObj) {
     BreadCrumbs.test(outputObj)
-    Setting._ = new TestSuite("class Setting", outputObj);
+    Setting._ = new TestSuite("Setting", outputObj);
     Setting._.run(Setting.constructorTest);
     Setting._.run(Setting.toStringTest);
     Setting._.destruct();

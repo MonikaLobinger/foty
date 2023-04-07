@@ -1,7 +1,7 @@
 ---
 <%_*
   let rendermode = false;
-  let foto       = "";
+  let pict       = "";
   let firstline  = "";
   let prevdate   = "";
   let nextdate   = "";
@@ -13,7 +13,7 @@
     if(key == "____") rendermode = true;
     if(rendermode) {
       switch(key) {
-      case "foto":      foto      = value; break;
+      case "pict":      pict      = value; break;
       case "firstline": firstline = value; break;
       case "prevdate":  prevdate  = value; break;
       case "nextdate":  nextdate  = value; break;
@@ -27,8 +27,8 @@
 <%_* } %>
 <%_*} %>
 ---
-<%_* if(foto.length > 0) { %>
-![foto](<% foto %>)
+<%_* if(pict.length > 0) { %>
+![picture](<% pict %>)
 <%_* } %>
 <%_* if(firstline.length > 0) { %>
 <% firstline %>
