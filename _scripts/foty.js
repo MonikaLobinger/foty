@@ -94,18 +94,22 @@ module.exports = main; // templater call: "await tp.user.foty(tp, app)"
   //#region test configurations
   // Specification options:
   // - render
-  //   default: false - so, if not set, the collection is not for render
-  //   but if once set outside, default changes to true
-  //   applies to all items and all collections of the collection it is set
-  //   if deep in a render collection render is set to true, an error will
-  //   occur
+  //   default: false, as long as not set
+  //            if set, the value will be inherited by contained collections
+  //            as long as set again
+  // - date
   const TEST = {
     a:23,
     // => in frontmatter section
     // a:23
     c: {
       _SPEC: { render: true, },
-      pict :"ja",
+      pict :"ja", 
+      d: { _SPEC: {render: false},
+        d: {
+          gloria: "halleluja"
+        }
+      }
     },
     // => in render section
     // b:ja
@@ -775,33 +779,46 @@ class Setting extends BreadCrumbs {
     let setting3 = new Setting(lit3)
     let setting4 = new Setting(lit4)
     let setting5 = new Setting(lit5)
-    let answ1 = setting1.getFrontmatterYAML()
-    let answ2 = setting2.getFrontmatterYAML()
-    let answ3 = setting3.getFrontmatterYAML()
-    let answ4 = setting4.getFrontmatterYAML()
-    let answ5 = setting5.getFrontmatterYAML()
-    let expAnsw1 = '{"a":23}'
-    let expAnsw2 = '{"a":23,"b":"ja"}'
-    let expAnsw3 = '{"a":23,"d":"ja","b":"ja"}'
-    let expAnsw4 = '{"a":23,"d":"ja","b":"ja","c":25}'
-    let expAnsw5 = '{"a":23}'
-    Setting._.bassert(1, JSON.stringify(answ1) == expAnsw1, `output of JSON.stringify(result) is:'${JSON.stringify(answ1)}', but should be:'${expAnsw1}'`)
-    Setting._.bassert(2, JSON.stringify(answ2) == expAnsw2, `output of JSON.stringify(result) is:'${JSON.stringify(answ2)}', but should be:'${expAnsw2}'`)
-    Setting._.bassert(3, JSON.stringify(answ3) == expAnsw3, `output of JSON.stringify(result) is:'${JSON.stringify(answ3)}', but should be:'${expAnsw3}'`)
-    Setting._.bassert(4, JSON.stringify(answ4) == expAnsw4, `output of JSON.stringify(result) is:'${JSON.stringify(answ4)}', but should be:'${expAnsw4}'`)
-    Setting._.bassert(5, JSON.stringify(answ5) == expAnsw5, `output of JSON.stringify(result) is:'${JSON.stringify(answ5)}', but should be:'${expAnsw5}'`)
+    let answ1f = setting1.getFrontmatterYAML()
+    let answ2f = setting2.getFrontmatterYAML()
+    let answ3f = setting3.getFrontmatterYAML()
+    let answ4f = setting4.getFrontmatterYAML()
+    let answ5f = setting5.getFrontmatterYAML()
+    let expAnsw1f = '{"a":23}'
+    let expAnsw2f = '{"a":23,"b":"ja"}'
+    let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
+    let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
+    let expAnsw5f = '{"a":23}'
+    Setting._.bassert(1, JSON.stringify(answ1f) == expAnsw1f, `output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}', but should be:'${expAnsw1f}'`)
+    Setting._.bassert(2, JSON.stringify(answ2f) == expAnsw2f, `output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}', but should be:'${expAnsw2f}'`)
+    Setting._.bassert(3, JSON.stringify(answ3f) == expAnsw3f, `output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}', but should be:'${expAnsw3f}'`)
+    Setting._.bassert(4, JSON.stringify(answ4f) == expAnsw4f, `output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}', but should be:'${expAnsw4f}'`)
+    Setting._.bassert(5, JSON.stringify(answ5f) == expAnsw5f, `output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}', but should be:'${expAnsw5f}'`)
   }
   static getRenderYAMLTest() {
     const lit1 = {a:23,c:{b:"ja",c:{c:25}},d:"ja"}
     const lit2 = {a:23,c: { _SPEC: { render: true,}, pict :"ja",} }
+    const lit3 = {a:23,c:{b:"ja"},d:"ja"}
     let setting1 = new Setting(lit1)
     let setting2 = new Setting(lit2)
+    let setting3 = new Setting(lit3)
     let answ1 = setting1.getRenderYAML()
     let answ2 = setting2.getRenderYAML()
+    let answ3 = setting3.getRenderYAML()
     let expAnsw1 = '{}'
     let expAnsw2 = '{"pict":"ja"}'
+    let expAnsw3 = '{}'
     Setting._.bassert(1, JSON.stringify(answ1) == expAnsw1, `output of JSON.stringify(result) is:'${JSON.stringify(answ1)}', but should be:'${expAnsw1}'`)
     Setting._.bassert(2, JSON.stringify(answ2) == expAnsw2, `output of JSON.stringify(result) is:'${JSON.stringify(answ2)}', but should be:'${expAnsw2}'`)
+    Setting._.bassert(3, JSON.stringify(answ3) == expAnsw3, `output of JSON.stringify(result) is:'${JSON.stringify(answ3)}', but should be:'${expAnsw3}'`)
+    const lit6 = {c: { _SPEC: { render: true,}, pict :"ja",
+                       d: {_SPEC: { render: false,},private: true,}
+                     }, 
+                 }
+    let setting6 = new Setting(lit6)
+    let answ6r = setting6.getRenderYAML()
+    let expAnsw6r = '{"pict":"ja"}'
+    Setting._.bassert(5, JSON.stringify(answ6r) == expAnsw6r, `output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}', but should be:'${expAnsw6r}'`)
   }
   static getterTest() { // check whether getter assigned to correct function
     const desc1 =  Object.getOwnPropertyDescriptor(Setting.prototype, "frontmatterYAML");
@@ -844,15 +861,7 @@ class SpecManager extends BreadCrumbs {
     let literalRender =  specLiteral["render"]
     let parentRender = 
       callersParentSpecManager ? callersParentSpecManager["render"] : false
-    if(parentRender == true && literalRender == false)
-      throw new SettingError(this.constructor.name + " " + "constructor",
-      "Breadcrumbs: '" + this.toBreadCrumbs() + 
-      "'\n   " + "OPTION: 'render'" +
-       "\n   " + "You have set 'render' to false for this collection" +
-       "\n   " + "but had it set to true in a containing collection." +
-       "\n   " + "This is not possible. Remove one of the settings.")
-    literalRender = literalRender == undefined ? false : literalRender
-    this.#render = parentRender ? parentRender : literalRender
+    this.#render = literalRender != undefined ? literalRender : parentRender
   }
   static isSpec(key) {
     return (key == SpecManager.SPEC_KEY)
@@ -914,6 +923,15 @@ class SpecManager extends BreadCrumbs {
     f = setting5.frontmatterYAML
     r = setting5.renderYAML
     SpecManager._.bassert(5, f.d==undefined && r.d==true, "Value should not appear in frontmatter output and should appear in render output")    
+    let literal6 = { a: { _SPEC: { render: true, }, 
+                          b: { c: { _SPEC: { render: false, }, d: true }                                            
+                             } 
+                        } 
+                   }
+    let setting6 = new Setting(literal6)
+    f = setting6.frontmatterYAML
+    r = setting6.renderYAML
+    SpecManager._.bassert(6, f.d==true && r.d==undefined, "Value should appear in frontmatter output and should not appear in render output")    
   }
   static _tryConstruct(arg1,arg2,arg3) {
     let specMan = new SpecManager(arg1,arg2,arg3);
