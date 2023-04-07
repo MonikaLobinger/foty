@@ -92,12 +92,21 @@ module.exports = main; // templater call: "await tp.user.foty(tp, app)"
   //#region USER CONFIGURATION
   //#endregion USER CONFIGURATION
   //#region test configurations
+  // Specification options:
+  // - render
+  //   default: false - so, if not set, the collection is not for render
+  //   but if once set outside, default changes to true
+  //   applies to all items and all collections of the collection it is set
+  //   if deep in a render collection render is set to true, an error will
+  //   occur
   const TEST = {
     a:23,
-    // => a:23
-    c: { _SPEC: { render: true,},
+    // => in frontmatter section
+    // a:23
+    c: {
+      _SPEC: { render: true, },
       pict :"ja",
-    }
+    },
     // => in render section
     // b:ja
   }
@@ -109,7 +118,7 @@ module.exports = main; // templater call: "await tp.user.foty(tp, app)"
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true;
-const TESTING = true;
+const TESTING = false;
 if(TESTING) DEBUG = false;
 // nach @todo und @remove suchen
 
@@ -579,7 +588,13 @@ class BreadCrumbs {
     if(!BreadCrumbs.isDefined(val))
       throw new SettingError(this.constructor.name + " " + funame,
       "Breadcrumbs: '" + this.toBreadCrumbs() + 
-        "'\n   '" + valname + msg)
+      "'\n   '" + valname + msg)
+  }
+  throwIfIsNotOfType(val, type="object", funame="constructor", msg="is not of javascript type") {
+    if(!BreadCrumbs.isOfType(val, type))
+      throw new SettingError(this.constructor.name + " " + funame,
+      "Breadcrumbs: '" + this.toBreadCrumbs() + 
+      "'\n   " + msg + " '" + type + "'")
   }
 
   static isDefined(val) {
@@ -681,21 +696,30 @@ class Setting extends BreadCrumbs {
   #frontmatterYAML = {}
   #renderYAML = {}
   #children = {}
+  #spec = {}
+  get spec() {return this.#spec}
+  get frontmatterYAML() { return this.getFrontmatterYAML()}
+  get renderYAML() { return this.getRenderYAML() }
   //#endregion member variables
   constructor(literal, key=undefined, caller=undefined) {
     super(literal, key === undefined ? Setting.#ROOT : key, caller)
     this.throwIfUndefined(literal)
+    this.#spec = new SpecManager(this.literal, undefined, this)
     for (const [key, value] of Object.entries(this.literal)) { 
       if(BreadCrumbs.isOfType(value, "object")) {
-        this.#children[key] = new Setting(value, key, this)
+        if(!SpecManager.isSpec(key))
+          this.#children[key] = new Setting(value, key, this)
       } else {
-        this.#frontmatterYAML[key]=value;
+        if(this.spec.render)
+          this.#renderYAML[key] = value;
+        else
+          this.#frontmatterYAML[key] = value;
       }
     }
   }
   getFrontmatterYAML() {
     let frontmatterYAML = {}
-    Object.assign(frontmatterYAML,this.#frontmatterYAML)
+    Object.assign(frontmatterYAML, this.#frontmatterYAML)
     for (const [key, value] of Object.entries(this.#children)) { 
       Object.assign(frontmatterYAML, value.getFrontmatterYAML())
     }
@@ -719,6 +743,7 @@ class Setting extends BreadCrumbs {
     Setting._.run(Setting.toStringTest);
     Setting._.run(Setting.getFrontmatterYAMLTest);
     Setting._.run(Setting.getRenderYAMLTest);
+    Setting._.run(Setting.getterTest);
     Setting._.destruct();
     Setting._ = null;
   }
@@ -731,7 +756,6 @@ class Setting extends BreadCrumbs {
     let setting = new Setting({},"myName")
     Setting._.bassert(6, setting instanceof BreadCrumbs, "'Setting' has to be an instance of 'BreadCrumbs'");
     Setting._.bassert(7, setting.constructor == Setting, "the constructor property is not 'Setting'")
-
   }
   static toStringTest() {
     let str = new Setting({}).toString()
@@ -760,7 +784,7 @@ class Setting extends BreadCrumbs {
     let expAnsw2 = '{"a":23,"b":"ja"}'
     let expAnsw3 = '{"a":23,"d":"ja","b":"ja"}'
     let expAnsw4 = '{"a":23,"d":"ja","b":"ja","c":25}'
-    let expAnsw5 = '{"a":23,"pict":"ja","render":true}'
+    let expAnsw5 = '{"a":23}'
     Setting._.bassert(1, JSON.stringify(answ1) == expAnsw1, `output of JSON.stringify(result) is:'${JSON.stringify(answ1)}', but should be:'${expAnsw1}'`)
     Setting._.bassert(2, JSON.stringify(answ2) == expAnsw2, `output of JSON.stringify(result) is:'${JSON.stringify(answ2)}', but should be:'${expAnsw2}'`)
     Setting._.bassert(3, JSON.stringify(answ3) == expAnsw3, `output of JSON.stringify(result) is:'${JSON.stringify(answ3)}', but should be:'${expAnsw3}'`)
@@ -775,23 +799,60 @@ class Setting extends BreadCrumbs {
     let answ1 = setting1.getRenderYAML()
     let answ2 = setting2.getRenderYAML()
     let expAnsw1 = '{}'
-    let expAnsw2 = '{}'
+    let expAnsw2 = '{"pict":"ja"}'
     Setting._.bassert(1, JSON.stringify(answ1) == expAnsw1, `output of JSON.stringify(result) is:'${JSON.stringify(answ1)}', but should be:'${expAnsw1}'`)
     Setting._.bassert(2, JSON.stringify(answ2) == expAnsw2, `output of JSON.stringify(result) is:'${JSON.stringify(answ2)}', but should be:'${expAnsw2}'`)
+  }
+  static getterTest() { // check whether getter assigned to correct function
+    const desc1 =  Object.getOwnPropertyDescriptor(Setting.prototype, "frontmatterYAML");
+    const desc2 =  Object.getOwnPropertyDescriptor(Setting.prototype, "renderYAML");
+    Setting._.bassert(1, typeof desc1.get == "function", `getter for 'frontmatterYAML' is not 'function'`)
+    Setting._.bassert(2, typeof desc2.get == "function", `getter for 'renderYAML' is not 'function'`)
+    Setting._.bassert(1, desc1.get.toString().contains("getFrontmatterYAML"), `getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`)
+    Setting._.bassert(2, desc2.get.toString().contains("getRenderYAML"), `getter for 'renderYAML' is not 'getRenderYAML'`)
   }
   static _tryConstruct(arg1,arg2) {
     let settings = new Setting(arg1,arg2);
   }
   //#endregion Setting tests
 }
+
+/** specification parser */
 class SpecManager extends BreadCrumbs {
   //#region member variables
   static SPEC_KEY = "_SPEC"
+  #render = false
+  get render() { return this.#render }
   //#endregion member variables
   constructor(literal, key, caller) {
-    super(literal, key, caller)
+    let specLiteral
+    if(literal != undefined) {
+      specLiteral = literal[SpecManager.SPEC_KEY];
+      if(specLiteral == undefined) specLiteral = {}
+    }
+    super(specLiteral, key === undefined ? SpecManager.SPEC_KEY : key, caller)
     this.throwIfUndefined(literal)
     this.throwIfUndefined(caller)
+    this.throwIfIsNotOfType(caller,"Setting")
+    let callersParent = caller.crumb
+    let callersParentSpecManager
+    if(callersParent != undefined) {
+      callersParentSpecManager = callersParent.spec
+    }
+    // render
+    // ======
+    let literalRender =  specLiteral["render"]
+    let parentRender = 
+      callersParentSpecManager ? callersParentSpecManager["render"] : false
+    if(parentRender == true && literalRender == false)
+      throw new SettingError(this.constructor.name + " " + "constructor",
+      "Breadcrumbs: '" + this.toBreadCrumbs() + 
+      "'\n   " + "OPTION: 'render'" +
+       "\n   " + "You have set 'render' to false for this collection" +
+       "\n   " + "but had it set to true in a containing collection." +
+       "\n   " + "This is not possible. Remove one of the settings.")
+    literalRender = literalRender == undefined ? false : literalRender
+    this.#render = parentRender ? parentRender : literalRender
   }
   static isSpec(key) {
     return (key == SpecManager.SPEC_KEY)
@@ -803,11 +864,13 @@ class SpecManager extends BreadCrumbs {
     SpecManager._.run(SpecManager.constructorTest);
     SpecManager._.run(SpecManager.toStringTest);
     SpecManager._.run(SpecManager.isSpecTest);
+    SpecManager._.run(SpecManager.renderOptionTest);
     SpecManager._.destruct();
     SpecManager._ = null;
   }
   static constructorTest() {
     let setting = new Setting({},"its Name")
+    let breadCrumbs = new BreadCrumbs({},"BreadCrumbs")
     SpecManager._.shouldAssert(1, SpecManager._tryConstruct, undefined, "myName", setting);
     SpecManager._.shouldAssert(2, SpecManager._tryConstruct, {}, undefined, setting);
     SpecManager._.shouldAssert(3, SpecManager._tryConstruct, {}, "myName", undefined);
@@ -817,6 +880,7 @@ class SpecManager extends BreadCrumbs {
     let specMan = new SpecManager({}, "myName", setting)
     SpecManager._.bassert(7, specMan instanceof BreadCrumbs, "'SpecManager' has to be an instance of 'BreadCrumbs'");
     SpecManager._.bassert(8, specMan.constructor == SpecManager, "the constructor property is not 'SpecManager'")
+    SpecManager._.shouldAssert(9, SpecManager._tryConstruct, {}, "SPEC", breadCrumbs);
   }
   static toStringTest() {
     let setting = new Setting({},"its Name")
@@ -826,6 +890,30 @@ class SpecManager extends BreadCrumbs {
   static isSpecTest() {
     SpecManager._.bassert(1, SpecManager.isSpec("_SPEC"), "Spec key is not identified as '_SPEC'")
     SpecManager._.bassert(2, !SpecManager.isSpec("SPEC"), "'SPEC' is accepted as SPEC key")
+  }
+  static renderOptionTest() {
+    let literal1 = { }
+    let literal2 = { _SPEC: { render: true,} }
+    let literal3 = { _SPEC: { render: false,} }
+    let setting1 = new Setting(literal1)
+    let setting2 = new Setting(literal2)
+    let setting3 = new Setting(literal3)
+    let spec1 = setting1.spec
+    let spec2 = setting2.spec
+    let spec3 = setting3.spec
+    SpecManager._.bassert(1, !spec1.render, "unset OPTION 'render' defaults to false, but here it is true.")
+    SpecManager._.bassert(2, spec2.render, "OPTION 'render' is set to true in 'literal', but here it is false.")
+    SpecManager._.bassert(3, !spec3.render, "OPTION 'render' is set to false in 'literal', but here it is true.")
+    let literal4 = { a: { b: { c: { d:true }}}}
+    let setting4 = new Setting(literal4)
+    let f = setting4.frontmatterYAML
+    let r = setting4.renderYAML
+    SpecManager._.bassert(4, f.d==true && r.d==undefined, "Value should appear in frontmatter output and should not appear in render output")    
+    let literal5 = { a: { _SPEC: { render: true, }, b: { c: { d: true } } } }
+    let setting5 = new Setting(literal5)
+    f = setting5.frontmatterYAML
+    r = setting5.renderYAML
+    SpecManager._.bassert(5, f.d==undefined && r.d==true, "Value should not appear in frontmatter output and should appear in render output")    
   }
   static _tryConstruct(arg1,arg2,arg3) {
     let specMan = new SpecManager(arg1,arg2,arg3);
@@ -855,8 +943,8 @@ async function main(tp, app) {
   let renderYAML = { "____": "" }
   try {
     let settings = new Setting(TEST);
-    frontmatterYAML = settings.getFrontmatterYAML()
-    Object.assign(renderYAML, settings.getRenderYAML())
+    frontmatterYAML = settings.frontmatterYAML
+    Object.assign(renderYAML, settings.renderYAML)
   } catch(e) { /* returns errYAML or rethrows */
     if(e instanceof FotyError) {
       let errYAML = {}
