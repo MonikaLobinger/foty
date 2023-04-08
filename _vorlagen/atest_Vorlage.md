@@ -27,18 +27,15 @@
 <%_* } %>
 <%_*} %>
 ---
-<%_* if(pict.length > 0) { %>
+<%_* if(pict!="") { %>
 ![picture](<% pict %>)
 <%_* } %>
-<%_* if(firstline.length > 0) { %>
+<%_* if(firstline!="") { %>
 <% firstline %>
 <%_* } %>
 
 
-<%_* if(prevdate.length > 0 && 
-nextdate.length > 0 &&
-prevname.length > 0 &&
-nextname.length > 0 
+<%_* if(prevdate!=""&& nextdate!=""&&prevname!=""&&nextname!=""
 ) { %>
 &#9668;[[<% prevname %>|<% prevdate %>]] - [[<% nextname %>|<% nextdate %>]]&#9658;
 <%_* } %>
