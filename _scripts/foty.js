@@ -1,4 +1,4 @@
-module.exports = main; // templater call: "await tp.user.foty(tp, app)"
+module.exports = main // templater call: "await tp.user.foty(tp, app)"
 /** Script for obsidian, templater extension needed
  * Creates new notes with frontmatter and text skeleton based on note types
  * 
@@ -97,8 +97,8 @@ module.exports = main; // templater call: "await tp.user.foty(tp, app)"
   //   default: false, as long as not set
   //            if set, the value will be inherited by contained collections
   //            as long as set again
-  const TYPE_PROMPT         = "Typ wählen";
-  const TYPE_MAX_ENTRIES    = 10; // Max entries in "type" drop down list
+  const TYPE_PROMPT         = "Typ wählen"
+  const TYPE_MAX_ENTRIES    = 10 // Max entries in "type" drop down list
   const Test = {
     NOTETYPES: {
       diary: {MARKER: "", DATE: true, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD" },
@@ -127,9 +127,9 @@ module.exports = main; // templater call: "await tp.user.foty(tp, app)"
   //#endregion test configurations
 //#endregion CONFIGURATION
 //#region debug, base, error and test
-var DEBUG = true;
-const TESTING = true;
-if(TESTING) DEBUG = false;
+var DEBUG = true
+const TESTING = true
+if(TESTING) DEBUG = false
 // nach @todo und @remove suchen
 
 /** Logs all parameters to console, if "DEBUG" is set to true
@@ -137,24 +137,24 @@ if(TESTING) DEBUG = false;
  */
 function dbg(...strs) {
   function dbgLevel(callStack) {
-    let answer = 0;
-    let stack = callStack.split("\n");
+    let answer = 0
+    let stack = callStack.split("\n")
     stack.every(str => {
-      answer++;
-      if(str.includes("at Object.main [")) return false;
-      return true;
-    });
-    return answer;
+      answer++
+      if(str.includes("at Object.main [")) return false
+      return true
+    })
+    return answer
   }
   if(DEBUG) {
-    let output = "";
-    let lvl = dbgLevel((new Error()).stack);
-    while(--lvl) output += " ";
+    let output = ""
+    let lvl = dbgLevel((new Error()).stack)
+    while(--lvl) output += " "
     for (const str of strs) {
-      output += str + " ";
+      output += str + " "
     }
-    output = "%c" + output;
-    console.log(output, "background: LightSkyBlue;");
+    output = "%c" + output
+    console.log(output, "background: LightSkyBlue")
   }
 }
 
@@ -164,7 +164,7 @@ function dbg(...strs) {
  * @param {String} c - foreground color
  */
 function aut(str, b = "yellow", c = "red") {
-  console.log("%c" + str, `background:${b};color:${c};font-weight:normal`);
+  console.log("%c" + str, `background:${b}color:${c}font-weight:normal`)
 }
 
 /** logs 'vn' and 'v' colored to console
@@ -174,15 +174,15 @@ function aut(str, b = "yellow", c = "red") {
  * @param {String} c - foreground color
  */
 function vaut(vn, v, b = "yellow", c = "red") {
-  let str = vn + ": " + v;
-  console.log("%c" + str, `background:${b};color:${c};font-weight:normal`);
+  let str = vn + ": " + v
+  console.log("%c" + str, `background:${b}color:${c}font-weight:normal`)
 }
 
 /** superclass for all Foty Errors (but not unit test Errors) */
 class FotyError extends Error {
   constructor(...params) {
-    super(...params);
-    this.name = "Foty Error";
+    super(...params)
+    this.name = "Foty Error"
   }
 }
 
@@ -192,9 +192,9 @@ class SettingError extends FotyError {
   section
   //#endregion member variables
   constructor(section = "Setting", ...params) {
-    super(...params);
-    this.name = "Setting Error";
-    this.section = section;
+    super(...params)
+    this.name = "Setting Error"
+    this.section = section
   }
 }
 
@@ -204,27 +204,27 @@ class CodingError extends FotyError {
   section
   //#endregion member variables
   constructor(section = "Setting", ...params) {
-    super(...params);
-    this.name = "Coding Error";
-    this.section = section;
+    super(...params)
+    this.name = "Coding Error"
+    this.section = section
   }
 }
 
 /** Runs unit tests */
 class TestSuite {
   //#region member variables
-  static ok = "\u2713";
-  static nok = "\u2718";
-  #name;
-  #outputObj = undefined;
-  #succeeded = 0;
-  #failed = 0;
-  #fname = "";
-  #asserts = 0;
-  #cases = 0;
-  o = this.#outputObj;
-  f = "failing";
-  s = "success";
+  static ok = "\u2713"
+  static nok = "\u2718"
+  #name
+  #outputObj = undefined
+  #succeeded = 0
+  #failed = 0
+  #fname = ""
+  #asserts = 0
+  #cases = 0
+  o = this.#outputObj
+  f = "failing"
+  s = "success"
   d = "details"
   get name() {return this.#name }
   e = "none"
@@ -235,110 +235,110 @@ class TestSuite {
    * @param {Object} outputObj - javascript object for output in Obsidian
    */
   constructor(name, outputObj) {
-    this.#name = name ? name : "Unknown";
-    this.o = outputObj;
-    if(this.o[this.f]==undefined) this.o[this.f] = this.e;
-    if(this.o[this.s]==undefined) this.o[this.s] = this.e;
-    if(this.o[this.d]==undefined) this.o[this.d] = this.e;
+    this.#name = name ? name : "Unknown"
+    this.o = outputObj
+    if(this.o[this.f]==undefined) this.o[this.f] = this.e
+    if(this.o[this.s]==undefined) this.o[this.s] = this.e
+    if(this.o[this.d]==undefined) this.o[this.d] = this.e
   }
   toString() {return " °°" + this.constructor.name + " " + this.name }
 
-  /** Shows results; resets
+  /** Shows results resets
    */
   destruct() {
-    let succStr = this.#succeeded==1 ? "test" : "tests";
-    let failStr = this.#failed==1 ? "test" : "tests";
+    let succStr = this.#succeeded==1 ? "test" : "tests"
+    let failStr = this.#failed==1 ? "test" : "tests"
     if(this.#failed==0) {
-      this.#praut(this.s, `Suite "${this.#name}": ${this.#succeeded} ${succStr} succeeded`);
+      this.#praut(this.s, `Suite "${this.#name}": ${this.#succeeded} ${succStr} succeeded`)
     } else {
-      this.#praut(this.f, `Suite "${this.#name}": ${this.#failed} ${failStr} failed, ${this.#succeeded} succeeded`);
+      this.#praut(this.f, `Suite "${this.#name}": ${this.#failed} ${failStr} failed, ${this.#succeeded} succeeded`)
     }
-    this.#name = null;
-    this.o = null;
-    this.#succeeded = 0;
-    this.#failed = 0;
-    this.#fname = "";
-    this.#asserts = 0;
-    this.#cases = 0;
+    this.#name = null
+    this.o = null
+    this.#succeeded = 0
+    this.#failed = 0
+    this.#fname = ""
+    this.#asserts = 0
+    this.#cases = 0
   }
 
   /** runs test
    * @param {Function} fn
    */
   run(fn) {
-    this.#fname = fn.name;
-    this.#asserts = 0;
+    this.#fname = fn.name
+    this.#asserts = 0
     try {
-      fn();
-      let cases = this.#cases==1 ? "case" : "cases";
+      fn()
+      let cases = this.#cases==1 ? "case" : "cases"
       if(0==this.#asserts) {
-        this.#succeeded++;
+        this.#succeeded++
         this.#praut(this.d, `${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.ok}`)
       } else {
-        this.#failed++;
+        this.#failed++
         this.#praut(this.d, `${TestSuite.nok}${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.nok}`)
       }
     } catch(e) {
       console.error("ERROR in TestSuite:run\n" +
-        "You probably caused an error in one of your tests which is not test specific\n" + e);
+        "You probably caused an error in one of your tests which is not test specific\n" + e)
     }
-    this.#fname = "";
-    this.#cases = 0;
+    this.#fname = ""
+    this.#cases = 0
   }
 
   /** runs test containing promised functions
    * @param {Function} fn
    * @example
-   * let _ = null;
+   * let _ = null
    * function testIt() {
-   *   _ = new TestSuite("testIt", null);
+   *   _ = new TestSuite("testIt", null)
    *   _.prun(first_Test)
-   *   .then ( (asw) => {return _.prun(second_Test);} )
-   *   .then ( (asw) => {return _.prun(third_Test);} )
-   *   .then ( (asw) => {_.destruct(); _ = null; } )
-   *   .catch(( asw) => log("CATCH " + asw) );
+   *   .then ( (asw) => {return _.prun(second_Test)} )
+   *   .then ( (asw) => {return _.prun(third_Test)} )
+   *   .then ( (asw) => {_.destruct() _ = null } )
+   *   .catch(( asw) => log("CATCH " + asw) )
    * }
    * function first_Test() {//second_Test, third_Test
    *   let p = new Promise((resolve, reject) => {
-   *     let funame = "first_Test"; //"second_Test", "third_Test"
+   *     let funame = "first_Test" //"second_Test", "third_Test"
    *     let result = asynchronousFunction(funame).then( () => {
-   *       _.assert( 1, _check, result);
-   *       _.assert( 2, _check, result);
-   *       // destruct result; (In use case it might be instance)
-   *       resolve("IN" + funame + ": Result " + result + " destructed");
-   *     });
-   *   });
-   *   return p;
+   *       _.assert( 1, _check, result)
+   *       _.assert( 2, _check, result)
+   *       // destruct result (In use case it might be instance)
+   *       resolve("IN" + funame + ": Result " + result + " destructed")
+   *     })
+   *   })
+   *   return p
    * }
    * function _check(result) {
    *   if(typeof result !== "string")
-   *     throw new TestError(`${result} should be a string`);
+   *     throw new TestError(`${result} should be a string`)
    * }
    */
   prun(fn) {
     return new Promise((resolve, reject) => {
-      this.#fname = fn.name;
-      this.#asserts = 0;
+      this.#fname = fn.name
+      this.#asserts = 0
       try {
         fn()
           .then((fnAnswer) => {
-            let cases = this.#cases==1 ? "case" : "cases";
+            let cases = this.#cases==1 ? "case" : "cases"
             if(0==this.#asserts) {
-              this.#succeeded++;
+              this.#succeeded++
               this.#praut(this.d, `${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.ok}`)
             } else {
-              this.#failed++;
+              this.#failed++
               this.#praut(this.d, `${TestSuite.nok}${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.nok}`)
             }
-            this.#fname = "";
-            this.#cases = 0;
-            resolve(fn.name + " resolved");
-          });
+            this.#fname = ""
+            this.#cases = 0
+            resolve(fn.name + " resolved")
+          })
       } catch(e) {
-        console.error(e);
-        this.#fname = "";
-        this.#cases = 0;
-        resolve(fn.name + " catch");
+        console.error(e)
+        this.#fname = ""
+        this.#cases = 0
+        resolve(fn.name + " catch")
       }
     })
   }
@@ -349,11 +349,11 @@ class TestSuite {
    * @param {string} message
    */
   bassert(errcase, isTrue, message) {
-    this.#cases++;
+    this.#cases++
     //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
     if(!isTrue) {
-      this.#asserts++;
-      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} - ${message}`, "background: rgba(255, 99, 71, 0.5);");
+      this.#asserts++
+      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} - ${message}`, "background: rgba(255, 99, 71, 0.5)")
     }
   }
 
@@ -363,14 +363,14 @@ class TestSuite {
    * @param {...} ...params
    */
   assert(errcase, fn, ...params) {
-    this.#cases++;
+    this.#cases++
     try {
       //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
-      fn(...params);
+      fn(...params)
     } catch(err) {
-      this.#asserts++;
-      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} - ${err.message}`, "background: rgba(255, 99, 71, 0.5);");
-      ;
+      this.#asserts++
+      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} - ${err.message}`, "background: rgba(255, 99, 71, 0.5)")
+      
     }
   }
 
@@ -380,18 +380,18 @@ class TestSuite {
    * @param {...} ...params
    */
   shouldAssert(errcase, fn, message, ...params) {
-    this.#cases++;
-    let hasAsserted = false;
+    this.#cases++
+    let hasAsserted = false
     try {
       //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
-      fn(...params);
+      fn(...params)
     } catch(err) {
-      hasAsserted = true;
+      hasAsserted = true
     }
     if(!hasAsserted) {
-      this.#asserts++;
-      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} should assert - ${message}`, "background: rgba(255, 99, 71, 0.5);");
-      ;
+      this.#asserts++
+      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} should assert - ${message}`, "background: rgba(255, 99, 71, 0.5)")
+      
     }
   }
 
@@ -400,29 +400,29 @@ class TestSuite {
    */
   #praut(key, str) {
     if(key!=this.s && key!=this.f && key!=this.d) {
-      let errstr = "%c" + key;
-      console.log(errstr, "background: rgba(255, 99, 71, 0.5);");
+      let errstr = "%c" + key
+      console.log(errstr, "background: rgba(255, 99, 71, 0.5)")
     } else if(this.o[key]==this.e) {
-      this.o[key] = str;
+      this.o[key] = str
     } else if(str[0]==TestSuite.nok) {
       if(key==this.d) {
         let outParts = this.o[key].split(TestSuite.nok)
         let len = outParts.length
-        let okPart = outParts[len - 1];
+        let okPart = outParts[len - 1]
         if(len==1) {
-          let newLastPart = str.substring(1) + "\n          " + okPart;
+          let newLastPart = str.substring(1) + "\n          " + okPart
           outParts[outParts.length - 1] = newLastPart
-          this.o[key] = outParts.join();
+          this.o[key] = outParts.join()
         } else {
-          let newLastPart = "\n          " + str.substring(1) + okPart;
+          let newLastPart = "\n          " + str.substring(1) + okPart
           outParts[outParts.length - 1] = newLastPart
-          this.o[key] = outParts.join(TestSuite.nok);
+          this.o[key] = outParts.join(TestSuite.nok)
         }
       } else {
-        this.o[key] = str.substring(1) + "\n          " + this.o[key];
+        this.o[key] = str.substring(1) + "\n          " + this.o[key]
       }
     } else {
-      this.o[key] = this.o[key] + "\n          " + str;
+      this.o[key] = this.o[key] + "\n          " + str
     }
   }
 }
@@ -430,8 +430,8 @@ class TestSuite {
 /** Error used for unit test  */
 class TestError extends Error {
   constructor(message, ...params) {
-    super(message, ...params);
-    this.name = "TestError";
+    super(message, ...params)
+    this.name = "TestError"
   }
   toString() {return " °°" + this.constructor.name + " " + this.name }
 }
@@ -440,7 +440,7 @@ class TestError extends Error {
 const Dialog = {
   Ok: 'Ok',
   Cancel: 'Cancel',
-};
+}
 //#endregion globals 
 //#region helper classes
 /** Events that Dispatcher stores and distribute to listeners
@@ -453,38 +453,38 @@ class Event {
   //#endregion member variables
 
   constructor(name) {
-    this.name = name;
-    this.callbacks = [];
+    this.name = name
+    this.callbacks = []
   }
   toString() {return " °°" + this.constructor.name + " " + this.name }
   registerCallback(callback, instance) {
-    this.callbacks.push([callback, instance]);
+    this.callbacks.push([callback, instance])
   }
   //#region Event tests
-  static _ = null;
+  static _ = null
   static test(outputObj) {
-    Event._ = new TestSuite("Event", outputObj);
-    Event._.run(Event.constructorTest);
-    Event._.run(Event.toStringTest);
-    Event._.run(Event.registerCallbackTest);
-    Event._.destruct();
-    Event._ = null;
+    Event._ = new TestSuite("Event", outputObj)
+    Event._.run(Event.constructorTest)
+    Event._.run(Event.toStringTest)
+    Event._.run(Event.registerCallbackTest)
+    Event._.destruct()
+    Event._ = null
   }
   static constructorTest() {
-    Event._.assert(1, Event._tryConstruct, undefined);
-    Event._.assert(2, Event._tryConstruct, "eventname");
+    Event._.assert(1, Event._tryConstruct, undefined)
+    Event._.assert(2, Event._tryConstruct, "eventname")
     let event = new Event()
     Event._.bassert(3, event.constructor==Event, "the constructor property is not Event")
   }
   static toStringTest() {
     let str = new Event("eventname").toString()
-    Event._.bassert(1, str.contains("eventname"), "does not contain Event name");
+    Event._.bassert(1, str.contains("eventname"), "does not contain Event name")
   }
   static registerCallbackTest() {
-    let e = new Error();
-    Event._.assert(1, Event._tryRegisterCallback, undefined, undefined);
-    Event._.assert(2, Event._tryRegisterCallback, "eventname", undefined);
-    Event._.assert(3, Event._tryRegisterCallback, "eventname", e);
+    let e = new Error()
+    Event._.assert(1, Event._tryRegisterCallback, undefined, undefined)
+    Event._.assert(2, Event._tryRegisterCallback, "eventname", undefined)
+    Event._.assert(3, Event._tryRegisterCallback, "eventname", e)
   }
   static _tryConstruct(arg1) {
     let event = new Event(arg1)
@@ -504,54 +504,54 @@ class Dispatcher {
   events
   //#endregion member variables
   constructor() {
-    this.events = {};
+    this.events = {}
   }
   toString() {return " °°" + this.constructor.name }
   registerEvent(eventName) {
-    var event = new Event(eventName);
-    this.events[eventName] = event;
+    var event = new Event(eventName)
+    this.events[eventName] = event
   }
   addListener(eventName, callback, instance) {
-    this.events[eventName].registerCallback(callback, instance);
+    this.events[eventName].registerCallback(callback, instance)
   }
   dispatchEvent(eventName, eventArgs) {
     this.events[eventName].callbacks.forEach((arr) => {
       let callback = arr[0]
       let instance = arr[1]
-      callback(instance, eventArgs);
-    });
+      callback(instance, eventArgs)
+    })
   }
   //#region Dispatcher tests
-  static _ = null;
+  static _ = null
   static test(outputObj) {
-    Dispatcher._ = new TestSuite("Dispatcher", outputObj);
-    Dispatcher._.run(Dispatcher.constructorTest);
-    Dispatcher._.run(Dispatcher.toStringTest);
-    Dispatcher._.run(Dispatcher.registerEventTest);
-    Dispatcher._.run(Dispatcher.dispatchEventTest);
-    Dispatcher._.run(Dispatcher.addListenerTest);
-    Dispatcher._.destruct();
-    Dispatcher._ = null;
+    Dispatcher._ = new TestSuite("Dispatcher", outputObj)
+    Dispatcher._.run(Dispatcher.constructorTest)
+    Dispatcher._.run(Dispatcher.toStringTest)
+    Dispatcher._.run(Dispatcher.registerEventTest)
+    Dispatcher._.run(Dispatcher.dispatchEventTest)
+    Dispatcher._.run(Dispatcher.addListenerTest)
+    Dispatcher._.destruct()
+    Dispatcher._ = null
     Event.test(outputObj)
   }
   static constructorTest() {
-    Dispatcher._.assert(1, Dispatcher._tryConstruct);
+    Dispatcher._.assert(1, Dispatcher._tryConstruct)
     let dispatcher = new Dispatcher
     Dispatcher._.bassert(2, dispatcher.constructor==Dispatcher, "the constructor property is not Dispatcher")
   }
   static toStringTest() {
     let str = new Dispatcher().toString()
-    Dispatcher._.bassert(1, str.contains("°°"), "does not contain module mark °°");
+    Dispatcher._.bassert(1, str.contains("°°"), "does not contain module mark °°")
   }
   static registerEventTest() {
-    Dispatcher._.assert(1, Dispatcher._tryRegisterEvent, undefined);
-    Dispatcher._.assert(1, Dispatcher._tryRegisterEvent, "big bang");
+    Dispatcher._.assert(1, Dispatcher._tryRegisterEvent, undefined)
+    Dispatcher._.assert(1, Dispatcher._tryRegisterEvent, "big bang")
   }
   static addListenerTest() {
-    Dispatcher._.assert(1, Dispatcher._tryAddListener, "big bang", undefined, undefined);
+    Dispatcher._.assert(1, Dispatcher._tryAddListener, "big bang", undefined, undefined)
   }
   static dispatchEventTest() {
-    Dispatcher._.assert(1, Dispatcher._tryDispatchEvent, "big bang", undefined);
+    Dispatcher._.assert(1, Dispatcher._tryDispatchEvent, "big bang", undefined)
   }
   static _tryConstruct() {
     let d = new Dispatcher()
@@ -599,7 +599,7 @@ class BreadCrumbs {
       breadcrumbs += this.caller.toBreadCrumbs()
       sep = "."
     }
-    breadcrumbs += sep + this.#key;
+    breadcrumbs += sep + this.#key
     return breadcrumbs
   }
 
@@ -650,25 +650,25 @@ class BreadCrumbs {
   }
 
   //#region BreadCrumbs tests
-  static _ = null;
+  static _ = null
   static test(outputObj) {
-    BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj);
-    BreadCrumbs._.run(BreadCrumbs.constructorTest);
-    BreadCrumbs._.run(BreadCrumbs.toStringTest);
-    BreadCrumbs._.run(BreadCrumbs.toBreadCrumbsTest);
-    BreadCrumbs._.run(BreadCrumbs.getKeyTest);
-    BreadCrumbs._.run(BreadCrumbs.getLiteralTest);
-    BreadCrumbs._.run(BreadCrumbs.getCrumbTest);
-    BreadCrumbs._.run(BreadCrumbs.isDefinedTest);
-    BreadCrumbs._.destruct();
-    BreadCrumbs._ = null;
+    BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj)
+    BreadCrumbs._.run(BreadCrumbs.constructorTest)
+    BreadCrumbs._.run(BreadCrumbs.toStringTest)
+    BreadCrumbs._.run(BreadCrumbs.toBreadCrumbsTest)
+    BreadCrumbs._.run(BreadCrumbs.getKeyTest)
+    BreadCrumbs._.run(BreadCrumbs.getLiteralTest)
+    BreadCrumbs._.run(BreadCrumbs.getCrumbTest)
+    BreadCrumbs._.run(BreadCrumbs.isDefinedTest)
+    BreadCrumbs._.destruct()
+    BreadCrumbs._ = null
   }
   static constructorTest() {
-    BreadCrumbs._.shouldAssert(1, BreadCrumbs._tryConstruct, {}, undefined);
-    BreadCrumbs._.assert(2, BreadCrumbs._tryConstruct, undefined, "myName");
+    BreadCrumbs._.shouldAssert(1, BreadCrumbs._tryConstruct, {}, undefined)
+    BreadCrumbs._.assert(2, BreadCrumbs._tryConstruct, undefined, "myName")
     let breadcrumbs = new BreadCrumbs(undefined, "TEST KEY")
-    BreadCrumbs._.bassert(3, breadcrumbs instanceof Object, "'BreadCrumbs' has to be an instance of 'Object'");
-    BreadCrumbs._.bassert(4, breadcrumbs instanceof BreadCrumbs, "'BreadCrumbs' has to be an instance of 'BreadCrumbs'");
+    BreadCrumbs._.bassert(3, breadcrumbs instanceof Object, "'BreadCrumbs' has to be an instance of 'Object'")
+    BreadCrumbs._.bassert(4, breadcrumbs instanceof BreadCrumbs, "'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
     BreadCrumbs._.bassert(5, breadcrumbs.constructor==BreadCrumbs, "the constructor property is not 'BreadCrumbs'")
   }
   static toStringTest() {
@@ -688,17 +688,17 @@ class BreadCrumbs {
   }
   static getKeyTest() {
     let breadcrumbs = new BreadCrumbs({}, "my name")
-    BreadCrumbs._.bassert(1, breadcrumbs.key=="my name", "does not return name given on construction ");
+    BreadCrumbs._.bassert(1, breadcrumbs.key=="my name", "does not return name given on construction ")
   }
   static getLiteralTest() {
-    const sym = Symbol("Symbol Descriptor");
+    const sym = Symbol("Symbol Descriptor")
     let breadcrumbs = new BreadCrumbs({sym: 87673 }, "my name")
-    BreadCrumbs._.bassert(1, breadcrumbs.literal.sym==87673, "does not return literal given on construction ");
+    BreadCrumbs._.bassert(1, breadcrumbs.literal.sym==87673, "does not return literal given on construction ")
   }
   static getCrumbTest() {
     let parent = new BreadCrumbs(undefined, "parent")
     let breadcrumbs = new BreadCrumbs({}, "my name", parent)
-    BreadCrumbs._.bassert(1, breadcrumbs.caller==parent, "does not return parent given on construction ");
+    BreadCrumbs._.bassert(1, breadcrumbs.caller==parent, "does not return parent given on construction ")
   }
   static isDefinedTest() {
     BreadCrumbs._.bassert(1, BreadCrumbs.isDefined(""), "Empty String is not accepted as defined")
@@ -706,7 +706,7 @@ class BreadCrumbs {
     BreadCrumbs._.bassert(3, !BreadCrumbs.isDefined(undefined), "undefined accepted as defined")
   }
   static _tryConstruct(arg1, arg2) {
-    let breadcrumbs = new BreadCrumbs(arg1, arg2);
+    let breadcrumbs = new BreadCrumbs(arg1, arg2)
   }
   //#endregion BreadCrumbs tests
 }
@@ -739,9 +739,9 @@ class Setting extends BreadCrumbs {
         }
       } else {
         if(this.spec.render)
-          this.#renderYAML[key] = value;
+          this.#renderYAML[key] = value
         else
-          this.#frontmatterYAML[key] = value;
+          this.#frontmatterYAML[key] = value
       }
     }
   }
@@ -758,7 +758,7 @@ class Setting extends BreadCrumbs {
       type = this.#notetypes.notetypes[typeKeys[0]]
     } else if(typeKeys.length > 1) {
       let typekey = await tp.system.suggester(typeKeys, typeKeys, 
-        false, TYPE_PROMPT, TYPE_MAX_ENTRIES);      
+        false, TYPE_PROMPT, TYPE_MAX_ENTRIES)      
       if(!typekey) {
         return Dialog.Cancel
       } else {
@@ -783,34 +783,34 @@ class Setting extends BreadCrumbs {
     return renderYAML
   }
   //#region Setting tests
-  static _ = null;
+  static _ = null
   static test(outputObj) {
     BreadCrumbs.test(outputObj)
     SpecManager.test(outputObj)
-    Setting._ = new TestSuite("Setting", outputObj);
-    Setting._.run(Setting.constructorTest);
-    Setting._.run(Setting.toStringTest);
-    Setting._.run(Setting.getFrontmatterYAMLTest);
-    Setting._.run(Setting.getRenderYAMLTest);
-    Setting._.run(Setting.getterTest);
-    Setting._.destruct();
-    Setting._ = null;
+    Setting._ = new TestSuite("Setting", outputObj)
+    Setting._.run(Setting.constructorTest)
+    Setting._.run(Setting.toStringTest)
+    Setting._.run(Setting.getFrontmatterYAMLTest)
+    Setting._.run(Setting.getRenderYAMLTest)
+    Setting._.run(Setting.getterTest)
+    Setting._.destruct()
+    Setting._ = null
   }
   static constructorTest() {
-    Setting._.shouldAssert(1, Setting._tryConstruct, undefined);
-    Setting._.assert(2, Setting._tryConstruct, {}, "myName");
-    Setting._.assert(3, Setting._tryConstruct, {}, "my Name");
-    Setting._.assert(4, Setting._tryConstruct, {}, 22);
-    Setting._.assert(5, Setting._tryConstruct, {}, Symbol('a'));
+    Setting._.shouldAssert(1, Setting._tryConstruct, undefined)
+    Setting._.assert(2, Setting._tryConstruct, {}, "myName")
+    Setting._.assert(3, Setting._tryConstruct, {}, "my Name")
+    Setting._.assert(4, Setting._tryConstruct, {}, 22)
+    Setting._.assert(5, Setting._tryConstruct, {}, Symbol('a'))
     let setting = new Setting({}, "myName")
-    Setting._.bassert(6, setting instanceof BreadCrumbs, "'Setting' has to be an instance of 'BreadCrumbs'");
+    Setting._.bassert(6, setting instanceof BreadCrumbs, "'Setting' has to be an instance of 'BreadCrumbs'")
     Setting._.bassert(7, setting.constructor==Setting, "the constructor property is not 'Setting'")
   }
   static toStringTest() {
     let str = new Setting({}).toString()
-    Setting._.bassert(1, str.contains(Setting.#ROOT_KEY), "result does not contain root string");
+    Setting._.bassert(1, str.contains(Setting.#ROOT_KEY), "result does not contain root string")
     str = new Setting({}, "my Name").toString()
-    Setting._.bassert(2, str.contains("my Name"), "result does not contain Setting key");
+    Setting._.bassert(2, str.contains("my Name"), "result does not contain Setting key")
     let setting = new Setting({}, "my Name")
   }
   static getFrontmatterYAMLTest() {
@@ -868,15 +868,15 @@ class Setting extends BreadCrumbs {
     Setting._.bassert(5, JSON.stringify(answ6r)==expAnsw6r, `output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}', but should be:'${expAnsw6r}'`)
   }
   static getterTest() {// check whether getter assigned to correct function
-    const desc1 = Object.getOwnPropertyDescriptor(Setting.prototype, "frontmatterYAML");
-    const desc2 = Object.getOwnPropertyDescriptor(Setting.prototype, "renderYAML");
+    const desc1 = Object.getOwnPropertyDescriptor(Setting.prototype, "frontmatterYAML")
+    const desc2 = Object.getOwnPropertyDescriptor(Setting.prototype, "renderYAML")
     Setting._.bassert(1, typeof desc1.get=="function", `getter for 'frontmatterYAML' is not 'function'`)
     Setting._.bassert(2, typeof desc2.get=="function", `getter for 'renderYAML' is not 'function'`)
     Setting._.bassert(1, desc1.get.toString().contains("getFrontmatterYAML"), `getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`)
     Setting._.bassert(2, desc2.get.toString().contains("getRenderYAML"), `getter for 'renderYAML' is not 'getRenderYAML'`)
   }
   static _tryConstruct(arg1, arg2) {
-    let settings = new Setting(arg1, arg2);
+    let settings = new Setting(arg1, arg2)
   }
   //#endregion Setting tests
 }
@@ -891,7 +891,7 @@ class SpecManager extends BreadCrumbs {
   constructor(literal, key, caller) {
     let specLiteral
     if(literal!=undefined)
-      specLiteral = literal[SpecManager.SPEC_KEY];
+      specLiteral = literal[SpecManager.SPEC_KEY]
     super(specLiteral, key === undefined ? SpecManager.SPEC_KEY : key, caller)
     specLiteral = undefined
     this.throwIfUndefined(literal)
@@ -917,29 +917,29 @@ class SpecManager extends BreadCrumbs {
   }
   static isHandlerKey(key) { return (key==SpecManager.SPEC_KEY) }
   //#region SpecManager tests
-  static _ = null;
+  static _ = null
   static test(outputObj) {
-    SpecManager._ = new TestSuite("SpecManager", outputObj);
-    SpecManager._.run(SpecManager.constructorTest);
-    SpecManager._.run(SpecManager.toStringTest);
-    SpecManager._.run(SpecManager.isHandlerKeyTest);
-    SpecManager._.run(SpecManager.renderOptionTest);
-    SpecManager._.destruct();
-    SpecManager._ = null;
+    SpecManager._ = new TestSuite("SpecManager", outputObj)
+    SpecManager._.run(SpecManager.constructorTest)
+    SpecManager._.run(SpecManager.toStringTest)
+    SpecManager._.run(SpecManager.isHandlerKeyTest)
+    SpecManager._.run(SpecManager.renderOptionTest)
+    SpecManager._.destruct()
+    SpecManager._ = null
   }
   static constructorTest() {
     let setting = new Setting({}, "its Name")
     let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    SpecManager._.shouldAssert(1, SpecManager._tryConstruct, undefined, "myName", setting);
-    SpecManager._.shouldAssert(2, SpecManager._tryConstruct, {}, undefined, setting);
-    SpecManager._.shouldAssert(3, SpecManager._tryConstruct, {}, "myName", undefined);
-    SpecManager._.assert(4, SpecManager._tryConstruct, {}, "my Name", setting);
-    SpecManager._.assert(5, SpecManager._tryConstruct, {}, 22, setting);
-    SpecManager._.assert(6, SpecManager._tryConstruct, {}, Symbol('a'), setting);
+    SpecManager._.shouldAssert(1, SpecManager._tryConstruct, undefined, "myName", setting)
+    SpecManager._.shouldAssert(2, SpecManager._tryConstruct, {}, undefined, setting)
+    SpecManager._.shouldAssert(3, SpecManager._tryConstruct, {}, "myName", undefined)
+    SpecManager._.assert(4, SpecManager._tryConstruct, {}, "my Name", setting)
+    SpecManager._.assert(5, SpecManager._tryConstruct, {}, 22, setting)
+    SpecManager._.assert(6, SpecManager._tryConstruct, {}, Symbol('a'), setting)
     let specMan = new SpecManager({}, "myName", setting)
-    SpecManager._.bassert(7, specMan instanceof BreadCrumbs, "'SpecManager' has to be an instance of 'BreadCrumbs'");
+    SpecManager._.bassert(7, specMan instanceof BreadCrumbs, "'SpecManager' has to be an instance of 'BreadCrumbs'")
     SpecManager._.bassert(8, specMan.constructor==SpecManager, "the constructor property is not 'SpecManager'")
-    SpecManager._.shouldAssert(9, SpecManager._tryConstruct, {}, "SPEC", breadCrumbs);
+    SpecManager._.shouldAssert(9, SpecManager._tryConstruct, {}, "SPEC", breadCrumbs)
   }
   static toStringTest() {
     let setting = new Setting({}, "its Name")
@@ -987,7 +987,7 @@ class SpecManager extends BreadCrumbs {
     SpecManager._.bassert(6, f.d==true && r.d==undefined, "Value should appear in frontmatter output and should not appear in render output")
   }
   static _tryConstruct(arg1, arg2, arg3) {
-    let specMan = new SpecManager(arg1, arg2, arg3);
+    let specMan = new SpecManager(arg1, arg2, arg3)
   }
   //#endregion SpecManager tests
 }
@@ -1010,7 +1010,7 @@ class NoteTypesManager extends BreadCrumbs {
   constructor(literal, key, caller) {
     let typesLiteral
     if(literal!=undefined)
-      typesLiteral = literal[NoteTypesManager.NOTETYPES_KEY];
+      typesLiteral = literal[NoteTypesManager.NOTETYPES_KEY]
     super(typesLiteral, key === undefined ? NoteTypesManager.NOTETYPES_KEY : key, caller)
     this.throwIfUndefined(caller)
     this.throwIfIsNotOfType(caller, "Setting")
@@ -1052,28 +1052,28 @@ class NoteTypesManager extends BreadCrumbs {
   }
   static isHandlerKey(key) { return (key==NoteTypesManager.NOTETYPES_KEY) }
   //#region NoteTypesManager tests
-  static _ = null;
+  static _ = null
   static test(outputObj) {
-    NoteTypesManager._ = new TestSuite("NoteTypesManager", outputObj);
-    NoteTypesManager._.run(NoteTypesManager.constructorTest);
-    NoteTypesManager._.run(NoteTypesManager.toStringTest);
-    NoteTypesManager._.run(NoteTypesManager.isHandlerKeyTest);
-    NoteTypesManager._.destruct();
-    NoteTypesManager._ = null;
+    NoteTypesManager._ = new TestSuite("NoteTypesManager", outputObj)
+    NoteTypesManager._.run(NoteTypesManager.constructorTest)
+    NoteTypesManager._.run(NoteTypesManager.toStringTest)
+    NoteTypesManager._.run(NoteTypesManager.isHandlerKeyTest)
+    NoteTypesManager._.destruct()
+    NoteTypesManager._ = null
   }
   static constructorTest() {
     let setting = new Setting({}, "its Name")
     let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    NoteTypesManager._.shouldAssert(1, NoteTypesManager._tryConstruct, undefined, "myName", setting);
-    NoteTypesManager._.shouldAssert(2, NoteTypesManager._tryConstruct, {}, undefined, setting);
-    NoteTypesManager._.shouldAssert(3, NoteTypesManager._tryConstruct, {}, "myName", undefined);
-    NoteTypesManager._.assert(4, NoteTypesManager._tryConstruct, {}, "my Name", setting);
-    NoteTypesManager._.assert(5, NoteTypesManager._tryConstruct, {}, 22, setting);
-    NoteTypesManager._.assert(6, NoteTypesManager._tryConstruct, {}, Symbol('a'), setting);
+    NoteTypesManager._.shouldAssert(1, NoteTypesManager._tryConstruct, undefined, "myName", setting)
+    NoteTypesManager._.shouldAssert(2, NoteTypesManager._tryConstruct, {}, undefined, setting)
+    NoteTypesManager._.shouldAssert(3, NoteTypesManager._tryConstruct, {}, "myName", undefined)
+    NoteTypesManager._.assert(4, NoteTypesManager._tryConstruct, {}, "my Name", setting)
+    NoteTypesManager._.assert(5, NoteTypesManager._tryConstruct, {}, 22, setting)
+    NoteTypesManager._.assert(6, NoteTypesManager._tryConstruct, {}, Symbol('a'), setting)
     let specMan = new NoteTypesManager({}, "myName", setting)
-    NoteTypesManager._.bassert(7, specMan instanceof BreadCrumbs, "'NoteTypesManager' has to be an instance of 'BreadCrumbs'");
+    NoteTypesManager._.bassert(7, specMan instanceof BreadCrumbs, "'NoteTypesManager' has to be an instance of 'BreadCrumbs'")
     NoteTypesManager._.bassert(8, specMan.constructor==NoteTypesManager, "the constructor property is not 'NoteTypesManager'")
-    NoteTypesManager._.shouldAssert(9, NoteTypesManager._tryConstruct, {}, "SPEC", breadCrumbs);
+    NoteTypesManager._.shouldAssert(9, NoteTypesManager._tryConstruct, {}, "SPEC", breadCrumbs)
   }
   static toStringTest() {
     let setting = new Setting({}, "its Name")
@@ -1086,12 +1086,12 @@ class NoteTypesManager extends BreadCrumbs {
   }
 
   static _tryConstruct(arg1, arg2, arg3) {
-    let specMan = new NoteTypesManager(arg1, arg2, arg3);
+    let specMan = new NoteTypesManager(arg1, arg2, arg3)
   }
   //#endregion NoteTypesManager tests
 }
 //#endregion code 
-/** Runs all tests, if TESTING is set; output to current note (indirect)
+/** Runs all tests, if TESTING is set output to current note (indirect)
  * @param {*} outputObj 
  */
 function test(outputObj) {
@@ -1112,8 +1112,8 @@ async function main(tp, app) {
   let frontmatterYAML = {}
   let renderYAML = {"____": "" }
   try {
-    let setting = new Setting(Test,undefined,undefined);
-    let dlgStatus = await setting.createNote(tp);
+    let setting = new Setting(Test,undefined,undefined)
+    let dlgStatus = await setting.createNote(tp)
     frontmatterYAML = setting.frontmatterYAML
     Object.assign(renderYAML, setting.renderYAML)
   } catch(e) {/* returns errYAML or rethrows */
