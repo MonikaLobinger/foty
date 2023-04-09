@@ -350,6 +350,7 @@ class TestSuite {
    */
   bassert(errcase, isTrue, message) {
     this.#cases++;
+    //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
     if(!isTrue) {
       this.#asserts++;
       console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} - ${message}`, "background: rgba(255, 99, 71, 0.5);");
@@ -364,6 +365,7 @@ class TestSuite {
   assert(errcase, fn, ...params) {
     this.#cases++;
     try {
+      //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
       fn(...params);
     } catch(err) {
       this.#asserts++;
@@ -381,6 +383,7 @@ class TestSuite {
     this.#cases++;
     let hasAsserted = false;
     try {
+      //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
       fn(...params);
     } catch(err) {
       hasAsserted = true;
@@ -433,6 +436,12 @@ class TestError extends Error {
   toString() {return " °°" + this.constructor.name + " " + this.name }
 }
 //#endregion debug,test and error
+//#region globals
+const Dialog = {
+  Ok: 'Ok',
+  Cancel: 'Cancel',
+};
+//#endregion globals 
 //#region helper classes
 /** Events that Dispatcher stores and distribute to listeners
  * 
@@ -570,15 +579,15 @@ class BreadCrumbs {
   //#region member variables
   #literal
   #key
-  #crumb
+  #caller
   get literal() {return this.#literal }
   get key() {return this.#key }
-  get crumb() {return this.#crumb }
+  get caller() {return this.#caller }
   //#endregion member variables
   constructor(literal, key, caller) {
     this.#literal = literal
     this.#key = key
-    this.#crumb = caller
+    this.#caller = caller
     this.throwIfUndefined(key, "key")
   }
   toString() {return "°°°" + this.constructor.name + " " + this.key }
@@ -586,15 +595,15 @@ class BreadCrumbs {
   toBreadCrumbs() {
     let breadcrumbs = ""
     let sep = ""
-    if(BreadCrumbs.isDefined(this.crumb)) {
-      breadcrumbs += this.crumb.toBreadCrumbs()
+    if(BreadCrumbs.isDefined(this.caller)) {
+      breadcrumbs += this.caller.toBreadCrumbs()
       sep = "."
     }
     breadcrumbs += sep + this.#key;
     return breadcrumbs
   }
 
-  isRoot() {return !BreadCrumbs.isDefined(this.crumb)}
+  isRoot() {return !BreadCrumbs.isDefined(this.caller)}
 
   throwIfUndefined(val, valname = "literal", funame = "constructor", msg = "' is undefined") {
     if(!BreadCrumbs.isDefined(val))
@@ -625,6 +634,9 @@ class BreadCrumbs {
           break
         case "SpecManager":
           answer = val instanceof SpecManager
+          break
+        case "NoteTypesManager":
+          answer = val instanceof NoteTypesManager
           break
         case "Option":
           answer = val instanceof Option
@@ -686,7 +698,7 @@ class BreadCrumbs {
   static getCrumbTest() {
     let parent = new BreadCrumbs(undefined, "parent")
     let breadcrumbs = new BreadCrumbs({}, "my name", parent)
-    BreadCrumbs._.bassert(1, breadcrumbs.crumb==parent, "does not return parent given on construction ");
+    BreadCrumbs._.bassert(1, breadcrumbs.caller==parent, "does not return parent given on construction ");
   }
   static isDefinedTest() {
     BreadCrumbs._.bassert(1, BreadCrumbs.isDefined(""), "Empty String is not accepted as defined")
@@ -704,23 +716,27 @@ class BreadCrumbs {
  */
 class Setting extends BreadCrumbs {
   //#region member variables
-  static #ROOT = "/"
+  static #ROOT_KEY = "/"
+  #children = {}
+  #notetypes = {}
+  #spec = {}
   #frontmatterYAML = {}
   #renderYAML = {}
-  #children = {}
-  #spec = {}
   get spec() {return this.#spec }
   get frontmatterYAML() {return this.getFrontmatterYAML() }
   get renderYAML() {return this.getRenderYAML() }
   //#endregion member variables
   constructor(literal, key=undefined, caller=undefined) {
-    super(literal, key === undefined ? Setting.#ROOT : key, caller)
+    super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
     this.throwIfUndefined(literal)
     this.#spec = new SpecManager(this.literal, undefined, this)
+    this.#notetypes = new NoteTypesManager(this.literal, undefined, this)
     for (const [key, value] of Object.entries(this.literal)) {
       if(BreadCrumbs.isOfType(value, "object")) {
-        if(!SpecManager.isSpec(key))
+        if(!this.#isHandlersKey(key)) {
           this.#children[key] = new Setting(value, key, this)  
+        } else {
+        }
       } else {
         if(this.spec.render)
           this.#renderYAML[key] = value;
@@ -729,16 +745,27 @@ class Setting extends BreadCrumbs {
       }
     }
   }
+  #isHandlersKey(key) {
+    return SpecManager.isHandlerKey(key) || 
+           NoteTypesManager.isHandlerKey(key)
+  }
   async createNote(tp) {
-    let type = Setting.DEFAULT_TYPE
-    let typeKeys = Object.keys(this.#spec.notetypes)
-    if(typeKeys.length > 1) {
+    let type
+    let typeKeys = Object.keys(this.#notetypes.notetypes)
+    if(typeKeys.length == 0) {
+      type = this.#notetypes.defaultType
+    } else if(typeKeys.length == 1) {
+      type = this.#notetypes.notetypes[typeKeys[0]]
+    } else if(typeKeys.length > 1) {
       let typekey = await tp.system.suggester(typeKeys, typeKeys, 
-        false, TYPE_PROMPT, TYPE_MAX_ENTRIES);
-      if(typekey)
-        type = this.#spec.notetypes[typekey]
+        false, TYPE_PROMPT, TYPE_MAX_ENTRIES);      
+      if(!typekey) {
+        return Dialog.Cancel
+      } else {
+        type = this.#notetypes.notetypes[typekey]
+      }
     }
-}
+  }
   getFrontmatterYAML() {
     let frontmatterYAML = {}
     Object.assign(frontmatterYAML, this.#frontmatterYAML)
@@ -781,7 +808,7 @@ class Setting extends BreadCrumbs {
   }
   static toStringTest() {
     let str = new Setting({}).toString()
-    Setting._.bassert(1, str.contains(Setting.#ROOT), "result does not contain root string");
+    Setting._.bassert(1, str.contains(Setting.#ROOT_KEY), "result does not contain root string");
     str = new Setting({}, "my Name").toString()
     Setting._.bassert(2, str.contains("my Name"), "result does not contain Setting key");
     let setting = new Setting({}, "my Name")
@@ -855,89 +882,47 @@ class Setting extends BreadCrumbs {
 }
 
 /** specification parser */
-class SpecManager extends BreadCrumbs {
+class SpecManager extends BreadCrumbs { 
   //#region member variables
   static SPEC_KEY = "_SPEC"
-  static NOTETYPES_KEY = "NOTETYPES"
-  static DEFAULT_TYPE = 
-    {MARKER: "",
-      DATE: false,
-      TITLE_BEFORE_DATE: "",
-      DATEFORMAT: "YYYY-MM-DD",
-    }
-  #notetypes = {}
   #render = false
   get render() {return this.#render}
-  get notetypes() {return this.#notetypes}
   //#endregion member variables
   constructor(literal, key, caller) {
     let specLiteral
-    if(literal!=undefined) {
+    if(literal!=undefined)
       specLiteral = literal[SpecManager.SPEC_KEY];
-      if(specLiteral==undefined) specLiteral = {}
-    }
     super(specLiteral, key === undefined ? SpecManager.SPEC_KEY : key, caller)
+    specLiteral = undefined
     this.throwIfUndefined(literal)
     this.throwIfUndefined(caller)
     this.throwIfIsNotOfType(caller, "Setting")
-    let callersParent = caller.crumb
-    let callersParentSpecManager
+    let callersParent = caller.caller
+    let callersParentSpec
     if(callersParent!=undefined) {
-      callersParentSpecManager = callersParent.spec
+      callersParentSpec = callersParent.spec
     }
-    this.createNoteTypesOrThrow(callersParent==undefined)
     // render
     // ======
-    let literalRender = specLiteral["render"]
-    let parentRender =
-      callersParentSpecManager ? callersParentSpecManager["render"] : false
-    this.#render = literalRender!=undefined ? literalRender : parentRender
+    let defaultRender = false
+    let literalRender = this.literal!=undefined ? 
+                        this.literal["render"] : 
+                        undefined
+    let parentRender = callersParentSpec!=undefined ? 
+                       callersParentSpec["render"] :
+                       undefined
+    this.#render = literalRender!=undefined ? literalRender : 
+                   parentRender!=undefined ? parentRender :
+                   defaultRender
   }
-  static isSpec(key) {
-    return (key==SpecManager.SPEC_KEY || key==SpecManager.NOTETYPES_KEY)
-  }
-  createNoteTypesOrThrow(isRoot) {
-    let literal = this.literal[SpecManager.NOTETYPES_KEY]
-    if(literal == undefined) 
-      return
-    if(!isRoot)
-      throw new SettingError(this.constructor.name + " " + constructor,
-      "Breadcrumbs: '" + this.toBreadCrumbs() +
-      "'\n   " + "notetypes can only be defined at root level" +
-       "\n   " + "Move your 'NOTETYPES' definition up.")
-    for (const [name, entry] of Object.entries(literal)) {
-      this.throwIfIsNotOfType(entry, "object")
-      for (const [key, value] of Object.entries(entry)) {
-        let allowedKeys = 
-          ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
-        if(!allowedKeys.contains(key)) 
-          throw new SettingError(this.constructor.name + " " + constructor,
-          "Breadcrumbs: '" + this.toBreadCrumbs() +
-          "'\n   '" + value + "' is no known note type definition key." +
-          "\n    Remove unknown key from your note type definitions." +
-          "\n   " + "Known keys are: '" + allowedKeys + "'")
-        switch(key) {
-        case "DATE": 
-          this.throwIfIsNotOfType(value,"boolean")
-          break
-        case "MARKER":
-        case "TITLE":
-        case "DATEFORMAT":
-          this.throwIfIsNotOfType(value,"string")
-          break
-        }
-      }
-      this.#notetypes[name] = 
-        Object.assign({}, Setting.DEFAULT_TYPE, entry)
-    }
-  }
+  static isHandlerKey(key) { return (key==SpecManager.SPEC_KEY) }
   //#region SpecManager tests
   static _ = null;
   static test(outputObj) {
     SpecManager._ = new TestSuite("SpecManager", outputObj);
     SpecManager._.run(SpecManager.constructorTest);
     SpecManager._.run(SpecManager.toStringTest);
-    SpecManager._.run(SpecManager.isSpecTest);
+    SpecManager._.run(SpecManager.isHandlerKeyTest);
     SpecManager._.run(SpecManager.renderOptionTest);
     SpecManager._.destruct();
     SpecManager._ = null;
@@ -961,9 +946,9 @@ class SpecManager extends BreadCrumbs {
     let str = new SpecManager({}, "myName", setting).toString()
     SpecManager._.bassert(1, str.contains("myName"), "result does not contain name string")
   }
-  static isSpecTest() {
-    SpecManager._.bassert(1, SpecManager.isSpec("_SPEC"), "Spec key is not identified as '_SPEC'")
-    SpecManager._.bassert(2, !SpecManager.isSpec("SPEC"), "'SPEC' is accepted as SPEC key")
+  static isHandlerKeyTest() {
+    SpecManager._.bassert(1, SpecManager.isHandlerKey("_SPEC"), "key is not identified as '_SPEC'")
+    SpecManager._.bassert(2, !SpecManager.isHandlerKey("SPEC"), "'SPEC' is accepted as key")
   }
   static renderOptionTest() {
     let literal1 = {}
@@ -1006,6 +991,105 @@ class SpecManager extends BreadCrumbs {
   }
   //#endregion SpecManager tests
 }
+
+/** notetypes parser */
+class NoteTypesManager extends BreadCrumbs {
+  //#region member variables
+  static NOTETYPES_KEY = "NOTETYPES"
+  static TYPES_KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
+  static #DEFAULT_TYPE = 
+    { MARKER: "",
+      DATE: false,
+      TITLE_BEFORE_DATE: "",
+      DATEFORMAT: "YYYY-MM-DD",
+    }
+  #notetypes = {}
+  get defaultType() {return NoteTypesManager.#DEFAULT_TYPE}
+  get notetypes() {return this.#notetypes}
+  //#endregion member variables
+  constructor(literal, key, caller) {
+    let typesLiteral
+    if(literal!=undefined)
+      typesLiteral = literal[NoteTypesManager.NOTETYPES_KEY];
+    super(typesLiteral, key === undefined ? NoteTypesManager.NOTETYPES_KEY : key, caller)
+    this.throwIfUndefined(caller)
+    this.throwIfIsNotOfType(caller, "Setting")
+    if(this.literal != undefined && !this.caller.isRoot())
+      throw new SettingError(this.constructor.name + " " + constructor,
+      "Breadcrumbs: '" + this.toBreadCrumbs() +
+      "'\n   " + "notetypes can only be defined at root level" +
+      "\n   " + "Move your 'NOTETYPES' definition up.")
+    this.throwIfUndefined(literal)
+    if(this.literal==undefined) 
+      return
+    this.createNoteTypesOrThrow()
+  }
+  createNoteTypesOrThrow() {
+    for (const [name, entry] of Object.entries(this.literal)) {
+      this.throwIfIsNotOfType(entry, "object")
+      for (const [key, value] of Object.entries(entry)) {
+        let allowedKeys = NoteTypesManager.TYPES_KEYS
+        if(!allowedKeys.contains(key)) 
+          throw new SettingError(this.constructor.name + " " + constructor,
+            "Breadcrumbs: '" + this.toBreadCrumbs() +
+            "'\n   '" + value + "' is no known note type definition key." +
+            "\n    Remove unknown key from your note type definitions." +
+            "\n   " + "Known keys are: '" + allowedKeys + "'")
+        switch(key) {
+        case "DATE": 
+          this.throwIfIsNotOfType(value,"boolean")
+          break
+        case "MARKER":
+        case "TITLE":
+        case "DATEFORMAT":
+          this.throwIfIsNotOfType(value,"string")
+          break
+        }
+      }
+      this.#notetypes[name] = 
+        Object.assign({}, NoteTypesManager.#DEFAULT_TYPE, entry)
+    }
+  }
+  static isHandlerKey(key) { return (key==NoteTypesManager.NOTETYPES_KEY) }
+  //#region NoteTypesManager tests
+  static _ = null;
+  static test(outputObj) {
+    NoteTypesManager._ = new TestSuite("NoteTypesManager", outputObj);
+    NoteTypesManager._.run(NoteTypesManager.constructorTest);
+    NoteTypesManager._.run(NoteTypesManager.toStringTest);
+    NoteTypesManager._.run(NoteTypesManager.isHandlerKeyTest);
+    NoteTypesManager._.destruct();
+    NoteTypesManager._ = null;
+  }
+  static constructorTest() {
+    let setting = new Setting({}, "its Name")
+    let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
+    NoteTypesManager._.shouldAssert(1, NoteTypesManager._tryConstruct, undefined, "myName", setting);
+    NoteTypesManager._.shouldAssert(2, NoteTypesManager._tryConstruct, {}, undefined, setting);
+    NoteTypesManager._.shouldAssert(3, NoteTypesManager._tryConstruct, {}, "myName", undefined);
+    NoteTypesManager._.assert(4, NoteTypesManager._tryConstruct, {}, "my Name", setting);
+    NoteTypesManager._.assert(5, NoteTypesManager._tryConstruct, {}, 22, setting);
+    NoteTypesManager._.assert(6, NoteTypesManager._tryConstruct, {}, Symbol('a'), setting);
+    let specMan = new NoteTypesManager({}, "myName", setting)
+    NoteTypesManager._.bassert(7, specMan instanceof BreadCrumbs, "'NoteTypesManager' has to be an instance of 'BreadCrumbs'");
+    NoteTypesManager._.bassert(8, specMan.constructor==NoteTypesManager, "the constructor property is not 'NoteTypesManager'")
+    NoteTypesManager._.shouldAssert(9, NoteTypesManager._tryConstruct, {}, "SPEC", breadCrumbs);
+  }
+  static toStringTest() {
+    let setting = new Setting({}, "its Name")
+    let str = new NoteTypesManager({}, "myName", setting).toString()
+    NoteTypesManager._.bassert(1, str.contains("myName"), "result does not contain name string")
+  }
+  static isHandlerKeyTest() {
+    NoteTypesManager._.bassert(1, NoteTypesManager.isHandlerKey("NOTETYPES"), "key is not identified as 'NOTETYPES'")
+    NoteTypesManager._.bassert(2, !NoteTypesManager.isHandlerKey("_NOTETYPES"), "'_NOTETYPES' is accepted as key")
+  }
+
+  static _tryConstruct(arg1, arg2, arg3) {
+    let specMan = new NoteTypesManager(arg1, arg2, arg3);
+  }
+  //#endregion NoteTypesManager tests
+}
 //#endregion code 
 /** Runs all tests, if TESTING is set; output to current note (indirect)
  * @param {*} outputObj 
@@ -1029,7 +1113,7 @@ async function main(tp, app) {
   let renderYAML = {"____": "" }
   try {
     let setting = new Setting(Test,undefined,undefined);
-    await setting.createNote(tp);
+    let dlgStatus = await setting.createNote(tp);
     frontmatterYAML = setting.frontmatterYAML
     Object.assign(renderYAML, setting.renderYAML)
   } catch(e) {/* returns errYAML or rethrows */
