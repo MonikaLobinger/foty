@@ -78,25 +78,25 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
  * region USER CONFIGURATION.
  */
 //#region CONFIGURATION
-  // This region simulates a configuration dialog
-  // It contains a configuration defining section, which user would never
-  // see in a configuration dialog, so it is named DONTTOUCH.
-  // And it contains the value section, which user can edit, so it is
-  // named USER CONFIGURATION.
-  //
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  // Only make changes in region USER CONFIGURATION
-  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  //#region DONTTOUCH
-  //#endregion DONTTOUCH
-  //#region USER CONFIGURATION
-  //#endregion USER CONFIGURATION
-  //#region test configurations
-  // Specification options:
-  // - render
-  //   default: false, as long as not set
-  //            if set, the value will be inherited by contained collections
-  //            as long as set again
+// This region simulates a configuration dialog
+// It contains a configuration defining section, which user would never
+// see in a configuration dialog, so it is named DONTTOUCH.
+// And it contains the value section, which user can edit, so it is
+// named USER CONFIGURATION.
+//
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Only make changes in region USER CONFIGURATION
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//  #region DONTTOUCH
+//  #endregion DONTTOUCH
+//  #region USER CONFIGURATION
+//  #endregion USER CONFIGURATION
+//  #region test configurations
+//   Specification options:
+//   - render
+//     default: false, as long as not set
+//              if set, the value will be inherited by contained collections
+//              as long as set again
   const TYPE_PROMPT         = "Typ wählen"
   const TYPE_MAX_ENTRIES    = 10 // Max entries in "type" drop down list
   const Test = {
@@ -124,7 +124,7 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
     audio: {marker: "{a}", pict: "a.jpg", frontmatter: {private: true, }, },
     plant: {frontmatter: {kind: "", seed: "", } },
   }
-  //#endregion test configurations
+//  #endregion test configurations
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
@@ -188,9 +188,9 @@ class FotyError extends Error {
 
 /** User Error thrown from Setting tree */
 class SettingError extends FotyError {
-  //#region member variables
+//  #region member variables
   section
-  //#endregion member variables
+//  #endregion member variables
   constructor(section = "Setting", ...params) {
     super(...params)
     this.name = "Setting Error"
@@ -200,9 +200,9 @@ class SettingError extends FotyError {
 
 /** Programming Error */
 class CodingError extends FotyError {
-  //#region member variables
+//  #region member variables
   section
-  //#endregion member variables
+//  #endregion member variables
   constructor(section = "Setting", ...params) {
     super(...params)
     this.name = "Coding Error"
@@ -212,7 +212,7 @@ class CodingError extends FotyError {
 
 /** Runs unit tests */
 class TestSuite {
-  //#region member variables
+//  #region member variables
   static ok = "\u2713"
   static nok = "\u2718"
   #name
@@ -228,7 +228,7 @@ class TestSuite {
   d = "details"
   get name() {return this.#name }
   e = "none"
-  //#endregion member variables
+//  #endregion member variables
 
   /** Sets up the suite
    * @param {String} name - name of the suite
@@ -447,10 +447,10 @@ const Dialog = {
  * 
  */
 class Event {
-  //#region member variables
+//  #region member variables
   name
   callbacks
-  //#endregion member variables
+//  #endregion member variables
 
   constructor(name) {
     this.name = name
@@ -460,7 +460,7 @@ class Event {
   registerCallback(callback, instance) {
     this.callbacks.push([callback, instance])
   }
-  //#region Event tests
+//  #region Event tests
   static _ = null
   static test(outputObj) {
     Event._ = new TestSuite("Event", outputObj)
@@ -493,16 +493,16 @@ class Event {
     let e = new Event("eventname")
     e.registerCallback(arg1, arg2)
   }
-  //#endregion Event tests
+//  #endregion Event tests
 }
 
 /** Event manager
  * 
  */
 class Dispatcher {
-  //#region member variables
+//  #region member variables
   events
-  //#endregion member variables
+//  #endregion member variables
   constructor() {
     this.events = {}
   }
@@ -521,7 +521,7 @@ class Dispatcher {
       callback(instance, eventArgs)
     })
   }
-  //#region Dispatcher tests
+//  #region Dispatcher tests
   static _ = null
   static test(outputObj) {
     Dispatcher._ = new TestSuite("Dispatcher", outputObj)
@@ -570,20 +570,20 @@ class Dispatcher {
     d.registerEvent(name)
     d.dispatchEvent(name, args)
   }
-  //#endregion Dispatcher tests
+//  #endregion Dispatcher tests
 }
 //#endregion helper classes
 //#region code 
 /** superclass for all settings classes */
 class BreadCrumbs {
-  //#region member variables
+//  #region member variables
   #literal
   #key
   #caller
   get literal() {return this.#literal }
   get key() {return this.#key }
   get caller() {return this.#caller }
-  //#endregion member variables
+//  #endregion member variables
   constructor(literal, key, caller) {
     this.#literal = literal
     this.#key = key
@@ -649,7 +649,7 @@ class BreadCrumbs {
     return answer
   }
 
-  //#region BreadCrumbs tests
+//  #region BreadCrumbs tests
   static _ = null
   static test(outputObj) {
     BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj)
@@ -708,14 +708,14 @@ class BreadCrumbs {
   static _tryConstruct(arg1, arg2) {
     let breadcrumbs = new BreadCrumbs(arg1, arg2)
   }
-  //#endregion BreadCrumbs tests
+//  #endregion BreadCrumbs tests
 }
 
 /** most elaborated subclass 
  * 
  */
 class Setting extends BreadCrumbs {
-  //#region member variables
+//  #region member variables
   static #ROOT_KEY = "/"
   #children = {}
   #spec = {}
@@ -725,7 +725,7 @@ class Setting extends BreadCrumbs {
   get spec() {return this.#spec }
   get frontmatterYAML() {return this.getFrontmatterYAML() }
   get renderYAML() {return this.getRenderYAML() }
-  //#endregion member variables
+//  #endregion member variables
   constructor(literal, key=undefined, caller=undefined) {
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
     this.throwIfUndefined(literal)
@@ -782,7 +782,7 @@ class Setting extends BreadCrumbs {
     }
     return renderYAML
   }
-  //#region Setting tests
+//  #region Setting tests
   static _ = null
   static test(outputObj) {
     BreadCrumbs.test(outputObj)
@@ -889,16 +889,16 @@ class Setting extends BreadCrumbs {
   static _tryConstruct(arg1, arg2) {
     let settings = new Setting(arg1, arg2)
   }
-  //#endregion Setting tests
+//  #endregion Setting tests
 }
 
 /** specification parser */
 class SpecManager extends BreadCrumbs { 
-  //#region member variables
+//  #region member variables
   static SPEC_KEY = "_SPEC"
   #render = false
   get render() {return this.#render}
-  //#endregion member variables
+//  #endregion member variables
   constructor(literal, key, caller) {
     let specLiteral
     if(literal!=undefined)
@@ -927,7 +927,7 @@ class SpecManager extends BreadCrumbs {
                    defaultRender
   }
   static isHandlerKey(key) { return (key==SpecManager.SPEC_KEY) }
-  //#region SpecManager tests
+//  #region SpecManager tests
   static _ = null
   static test(outputObj) {
     SpecManager._ = new TestSuite("SpecManager", outputObj)
@@ -1004,12 +1004,12 @@ class SpecManager extends BreadCrumbs {
   static _tryConstruct(arg1, arg2, arg3) {
     let specMan = new SpecManager(arg1, arg2, arg3)
   }
-  //#endregion SpecManager tests
+//  #endregion SpecManager tests
 }
 
 /** notetypes parser */
 class NoteTypesManager extends BreadCrumbs {
-  //#region member variables
+//  #region member variables
   static NOTETYPES_KEY = "NOTETYPES"
   static TYPES_KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
   static #DEFAULT_TYPE = 
@@ -1021,7 +1021,7 @@ class NoteTypesManager extends BreadCrumbs {
   #notetypes = {}
   get defaultType() {return NoteTypesManager.#DEFAULT_TYPE}
   get notetypes() {return this.#notetypes}
-  //#endregion member variables
+//  #endregion member variables
   constructor(literal, key, caller) {
     let typesLiteral
     if(literal!=undefined)
@@ -1066,7 +1066,7 @@ class NoteTypesManager extends BreadCrumbs {
     }
   }
   static isHandlerKey(key) { return (key==NoteTypesManager.NOTETYPES_KEY) }
-  //#region NoteTypesManager tests
+//  #region NoteTypesManager tests
   static _ = null
   static test(outputObj) {
     NoteTypesManager._ = new TestSuite("NoteTypesManager", outputObj)
@@ -1113,7 +1113,7 @@ class NoteTypesManager extends BreadCrumbs {
   static _tryConstruct(arg1, arg2, arg3) {
     let specMan = new NoteTypesManager(arg1, arg2, arg3)
   }
-  //#endregion NoteTypesManager tests
+//  #endregion NoteTypesManager tests
 }
 //#endregion code 
 /** Runs all tests, if TESTING is set output to current note (indirect)
