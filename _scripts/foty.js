@@ -1,19 +1,19 @@
 module.exports = main // templater call: "await tp.user.foty(tp, app)"
 /** Script for obsidian, templater extension needed
  * Creates new notes with frontmatter and text skeleton based on note types
- * 
+ *
  * Basics
  * ======
  * Obsidian creates a new note as empty note.
  * Notes of given kinds have some text in it in common. This text can be
- * inserted automatically with a template. One has to write the templates 
- * for the kinds of notes one uses, choose the correct one on new note 
- * creation and the skeleton will be inserted. 
- * Code can also be written in javascript in case templater extension is 
+ * inserted automatically with a template. One has to write the templates
+ * for the kinds of notes one uses, choose the correct one on new note
+ * creation and the skeleton will be inserted.
+ * Code can also be written in javascript in case templater extension is
  * installed. This can be done within the template in specific code sections.
  * With templater parts of javascript code can be written in javascript files
  * which each export a function. This function can be called from within the
- * code section. 
+ * code section.
  *
  * Problem description
  * ===================
@@ -21,50 +21,50 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
  * template has to be changed. If general needs change, all templates have
  * to be changed. Elaborated Templates are difficult to maintain. Not all
  * users of obsidian can write javascript.
- * 
+ *
  * Intention of foty
  * =================
  * Let user needs be configurable and write a full note skeleton from given
  * configuration.
  * For changing needs only configuration should have to be changed.
- * 
+ *
  * Presumptions
  * ============
- * Note skeleton will contain a frontmatter header and a rendered part. 
+ * Note skeleton will contain a frontmatter header and a rendered part.
  * Frontmatter header has frontmatter entries. Rendered part has plain text
- * and text based on variable output, e.g. date or links to resources. 
+ * and text based on variable output, e.g. date or links to resources.
  *
  * On new unnamed note creation note name will be created. Some kinds of
  * notes have a marker in its names, which do not belong to the semantic
  * title.
- * 
+ *
  * This all has to be configurable based on kind of note. Different kinds
  * of notes in foty are called 'types'. The configuration of a type should
- * lead to expected output, after foty has identified the type and the 
+ * lead to expected output, after foty has identified the type and the
  * (semantic) title.
- * 
+ *
  * Note types can be bound to folders.
- * 
+ *
  * Realization
  * ===========
  * foty consists of two parts: This javascript file and the template file,
  * which calls this script.
- * 
+ *
  * The script will return a list of key/value entries. One of the keys
  * is '____'. Before this key all entries are frontmatter entries, entries
  * after this keys are variables to be used in render part.
- * 
+ *
  * The template will write out all frontmatter entries in notes frontmatter
- * header section. Then it will write the render section depending on 
- * variables. 
- * 
+ * header section. Then it will write the render section depending on
+ * variables.
+ *
  * Connection between script and template is tight, the template has to know
  * the names of the variables.
- * 
- * One could have realized it the way, that all the output is created from 
+ *
+ * One could have realized it the way, that all the output is created from
  * script file, but than changes in rendering only would require javascript
  * editing.
- * 
+ *
  * Usage
  * =====
  * Different parts of codes are in different regions.
@@ -73,7 +73,7 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
  * Regions can be nested.
  * Using Visual Studio Code (and perhaps other source code editors) regions
  * marked this way can be folded for convenience.
- * 
+ *
  * Some settings for the script can be adapted to user needs. Those are in
  * region USER CONFIGURATION.
  */
@@ -97,59 +97,64 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
 //     default: false, as long as not set
 //              if set, the value will be inherited by contained collections
 //              as long as set again
-  const TYPE_PROMPT         = "Typ wählen"
-  const TYPE_MAX_ENTRIES    = 10 // Max entries in "type" drop down list
-  const Test = {
-    NOTETYPES: {
-      diary: {MARKER: "", DATE: true, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD" },
-      citation: {MARKER: "°", }
+const TYPE_PROMPT = "Typ wählen"
+const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
+const Test = {
+  NOTETYPES: {
+    diary: {
+      MARKER: "",
+      DATE: true,
+      TITLE_BEFORE_DATE: "",
+      DATEFORMAT: "YYYY-MM-DD",
     },
-    a: 23,
-    // => in frontmatter section
-    // a:23
-    c: {
-      _SPEC: {render: true, },
-      pict: "ja",
+    citation: {MARKER: "°"},
+  },
+  a: 23,
+  // => in frontmatter section
+  // a:23
+  c: {
+    _SPEC: {render: true},
+    pict: "ja",
+    d: {
+      _SPEC: {render: false},
       d: {
-        _SPEC: {render: false },
-        d: {
-          gloria: "halleluja"
-        }
-      }
+        gloria: "halleluja",
+      },
     },
-    // => in render section
-    // b:ja
-  }
-  const Test2 = {
-    audio: {marker: "{a}", pict: "a.jpg", frontmatter: {private: true, }, },
-    plant: {frontmatter: {kind: "", seed: "", } },
-  }
+  },
+  // => in render section
+  // b:ja
+}
+const Test2 = {
+  audio: {marker: "{a}", pict: "a.jpg", frontmatter: {private: true}},
+  plant: {frontmatter: {kind: "", seed: ""}},
+}
 //  #endregion test configurations
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
 const TESTING = false
-if(TESTING) DEBUG = false
+if (TESTING) DEBUG = false
 // nach @todo und @remove suchen
 
 /** Logs all parameters to console, if "DEBUG" is set to true
- * @param  {...any} strs 
+ * @param  {...any} strs
  */
 function dbg(...strs) {
   function dbgLevel(callStack) {
     let answer = 0
     let stack = callStack.split("\n")
-    stack.every(str => {
+    stack.every((str) => {
       answer++
-      if(str.includes("at Object.main [")) return false
+      if (str.includes("at Object.main [")) return false
       return true
     })
     return answer
   }
-  if(DEBUG) {
+  if (DEBUG) {
     let output = ""
-    let lvl = dbgLevel((new Error()).stack)
-    while(--lvl) output += " "
+    let lvl = dbgLevel(new Error().stack)
+    while (--lvl) output += " "
     for (const str of strs) {
       output += str + " "
     }
@@ -188,9 +193,9 @@ class FotyError extends Error {
 
 /** User Error thrown from Setting tree */
 class SettingError extends FotyError {
-//  #region member variables
+  //  #region member variables
   section
-//  #endregion member variables
+  //  #endregion member variables
   constructor(section = "Setting", ...params) {
     super(...params)
     this.name = "Setting Error"
@@ -200,9 +205,9 @@ class SettingError extends FotyError {
 
 /** Programming Error */
 class CodingError extends FotyError {
-//  #region member variables
+  //  #region member variables
   section
-//  #endregion member variables
+  //  #endregion member variables
   constructor(section = "Setting", ...params) {
     super(...params)
     this.name = "Coding Error"
@@ -212,7 +217,7 @@ class CodingError extends FotyError {
 
 /** Runs unit tests */
 class TestSuite {
-//  #region member variables
+  //  #region member variables
   static ok = "\u2713"
   static nok = "\u2718"
   #name
@@ -226,9 +231,11 @@ class TestSuite {
   f = "failing"
   s = "success"
   d = "details"
-  get name() {return this.#name }
+  get name() {
+    return this.#name
+  }
   e = "none"
-//  #endregion member variables
+  //  #endregion member variables
 
   /** Sets up the suite
    * @param {String} name - name of the suite
@@ -237,21 +244,31 @@ class TestSuite {
   constructor(name, outputObj) {
     this.#name = name ? name : "Unknown"
     this.o = outputObj
-    if(this.o[this.f]==undefined) this.o[this.f] = this.e
-    if(this.o[this.s]==undefined) this.o[this.s] = this.e
-    if(this.o[this.d]==undefined) this.o[this.d] = this.e
+    if (this.o[this.f] == undefined) this.o[this.f] = this.e
+    if (this.o[this.s] == undefined) this.o[this.s] = this.e
+    if (this.o[this.d] == undefined) this.o[this.d] = this.e
   }
-  toString() {return " °°" + this.constructor.name + " " + this.name }
+  toString() {
+    return " °°" + this.constructor.name + " " + this.name
+  }
 
   /** Shows results resets
    */
   destruct() {
-    let succStr = this.#succeeded==1 ? "test" : "tests"
-    let failStr = this.#failed==1 ? "test" : "tests"
-    if(this.#failed==0) {
-      this.#praut(this.s, `Suite "${this.#name}": ${this.#succeeded} ${succStr} succeeded`)
+    let succStr = this.#succeeded == 1 ? "test" : "tests"
+    let failStr = this.#failed == 1 ? "test" : "tests"
+    if (this.#failed == 0) {
+      this.#praut(
+        this.s,
+        `Suite "${this.#name}": ${this.#succeeded} ${succStr} succeeded`
+      )
     } else {
-      this.#praut(this.f, `Suite "${this.#name}": ${this.#failed} ${failStr} failed, ${this.#succeeded} succeeded`)
+      this.#praut(
+        this.f,
+        `Suite "${this.#name}": ${this.#failed} ${failStr} failed, ${
+          this.#succeeded
+        } succeeded`
+      )
     }
     this.#name = null
     this.o = null
@@ -270,17 +287,30 @@ class TestSuite {
     this.#asserts = 0
     try {
       fn()
-      let cases = this.#cases==1 ? "case" : "cases"
-      if(0==this.#asserts) {
+      let cases = this.#cases == 1 ? "case" : "cases"
+      if (0 == this.#asserts) {
         this.#succeeded++
-        this.#praut(this.d, `${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.ok}`)
+        this.#praut(
+          this.d,
+          `${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${
+            TestSuite.ok
+          }`
+        )
       } else {
         this.#failed++
-        this.#praut(this.d, `${TestSuite.nok}${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.nok}`)
+        this.#praut(
+          this.d,
+          `${TestSuite.nok}${this.#name}:${this.#fname}(${
+            this.#cases
+          } ${cases}) ${TestSuite.nok}`
+        )
       }
-    } catch(e) {
-      console.error("ERROR in TestSuite:run\n" +
-        "You probably caused an error in one of your tests which is not test specific\n" + e)
+    } catch (e) {
+      console.error(
+        "ERROR in TestSuite:run\n" +
+          "You probably caused an error in one of your tests which is not test specific\n" +
+          e
+      )
     }
     this.#fname = ""
     this.#cases = 0
@@ -320,21 +350,30 @@ class TestSuite {
       this.#fname = fn.name
       this.#asserts = 0
       try {
-        fn()
-          .then((fnAnswer) => {
-            let cases = this.#cases==1 ? "case" : "cases"
-            if(0==this.#asserts) {
-              this.#succeeded++
-              this.#praut(this.d, `${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.ok}`)
-            } else {
-              this.#failed++
-              this.#praut(this.d, `${TestSuite.nok}${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${TestSuite.nok}`)
-            }
-            this.#fname = ""
-            this.#cases = 0
-            resolve(fn.name + " resolved")
-          })
-      } catch(e) {
+        fn().then((fnAnswer) => {
+          let cases = this.#cases == 1 ? "case" : "cases"
+          if (0 == this.#asserts) {
+            this.#succeeded++
+            this.#praut(
+              this.d,
+              `${this.#name}:${this.#fname}(${this.#cases} ${cases}) ${
+                TestSuite.ok
+              }`
+            )
+          } else {
+            this.#failed++
+            this.#praut(
+              this.d,
+              `${TestSuite.nok}${this.#name}:${this.#fname}(${
+                this.#cases
+              } ${cases}) ${TestSuite.nok}`
+            )
+          }
+          this.#fname = ""
+          this.#cases = 0
+          resolve(fn.name + " resolved")
+        })
+      } catch (e) {
         console.error(e)
         this.#fname = ""
         this.#cases = 0
@@ -351,9 +390,12 @@ class TestSuite {
   bassert(errcase, isTrue, message) {
     this.#cases++
     //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
-    if(!isTrue) {
+    if (!isTrue) {
       this.#asserts++
-      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} - ${message}`, "background: rgba(255, 99, 71, 0.5)")
+      console.log(
+        `%c   ${this.#name}/${this.#fname}:case ${errcase} - ${message}`,
+        "background: rgba(255, 99, 71, 0.5)"
+      )
     }
   }
 
@@ -367,10 +409,12 @@ class TestSuite {
     try {
       //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
       fn(...params)
-    } catch(err) {
+    } catch (err) {
       this.#asserts++
-      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} - ${err.message}`, "background: rgba(255, 99, 71, 0.5)")
-      
+      console.log(
+        `%c   ${this.#name}/${this.#fname}:case ${errcase} - ${err.message}`,
+        "background: rgba(255, 99, 71, 0.5)"
+      )
     }
   }
 
@@ -385,13 +429,17 @@ class TestSuite {
     try {
       //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
       fn(...params)
-    } catch(err) {
+    } catch (err) {
       hasAsserted = true
     }
-    if(!hasAsserted) {
+    if (!hasAsserted) {
       this.#asserts++
-      console.log(`%c   ${this.#name}/${this.#fname}:case ${errcase} should assert - ${message}`, "background: rgba(255, 99, 71, 0.5)")
-      
+      console.log(
+        `%c   ${this.#name}/${
+          this.#fname
+        }:case ${errcase} should assert - ${message}`,
+        "background: rgba(255, 99, 71, 0.5)"
+      )
     }
   }
 
@@ -399,17 +447,17 @@ class TestSuite {
    * @param {string} str
    */
   #praut(key, str) {
-    if(key!=this.s && key!=this.f && key!=this.d) {
+    if (key != this.s && key != this.f && key != this.d) {
       let errstr = "%c" + key
       console.log(errstr, "background: rgba(255, 99, 71, 0.5)")
-    } else if(this.o[key]==this.e) {
+    } else if (this.o[key] == this.e) {
       this.o[key] = str
-    } else if(str[0]==TestSuite.nok) {
-      if(key==this.d) {
+    } else if (str[0] == TestSuite.nok) {
+      if (key == this.d) {
         let outParts = this.o[key].split(TestSuite.nok)
         let len = outParts.length
         let okPart = outParts[len - 1]
-        if(len==1) {
+        if (len == 1) {
           let newLastPart = str.substring(1) + "\n          " + okPart
           outParts[outParts.length - 1] = newLastPart
           this.o[key] = outParts.join()
@@ -433,34 +481,38 @@ class TestError extends Error {
     super(message, ...params)
     this.name = "TestError"
   }
-  toString() {return " °°" + this.constructor.name + " " + this.name }
+  toString() {
+    return " °°" + this.constructor.name + " " + this.name
+  }
 }
 //#endregion debug,test and error
 //#region globals
 const Dialog = {
-  Ok: 'Ok',
-  Cancel: 'Cancel',
+  Ok: "Ok",
+  Cancel: "Cancel",
 }
-//#endregion globals 
+//#endregion globals
 //#region helper classes
 /** Events that Dispatcher stores and distribute to listeners
- * 
+ *
  */
 class Event {
-//  #region member variables
+  //  #region member variables
   name
   callbacks
-//  #endregion member variables
+  //  #endregion member variables
 
   constructor(name) {
     this.name = name
     this.callbacks = []
   }
-  toString() {return " °°" + this.constructor.name + " " + this.name }
+  toString() {
+    return " °°" + this.constructor.name + " " + this.name
+  }
   registerCallback(callback, instance) {
     this.callbacks.push([callback, instance])
   }
-//  #region Event tests
+  //  #region Event tests
   static _ = null
   static test(outputObj) {
     Event._ = new TestSuite("Event", outputObj)
@@ -474,7 +526,11 @@ class Event {
     Event._.assert(1, Event._tryConstruct, undefined)
     Event._.assert(2, Event._tryConstruct, "eventname")
     let event = new Event()
-    Event._.bassert(3, event.constructor==Event, "the constructor property is not Event")
+    Event._.bassert(
+      3,
+      event.constructor == Event,
+      "the constructor property is not Event"
+    )
   }
   static toStringTest() {
     let str = new Event("eventname").toString()
@@ -493,20 +549,22 @@ class Event {
     let e = new Event("eventname")
     e.registerCallback(arg1, arg2)
   }
-//  #endregion Event tests
+  //  #endregion Event tests
 }
 
 /** Event manager
- * 
+ *
  */
 class Dispatcher {
-//  #region member variables
+  //  #region member variables
   events
-//  #endregion member variables
+  //  #endregion member variables
   constructor() {
     this.events = {}
   }
-  toString() {return " °°" + this.constructor.name }
+  toString() {
+    return " °°" + this.constructor.name
+  }
   registerEvent(eventName) {
     var event = new Event(eventName)
     this.events[eventName] = event
@@ -521,7 +579,7 @@ class Dispatcher {
       callback(instance, eventArgs)
     })
   }
-//  #region Dispatcher tests
+  //  #region Dispatcher tests
   static _ = null
   static test(outputObj) {
     Dispatcher._ = new TestSuite("Dispatcher", outputObj)
@@ -536,19 +594,33 @@ class Dispatcher {
   }
   static constructorTest() {
     Dispatcher._.assert(1, Dispatcher._tryConstruct)
-    let dispatcher = new Dispatcher
-    Dispatcher._.bassert(2, dispatcher.constructor==Dispatcher, "the constructor property is not Dispatcher")
+    let dispatcher = new Dispatcher()
+    Dispatcher._.bassert(
+      2,
+      dispatcher.constructor == Dispatcher,
+      "the constructor property is not Dispatcher"
+    )
   }
   static toStringTest() {
     let str = new Dispatcher().toString()
-    Dispatcher._.bassert(1, str.contains("°°"), "does not contain module mark °°")
+    Dispatcher._.bassert(
+      1,
+      str.contains("°°"),
+      "does not contain module mark °°"
+    )
   }
   static registerEventTest() {
     Dispatcher._.assert(1, Dispatcher._tryRegisterEvent, undefined)
     Dispatcher._.assert(1, Dispatcher._tryRegisterEvent, "big bang")
   }
   static addListenerTest() {
-    Dispatcher._.assert(1, Dispatcher._tryAddListener, "big bang", undefined, undefined)
+    Dispatcher._.assert(
+      1,
+      Dispatcher._tryAddListener,
+      "big bang",
+      undefined,
+      undefined
+    )
   }
   static dispatchEventTest() {
     Dispatcher._.assert(1, Dispatcher._tryDispatchEvent, "big bang", undefined)
@@ -570,32 +642,40 @@ class Dispatcher {
     d.registerEvent(name)
     d.dispatchEvent(name, args)
   }
-//  #endregion Dispatcher tests
+  //  #endregion Dispatcher tests
 }
 //#endregion helper classes
-//#region code 
+//#region code
 /** superclass for all settings classes */
 class BreadCrumbs {
-//  #region member variables
+  //  #region member variables
   #literal
   #key
   #caller
-  get literal() {return this.#literal }
-  get key() {return this.#key }
-  get caller() {return this.#caller }
-//  #endregion member variables
+  get literal() {
+    return this.#literal
+  }
+  get key() {
+    return this.#key
+  }
+  get caller() {
+    return this.#caller
+  }
+  //  #endregion member variables
   constructor(literal, key, caller) {
     this.#literal = literal
     this.#key = key
     this.#caller = caller
     this.throwIfUndefined(key, "key")
   }
-  toString() {return "°°°" + this.constructor.name + " " + this.key }
+  toString() {
+    return "°°°" + this.constructor.name + " " + this.key
+  }
 
   toBreadCrumbs() {
     let breadcrumbs = ""
     let sep = ""
-    if(BreadCrumbs.isDefined(this.caller)) {
+    if (BreadCrumbs.isDefined(this.caller)) {
       breadcrumbs += this.caller.toBreadCrumbs()
       sep = "."
     }
@@ -603,31 +683,50 @@ class BreadCrumbs {
     return breadcrumbs
   }
 
-  isRoot() {return !BreadCrumbs.isDefined(this.caller)}
-
-  throwIfUndefined(val, valname = "literal", funame = "constructor", msg = "' is undefined") {
-    if(!BreadCrumbs.isDefined(val))
-      throw new SettingError(this.constructor.name + " " + funame,
-        "Breadcrumbs: '" + this.toBreadCrumbs() +
-        "'\n   '" + valname + msg)
+  isRoot() {
+    return !BreadCrumbs.isDefined(this.caller)
   }
-  throwIfIsNotOfType(val, type = "object", funame = "constructor", msg = "is not of javascript type") {
-    if(!BreadCrumbs.isOfType(val, type))
-      throw new SettingError(this.constructor.name + " " + funame,
-        "Breadcrumbs: '" + this.toBreadCrumbs() +
-        "'\n   " + msg + " '" + type + "'")
+
+  throwIfUndefined(
+    val,
+    valname = "literal",
+    funame = "constructor",
+    msg = "' is undefined"
+  ) {
+    if (!BreadCrumbs.isDefined(val))
+      throw new SettingError(
+        this.constructor.name + " " + funame,
+        "Breadcrumbs: '" + this.toBreadCrumbs() + "'\n   '" + valname + msg
+      )
+  }
+  throwIfIsNotOfType(
+    val,
+    type = "object",
+    funame = "constructor",
+    msg = "is not of javascript type"
+  ) {
+    if (!BreadCrumbs.isOfType(val, type))
+      throw new SettingError(
+        this.constructor.name + " " + funame,
+        "Breadcrumbs: '" +
+          this.toBreadCrumbs() +
+          "'\n   " +
+          msg +
+          " '" +
+          type +
+          "'"
+      )
   }
 
   static isDefined(val) {
-    return (typeof val!="undefined")
+    return typeof val != "undefined"
   }
-  static isOfType(val, type) {// + array null Setting SpecMan Option
+  static isOfType(val, type) {
+    // + array null Setting SpecMan Option
     let answer = false
-    if(type=="null" && val === null)
-      answer = true
-    if(type=="array" && typeof val=="object")
-      answer = Array.isArray(val)
-    else if(typeof val=="object" && type!="object")
+    if (type == "null" && val === null) answer = true
+    if (type == "array" && typeof val == "object") answer = Array.isArray(val)
+    else if (typeof val == "object" && type != "object")
       switch (type) {
         case "Setting":
           answer = val instanceof Setting
@@ -644,12 +743,11 @@ class BreadCrumbs {
         default:
           break
       }
-    else
-      answer = typeof val==type
+    else answer = typeof val == type
     return answer
   }
 
-//  #region BreadCrumbs tests
+  //  #region BreadCrumbs tests
   static _ = null
   static test(outputObj) {
     BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj)
@@ -667,13 +765,29 @@ class BreadCrumbs {
     BreadCrumbs._.shouldAssert(1, BreadCrumbs._tryConstruct, {}, undefined)
     BreadCrumbs._.assert(2, BreadCrumbs._tryConstruct, undefined, "myName")
     let breadcrumbs = new BreadCrumbs(undefined, "TEST KEY")
-    BreadCrumbs._.bassert(3, breadcrumbs instanceof Object, "'BreadCrumbs' has to be an instance of 'Object'")
-    BreadCrumbs._.bassert(4, breadcrumbs instanceof BreadCrumbs, "'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
-    BreadCrumbs._.bassert(5, breadcrumbs.constructor==BreadCrumbs, "the constructor property is not 'BreadCrumbs'")
+    BreadCrumbs._.bassert(
+      3,
+      breadcrumbs instanceof Object,
+      "'BreadCrumbs' has to be an instance of 'Object'"
+    )
+    BreadCrumbs._.bassert(
+      4,
+      breadcrumbs instanceof BreadCrumbs,
+      "'BreadCrumbs' has to be an instance of 'BreadCrumbs'"
+    )
+    BreadCrumbs._.bassert(
+      5,
+      breadcrumbs.constructor == BreadCrumbs,
+      "the constructor property is not 'BreadCrumbs'"
+    )
   }
   static toStringTest() {
     let str = new BreadCrumbs(undefined, "my name").toString()
-    BreadCrumbs._.bassert(1, str.contains("my name"), "result does not contain name given on construction ")
+    BreadCrumbs._.bassert(
+      1,
+      str.contains("my name"),
+      "result does not contain name given on construction "
+    )
   }
   static toBreadCrumbsTest() {
     let parent = new BreadCrumbs(undefined, "parent")
@@ -682,84 +796,128 @@ class BreadCrumbs {
     let parentStr = parent.toBreadCrumbs()
     let childStr = child.toBreadCrumbs()
     let grandChildStr = grandChild.toBreadCrumbs()
-    BreadCrumbs._.bassert(1, parentStr=="parent", "breadCrumbs: '" + parentStr + "' are wrong")
-    BreadCrumbs._.bassert(2, childStr=="parent.child", "breadCrumbs: '" + childStr + "' are wrong")
-    BreadCrumbs._.bassert(3, grandChildStr=="parent.child.grandChild", "breadCrumbs: '" + grandChildStr + "' are wrong")
+    BreadCrumbs._.bassert(
+      1,
+      parentStr == "parent",
+      "breadCrumbs: '" + parentStr + "' are wrong"
+    )
+    BreadCrumbs._.bassert(
+      2,
+      childStr == "parent.child",
+      "breadCrumbs: '" + childStr + "' are wrong"
+    )
+    BreadCrumbs._.bassert(
+      3,
+      grandChildStr == "parent.child.grandChild",
+      "breadCrumbs: '" + grandChildStr + "' are wrong"
+    )
   }
   static getKeyTest() {
     let breadcrumbs = new BreadCrumbs({}, "my name")
-    BreadCrumbs._.bassert(1, breadcrumbs.key=="my name", "does not return name given on construction ")
+    BreadCrumbs._.bassert(
+      1,
+      breadcrumbs.key == "my name",
+      "does not return name given on construction "
+    )
   }
   static getLiteralTest() {
     const sym = Symbol("Symbol Descriptor")
-    let breadcrumbs = new BreadCrumbs({sym: 87673 }, "my name")
-    BreadCrumbs._.bassert(1, breadcrumbs.literal.sym==87673, "does not return literal given on construction ")
+    let breadcrumbs = new BreadCrumbs({sym: 87673}, "my name")
+    BreadCrumbs._.bassert(
+      1,
+      breadcrumbs.literal.sym == 87673,
+      "does not return literal given on construction "
+    )
   }
   static getCrumbTest() {
     let parent = new BreadCrumbs(undefined, "parent")
     let breadcrumbs = new BreadCrumbs({}, "my name", parent)
-    BreadCrumbs._.bassert(1, breadcrumbs.caller==parent, "does not return parent given on construction ")
+    BreadCrumbs._.bassert(
+      1,
+      breadcrumbs.caller == parent,
+      "does not return parent given on construction "
+    )
   }
   static isDefinedTest() {
-    BreadCrumbs._.bassert(1, BreadCrumbs.isDefined(""), "Empty String is not accepted as defined")
-    BreadCrumbs._.bassert(2, BreadCrumbs.isDefined(null), "null is not accepted as defined")
-    BreadCrumbs._.bassert(3, !BreadCrumbs.isDefined(undefined), "undefined accepted as defined")
+    BreadCrumbs._.bassert(
+      1,
+      BreadCrumbs.isDefined(""),
+      "Empty String is not accepted as defined"
+    )
+    BreadCrumbs._.bassert(
+      2,
+      BreadCrumbs.isDefined(null),
+      "null is not accepted as defined"
+    )
+    BreadCrumbs._.bassert(
+      3,
+      !BreadCrumbs.isDefined(undefined),
+      "undefined accepted as defined"
+    )
   }
   static _tryConstruct(arg1, arg2) {
     let breadcrumbs = new BreadCrumbs(arg1, arg2)
   }
-//  #endregion BreadCrumbs tests
+  //  #endregion BreadCrumbs tests
 }
 
-/** most elaborated subclass 
- * 
+/** most elaborated subclass
+ *
  */
 class Setting extends BreadCrumbs {
-//  #region member variables
+  //  #region member variables
   static #ROOT_KEY = "/"
   #children = {}
   #spec = {}
   #notetypes = {}
   #frontmatterYAML = {}
   #renderYAML = {}
-  get spec() {return this.#spec }
-  get frontmatterYAML() {return this.getFrontmatterYAML() }
-  get renderYAML() {return this.getRenderYAML() }
-//  #endregion member variables
-  constructor(literal, key=undefined, caller=undefined) {
+  get spec() {
+    return this.#spec
+  }
+  get frontmatterYAML() {
+    return this.getFrontmatterYAML()
+  }
+  get renderYAML() {
+    return this.getRenderYAML()
+  }
+  //  #endregion member variables
+  constructor(literal, key = undefined, caller = undefined) {
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
     this.throwIfUndefined(literal)
     this.#spec = new SpecManager(this.literal, undefined, this)
     this.#notetypes = new NoteTypesManager(this.literal, undefined, this)
     for (const [key, value] of Object.entries(this.literal)) {
-      if(BreadCrumbs.isOfType(value, "object")) {
-        if(!Setting.#isHandlersKey(key)) {
-          this.#children[key] = new Setting(value, key, this)  
+      if (BreadCrumbs.isOfType(value, "object")) {
+        if (!Setting.#isHandlersKey(key)) {
+          this.#children[key] = new Setting(value, key, this)
         } else {
         }
       } else {
-        if(this.spec.render)
-          this.#renderYAML[key] = value
-        else
-          this.#frontmatterYAML[key] = value
+        if (this.spec.render) this.#renderYAML[key] = value
+        else this.#frontmatterYAML[key] = value
       }
     }
   }
   static #isHandlersKey(key) {
-    return SpecManager.isHandlerKey(key) || 
-           NoteTypesManager.isHandlerKey(key)
+    return SpecManager.isHandlerKey(key) || NoteTypesManager.isHandlerKey(key)
   }
   async createNote(tp) {
     let type
     let typeKeys = Object.keys(this.#notetypes.notetypes)
-    if(typeKeys.length == 0) {
+    if (typeKeys.length == 0) {
       type = this.#notetypes.defaultType
-    } else if(typeKeys.length == 1) {
+    } else if (typeKeys.length == 1) {
       type = this.#notetypes.notetypes[typeKeys[0]]
-    } else if(typeKeys.length > 1) {
-      let typekey = await tp.system.suggester(typeKeys, typeKeys, 
-        false, TYPE_PROMPT, TYPE_MAX_ENTRIES)      
-      if(!typekey) {
+    } else if (typeKeys.length > 1) {
+      let typekey = await tp.system.suggester(
+        typeKeys,
+        typeKeys,
+        false,
+        TYPE_PROMPT,
+        TYPE_MAX_ENTRIES
+      )
+      if (!typekey) {
         return Dialog.Cancel
       } else {
         type = this.#notetypes.notetypes[typekey]
@@ -782,7 +940,7 @@ class Setting extends BreadCrumbs {
     }
     return renderYAML
   }
-//  #region Setting tests
+  //  #region Setting tests
   static _ = null
   static test(outputObj) {
     BreadCrumbs.test(outputObj)
@@ -803,33 +961,79 @@ class Setting extends BreadCrumbs {
     Setting._.assert(2, Setting._tryConstruct, {}, "myName")
     Setting._.assert(3, Setting._tryConstruct, {}, "my Name")
     Setting._.assert(4, Setting._tryConstruct, {}, 22)
-    Setting._.assert(5, Setting._tryConstruct, {}, Symbol('a'))
+    Setting._.assert(5, Setting._tryConstruct, {}, Symbol("a"))
     let setting = new Setting({}, "myName")
-    Setting._.bassert(6, setting instanceof BreadCrumbs, "'Setting' has to be an instance of 'BreadCrumbs'")
-    Setting._.bassert(7, setting.constructor==Setting, "the constructor property is not 'Setting'")
+    Setting._.bassert(
+      6,
+      setting instanceof BreadCrumbs,
+      "'Setting' has to be an instance of 'BreadCrumbs'"
+    )
+    Setting._.bassert(
+      7,
+      setting.constructor == Setting,
+      "the constructor property is not 'Setting'"
+    )
   }
   static toStringTest() {
     let str = new Setting({}).toString()
-    Setting._.bassert(1, str.contains(Setting.#ROOT_KEY), "result does not contain root string")
+    Setting._.bassert(
+      1,
+      str.contains(Setting.#ROOT_KEY),
+      "result does not contain root string"
+    )
     str = new Setting({}, "my Name").toString()
-    Setting._.bassert(2, str.contains("my Name"), "result does not contain Setting key")
+    Setting._.bassert(
+      2,
+      str.contains("my Name"),
+      "result does not contain Setting key"
+    )
     let setting = new Setting({}, "my Name")
   }
   static isHandlersKeyTest() {
-    Setting._.bassert(1, Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key, but isn't")
-    Setting._.bassert(2, Setting.#isHandlersKey(NoteTypesManager.NOTETYPES_KEY), NoteTypesManager.NOTETYPES_KEY + " should be recognized as handler key, but isn't")
-    Setting._.bassert(3, !Setting.#isHandlersKey(NoteTypesManager.TYPES_KEYS[0]),NoteTypesManager.TYPES_KEYS[0] + " should not be recognized as handlers key, but is")
-    Setting._.bassert(4, !Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key, but is")
-    Setting._.bassert(5, !Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key, but is")
-    Setting._.bassert(6, !Setting.#isHandlersKey(22),"22 should not be recognized as handlers key, but is")
-    Setting._.bassert(7, !Setting.#isHandlersKey(),"no argument should not be recognized as handlers key, but is")
+    Setting._.bassert(
+      1,
+      Setting.#isHandlersKey(SpecManager.SPEC_KEY),
+      SpecManager.SPEC_KEY + " should be recognized as handler key, but isn't"
+    )
+    Setting._.bassert(
+      2,
+      Setting.#isHandlersKey(NoteTypesManager.NOTETYPES_KEY),
+      NoteTypesManager.NOTETYPES_KEY +
+        " should be recognized as handler key, but isn't"
+    )
+    Setting._.bassert(
+      3,
+      !Setting.#isHandlersKey(NoteTypesManager.TYPES_KEYS[0]),
+      NoteTypesManager.TYPES_KEYS[0] +
+        " should not be recognized as handlers key, but is"
+    )
+    Setting._.bassert(
+      4,
+      !Setting.#isHandlersKey("no"),
+      "'no' should not be recognized as handlers key, but is"
+    )
+    Setting._.bassert(
+      5,
+      !Setting.#isHandlersKey(""),
+      "empty string should not be recognized as handlers key, but is"
+    )
+    Setting._.bassert(
+      6,
+      !Setting.#isHandlersKey(22),
+      "22 should not be recognized as handlers key, but is"
+    )
+    Setting._.bassert(
+      7,
+      !Setting.#isHandlersKey(),
+      "no argument should not be recognized as handlers key, but is"
+    )
   }
   static getFrontmatterYAMLTest() {
-    const lit1 = {a: 23 }
-    const lit2 = {a: 23, b: "ja" }
-    const lit3 = {a: 23, c: {b: "ja" }, d: "ja" }
-    const lit4 = {a: 23, c: {b: "ja", c: {c: 25 } }, d: "ja" }
-    const lit5 = {a: 23, c: {_SPEC: {render: true, }, pict: "ja", } }
+    const lit1 = {a: 23}
+    const lit2 = {a: 23, b: "ja"}
+    const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+    const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+    const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
     let setting1 = new Setting(lit1)
     let setting2 = new Setting(lit2)
     let setting3 = new Setting(lit3)
@@ -845,64 +1049,143 @@ class Setting extends BreadCrumbs {
     let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
     let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
     let expAnsw5f = '{"a":23}'
-    Setting._.bassert(1, JSON.stringify(answ1f)==expAnsw1f, `output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}', but should be:'${expAnsw1f}'`)
-    Setting._.bassert(2, JSON.stringify(answ2f)==expAnsw2f, `output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}', but should be:'${expAnsw2f}'`)
-    Setting._.bassert(3, JSON.stringify(answ3f)==expAnsw3f, `output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}', but should be:'${expAnsw3f}'`)
-    Setting._.bassert(4, JSON.stringify(answ4f)==expAnsw4f, `output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}', but should be:'${expAnsw4f}'`)
-    Setting._.bassert(5, JSON.stringify(answ5f)==expAnsw5f, `output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}', but should be:'${expAnsw5f}'`)
+    Setting._.bassert(
+      1,
+      JSON.stringify(answ1f) == expAnsw1f,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ1f
+      )}', but should be:'${expAnsw1f}'`
+    )
+    Setting._.bassert(
+      2,
+      JSON.stringify(answ2f) == expAnsw2f,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ2f
+      )}', but should be:'${expAnsw2f}'`
+    )
+    Setting._.bassert(
+      3,
+      JSON.stringify(answ3f) == expAnsw3f,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ3f
+      )}', but should be:'${expAnsw3f}'`
+    )
+    Setting._.bassert(
+      4,
+      JSON.stringify(answ4f) == expAnsw4f,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ4f
+      )}', but should be:'${expAnsw4f}'`
+    )
+    Setting._.bassert(
+      5,
+      JSON.stringify(answ5f) == expAnsw5f,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ5f
+      )}', but should be:'${expAnsw5f}'`
+    )
   }
   static getRenderYAMLTest() {
-    const lit1 = {a: 23, c: {b: "ja", c: {c: 25 } }, d: "ja" }
-    const lit2 = {a: 23, c: {_SPEC: {render: true, }, pict: "ja", } }
-    const lit3 = {a: 23, c: {b: "ja" }, d: "ja" }
+    const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+    const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+    const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
     let setting1 = new Setting(lit1)
     let setting2 = new Setting(lit2)
     let setting3 = new Setting(lit3)
     let answ1 = setting1.getRenderYAML()
     let answ2 = setting2.getRenderYAML()
     let answ3 = setting3.getRenderYAML()
-    let expAnsw1 = '{}'
+    let expAnsw1 = "{}"
     let expAnsw2 = '{"pict":"ja"}'
-    let expAnsw3 = '{}'
-    Setting._.bassert(1, JSON.stringify(answ1)==expAnsw1, `output of JSON.stringify(result) is:'${JSON.stringify(answ1)}', but should be:'${expAnsw1}'`)
-    Setting._.bassert(2, JSON.stringify(answ2)==expAnsw2, `output of JSON.stringify(result) is:'${JSON.stringify(answ2)}', but should be:'${expAnsw2}'`)
-    Setting._.bassert(3, JSON.stringify(answ3)==expAnsw3, `output of JSON.stringify(result) is:'${JSON.stringify(answ3)}', but should be:'${expAnsw3}'`)
+    let expAnsw3 = "{}"
+    Setting._.bassert(
+      1,
+      JSON.stringify(answ1) == expAnsw1,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ1
+      )}', but should be:'${expAnsw1}'`
+    )
+    Setting._.bassert(
+      2,
+      JSON.stringify(answ2) == expAnsw2,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ2
+      )}', but should be:'${expAnsw2}'`
+    )
+    Setting._.bassert(
+      3,
+      JSON.stringify(answ3) == expAnsw3,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ3
+      )}', but should be:'${expAnsw3}'`
+    )
     const lit6 = {
       c: {
-        _SPEC: {render: true, }, pict: "ja",
-        d: {_SPEC: {render: false, }, private: true, }
+        _SPEC: {render: true},
+        pict: "ja",
+        d: {_SPEC: {render: false}, private: true},
       },
     }
     let setting6 = new Setting(lit6)
     let answ6r = setting6.getRenderYAML()
     let expAnsw6r = '{"pict":"ja"}'
-    Setting._.bassert(5, JSON.stringify(answ6r)==expAnsw6r, `output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}', but should be:'${expAnsw6r}'`)
+    Setting._.bassert(
+      5,
+      JSON.stringify(answ6r) == expAnsw6r,
+      `output of JSON.stringify(result) is:'${JSON.stringify(
+        answ6r
+      )}', but should be:'${expAnsw6r}'`
+    )
   }
-  static getterTest() {// check whether getter assigned to correct function
-    const desc1 = Object.getOwnPropertyDescriptor(Setting.prototype, "frontmatterYAML")
-    const desc2 = Object.getOwnPropertyDescriptor(Setting.prototype, "renderYAML")
-    Setting._.bassert(1, typeof desc1.get=="function", `getter for 'frontmatterYAML' is not 'function'`)
-    Setting._.bassert(2, typeof desc2.get=="function", `getter for 'renderYAML' is not 'function'`)
-    Setting._.bassert(1, desc1.get.toString().contains("getFrontmatterYAML"), `getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`)
-    Setting._.bassert(2, desc2.get.toString().contains("getRenderYAML"), `getter for 'renderYAML' is not 'getRenderYAML'`)
+  static getterTest() {
+    // check whether getter assigned to correct function
+    const desc1 = Object.getOwnPropertyDescriptor(
+      Setting.prototype,
+      "frontmatterYAML"
+    )
+    const desc2 = Object.getOwnPropertyDescriptor(
+      Setting.prototype,
+      "renderYAML"
+    )
+    Setting._.bassert(
+      1,
+      typeof desc1.get == "function",
+      `getter for 'frontmatterYAML' is not 'function'`
+    )
+    Setting._.bassert(
+      2,
+      typeof desc2.get == "function",
+      `getter for 'renderYAML' is not 'function'`
+    )
+    Setting._.bassert(
+      1,
+      desc1.get.toString().contains("getFrontmatterYAML"),
+      `getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`
+    )
+    Setting._.bassert(
+      2,
+      desc2.get.toString().contains("getRenderYAML"),
+      `getter for 'renderYAML' is not 'getRenderYAML'`
+    )
   }
   static _tryConstruct(arg1, arg2) {
     let settings = new Setting(arg1, arg2)
   }
-//  #endregion Setting tests
+  //  #endregion Setting tests
 }
 
 /** specification parser */
-class SpecManager extends BreadCrumbs { 
-//  #region member variables
+class SpecManager extends BreadCrumbs {
+  //  #region member variables
   static SPEC_KEY = "_SPEC"
   #render = false
-  get render() {return this.#render}
-//  #endregion member variables
+  get render() {
+    return this.#render
+  }
+  //  #endregion member variables
   constructor(literal, key, caller) {
     let specLiteral
-    if(literal!=undefined)
-      specLiteral = literal[SpecManager.SPEC_KEY]
+    if (literal != undefined) specLiteral = literal[SpecManager.SPEC_KEY]
     super(specLiteral, key === undefined ? SpecManager.SPEC_KEY : key, caller)
     specLiteral = undefined
     this.throwIfUndefined(literal)
@@ -910,24 +1193,27 @@ class SpecManager extends BreadCrumbs {
     this.throwIfIsNotOfType(caller, "Setting")
     let callersParent = caller.caller
     let callersParentSpec
-    if(callersParent!=undefined) {
+    if (callersParent != undefined) {
       callersParentSpec = callersParent.spec
     }
     // render
     // ======
     let defaultRender = false
-    let literalRender = this.literal!=undefined ? 
-                        this.literal["render"] : 
-                        undefined
-    let parentRender = callersParentSpec!=undefined ? 
-                       callersParentSpec["render"] :
-                       undefined
-    this.#render = literalRender!=undefined ? literalRender : 
-                   parentRender!=undefined ? parentRender :
-                   defaultRender
+    let literalRender =
+      this.literal != undefined ? this.literal["render"] : undefined
+    let parentRender =
+      callersParentSpec != undefined ? callersParentSpec["render"] : undefined
+    this.#render =
+      literalRender != undefined
+        ? literalRender
+        : parentRender != undefined
+        ? parentRender
+        : defaultRender
   }
-  static isHandlerKey(key) { return (key==SpecManager.SPEC_KEY) }
-//  #region SpecManager tests
+  static isHandlerKey(key) {
+    return key == SpecManager.SPEC_KEY
+  }
+  //  #region SpecManager tests
   static _ = null
   static test(outputObj) {
     SpecManager._ = new TestSuite("SpecManager", outputObj)
@@ -941,102 +1227,190 @@ class SpecManager extends BreadCrumbs {
   static constructorTest() {
     let setting = new Setting({}, "its Name")
     let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    SpecManager._.shouldAssert(1, SpecManager._tryConstruct, undefined, "myName", setting)
-    SpecManager._.shouldAssert(2, SpecManager._tryConstruct, {}, undefined, setting)
-    SpecManager._.shouldAssert(3, SpecManager._tryConstruct, {}, "myName", undefined)
+    SpecManager._.shouldAssert(
+      1,
+      SpecManager._tryConstruct,
+      undefined,
+      "myName",
+      setting
+    )
+    SpecManager._.shouldAssert(
+      2,
+      SpecManager._tryConstruct,
+      {},
+      undefined,
+      setting
+    )
+    SpecManager._.shouldAssert(
+      3,
+      SpecManager._tryConstruct,
+      {},
+      "myName",
+      undefined
+    )
     SpecManager._.assert(4, SpecManager._tryConstruct, {}, "my Name", setting)
     SpecManager._.assert(5, SpecManager._tryConstruct, {}, 22, setting)
-    SpecManager._.assert(6, SpecManager._tryConstruct, {}, Symbol('a'), setting)
+    SpecManager._.assert(6, SpecManager._tryConstruct, {}, Symbol("a"), setting)
     let specMan = new SpecManager({}, "myName", setting)
-    SpecManager._.bassert(7, specMan instanceof BreadCrumbs, "'SpecManager' has to be an instance of 'BreadCrumbs'")
-    SpecManager._.bassert(8, specMan.constructor==SpecManager, "the constructor property is not 'SpecManager'")
-    SpecManager._.shouldAssert(9, SpecManager._tryConstruct, {}, "SPEC", breadCrumbs)
+    SpecManager._.bassert(
+      7,
+      specMan instanceof BreadCrumbs,
+      "'SpecManager' has to be an instance of 'BreadCrumbs'"
+    )
+    SpecManager._.bassert(
+      8,
+      specMan.constructor == SpecManager,
+      "the constructor property is not 'SpecManager'"
+    )
+    SpecManager._.shouldAssert(
+      9,
+      SpecManager._tryConstruct,
+      {},
+      "SPEC",
+      breadCrumbs
+    )
     specMan = new SpecManager({}, "myName", setting)
-    SpecManager._.bassert(10, BreadCrumbs.isOfType(specMan, "object"), "for empty literal SpecManager should construct object, but does not")
+    SpecManager._.bassert(
+      10,
+      BreadCrumbs.isOfType(specMan, "object"),
+      "for empty literal SpecManager should construct object, but does not"
+    )
     let render = specMan.render
-    SpecManager._.bassert(11, render != undefined, "For empty literal SpecManager should create render attribute, but does not")
+    SpecManager._.bassert(
+      11,
+      render != undefined,
+      "For empty literal SpecManager should create render attribute, but does not"
+    )
   }
   static toStringTest() {
     let setting = new Setting({}, "its Name")
     let str = new SpecManager({}, "myName", setting).toString()
-    SpecManager._.bassert(1, str.contains("myName"), "result does not contain name string")
+    SpecManager._.bassert(
+      1,
+      str.contains("myName"),
+      "result does not contain name string"
+    )
   }
   static isHandlerKeyTest() {
-    SpecManager._.bassert(1, SpecManager.isHandlerKey("_SPEC"), "key is not identified as '_SPEC'")
-    SpecManager._.bassert(2, !SpecManager.isHandlerKey("SPEC"), "'SPEC' is accepted as key")
+    SpecManager._.bassert(
+      1,
+      SpecManager.isHandlerKey("_SPEC"),
+      "key is not identified as '_SPEC'"
+    )
+    SpecManager._.bassert(
+      2,
+      !SpecManager.isHandlerKey("SPEC"),
+      "'SPEC' is accepted as key"
+    )
   }
   static renderOptionTest() {
     let literal1 = {}
-    let literal2 = {_SPEC: {render: true, } }
-    let literal3 = {_SPEC: {render: false, } }
+    let literal2 = {_SPEC: {render: true}}
+    let literal3 = {_SPEC: {render: false}}
     let setting1 = new Setting(literal1)
     let setting2 = new Setting(literal2)
     let setting3 = new Setting(literal3)
     let spec1 = setting1.spec
     let spec2 = setting2.spec
     let spec3 = setting3.spec
-    SpecManager._.bassert(1, !spec1.render, "unset OPTION 'render' defaults to false, but here it is true.")
-    SpecManager._.bassert(2, spec2.render, "OPTION 'render' is set to true in 'literal', but here it is false.")
-    SpecManager._.bassert(3, !spec3.render, "OPTION 'render' is set to false in 'literal', but here it is true.")
-    let literal4 = {a: {b: {c: {d: true } } } }
+    SpecManager._.bassert(
+      1,
+      !spec1.render,
+      "unset OPTION 'render' defaults to false, but here it is true."
+    )
+    SpecManager._.bassert(
+      2,
+      spec2.render,
+      "OPTION 'render' is set to true in 'literal', but here it is false."
+    )
+    SpecManager._.bassert(
+      3,
+      !spec3.render,
+      "OPTION 'render' is set to false in 'literal', but here it is true."
+    )
+    let literal4 = {a: {b: {c: {d: true}}}}
     let setting4 = new Setting(literal4)
     let f = setting4.frontmatterYAML
     let r = setting4.renderYAML
-    SpecManager._.bassert(4, f.d==true && r.d==undefined, "Value should appear in frontmatter output and should not appear in render output")
-    let literal5 = {a: {_SPEC: {render: true, }, b: {c: {d: true } } } }
+    SpecManager._.bassert(
+      4,
+      f.d == true && r.d == undefined,
+      "Value should appear in frontmatter output and should not appear in render output"
+    )
+    let literal5 = {a: {_SPEC: {render: true}, b: {c: {d: true}}}}
     let setting5 = new Setting(literal5)
     f = setting5.frontmatterYAML
     r = setting5.renderYAML
-    SpecManager._.bassert(5, f.d==undefined && r.d==true, "Value should not appear in frontmatter output and should appear in render output")
+    SpecManager._.bassert(
+      5,
+      f.d == undefined && r.d == true,
+      "Value should not appear in frontmatter output and should appear in render output"
+    )
     let literal6 = {
       a: {
-        _SPEC: {render: true, },
+        _SPEC: {render: true},
         b: {
-          c: {_SPEC: {render: false, }, d: true }
-        }
-      }
+          c: {_SPEC: {render: false}, d: true},
+        },
+      },
     }
     let setting6 = new Setting(literal6)
     f = setting6.frontmatterYAML
     r = setting6.renderYAML
-    SpecManager._.bassert(6, f.d==true && r.d==undefined, "Value should appear in frontmatter output and should not appear in render output")
+    SpecManager._.bassert(
+      6,
+      f.d == true && r.d == undefined,
+      "Value should appear in frontmatter output and should not appear in render output"
+    )
   }
   static _tryConstruct(arg1, arg2, arg3) {
     let specMan = new SpecManager(arg1, arg2, arg3)
   }
-//  #endregion SpecManager tests
+  //  #endregion SpecManager tests
 }
 
 /** notetypes parser */
 class NoteTypesManager extends BreadCrumbs {
-//  #region member variables
+  //  #region member variables
   static NOTETYPES_KEY = "NOTETYPES"
   static TYPES_KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
-  static #DEFAULT_TYPE = 
-    { MARKER: "",
-      DATE: false,
-      TITLE_BEFORE_DATE: "",
-      DATEFORMAT: "YYYY-MM-DD",
-    }
+  static #DEFAULT_TYPE = {
+    MARKER: "",
+    DATE: false,
+    TITLE_BEFORE_DATE: "",
+    DATEFORMAT: "YYYY-MM-DD",
+  }
   #notetypes = {}
-  get defaultType() {return NoteTypesManager.#DEFAULT_TYPE}
-  get notetypes() {return this.#notetypes}
-//  #endregion member variables
+  get defaultType() {
+    return NoteTypesManager.#DEFAULT_TYPE
+  }
+  get notetypes() {
+    return this.#notetypes
+  }
+  //  #endregion member variables
   constructor(literal, key, caller) {
     let typesLiteral
-    if(literal!=undefined)
+    if (literal != undefined)
       typesLiteral = literal[NoteTypesManager.NOTETYPES_KEY]
-    super(typesLiteral, key === undefined ? NoteTypesManager.NOTETYPES_KEY : key, caller)
+    super(
+      typesLiteral,
+      key === undefined ? NoteTypesManager.NOTETYPES_KEY : key,
+      caller
+    )
     this.throwIfUndefined(caller)
     this.throwIfIsNotOfType(caller, "Setting")
-    if(this.literal != undefined && !this.caller.isRoot())
-      throw new SettingError(this.constructor.name + " " + constructor,
-      "Breadcrumbs: '" + this.toBreadCrumbs() +
-      "'\n   " + "notetypes can only be defined at root level" +
-      "\n   " + "Move your 'NOTETYPES' definition up.")
+    if (this.literal != undefined && !this.caller.isRoot())
+      throw new SettingError(
+        this.constructor.name + " " + constructor,
+        "Breadcrumbs: '" +
+          this.toBreadCrumbs() +
+          "'\n   " +
+          "notetypes can only be defined at root level" +
+          "\n   " +
+          "Move your 'NOTETYPES' definition up."
+      )
     this.throwIfUndefined(literal)
-    if(this.literal==undefined) 
-      return
+    if (this.literal == undefined) return
     this.createNoteTypesOrThrow()
   }
   createNoteTypesOrThrow() {
@@ -1044,29 +1418,42 @@ class NoteTypesManager extends BreadCrumbs {
       this.throwIfIsNotOfType(entry, "object")
       for (const [key, value] of Object.entries(entry)) {
         let allowedKeys = NoteTypesManager.TYPES_KEYS
-        if(!allowedKeys.contains(key)) 
-          throw new SettingError(this.constructor.name + " " + constructor,
-            "Breadcrumbs: '" + this.toBreadCrumbs() +
-            "'\n   '" + value + "' is no known note type definition key." +
-            "\n    Remove unknown key from your note type definitions." +
-            "\n   " + "Known keys are: '" + allowedKeys + "'")
-        switch(key) {
-        case "DATE": 
-          this.throwIfIsNotOfType(value,"boolean")
-          break
-        case "MARKER":
-        case "TITLE":
-        case "DATEFORMAT":
-          this.throwIfIsNotOfType(value,"string")
-          break
+        if (!allowedKeys.contains(key))
+          throw new SettingError(
+            this.constructor.name + " " + constructor,
+            "Breadcrumbs: '" +
+              this.toBreadCrumbs() +
+              "'\n   '" +
+              value +
+              "' is no known note type definition key." +
+              "\n    Remove unknown key from your note type definitions." +
+              "\n   " +
+              "Known keys are: '" +
+              allowedKeys +
+              "'"
+          )
+        switch (key) {
+          case "DATE":
+            this.throwIfIsNotOfType(value, "boolean")
+            break
+          case "MARKER":
+          case "TITLE":
+          case "DATEFORMAT":
+            this.throwIfIsNotOfType(value, "string")
+            break
         }
       }
-      this.#notetypes[name] = 
-        Object.assign({}, NoteTypesManager.#DEFAULT_TYPE, entry)
+      this.#notetypes[name] = Object.assign(
+        {},
+        NoteTypesManager.#DEFAULT_TYPE,
+        entry
+      )
     }
   }
-  static isHandlerKey(key) { return (key==NoteTypesManager.NOTETYPES_KEY) }
-//  #region NoteTypesManager tests
+  static isHandlerKey(key) {
+    return key == NoteTypesManager.NOTETYPES_KEY
+  }
+  //  #region NoteTypesManager tests
   static _ = null
   static test(outputObj) {
     NoteTypesManager._ = new TestSuite("NoteTypesManager", outputObj)
@@ -1079,48 +1466,132 @@ class NoteTypesManager extends BreadCrumbs {
   static constructorTest() {
     let setting = new Setting({}, "its Name")
     let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    NoteTypesManager._.shouldAssert(1, NoteTypesManager._tryConstruct, undefined, "myName", setting)
-    NoteTypesManager._.shouldAssert(2, NoteTypesManager._tryConstruct, {}, undefined, setting)
-    NoteTypesManager._.shouldAssert(3, NoteTypesManager._tryConstruct, {}, "myName", undefined)
-    NoteTypesManager._.assert(4, NoteTypesManager._tryConstruct, {}, "my Name", setting)
-    NoteTypesManager._.assert(5, NoteTypesManager._tryConstruct, {}, 22, setting)
-    NoteTypesManager._.assert(6, NoteTypesManager._tryConstruct, {}, Symbol('a'), setting)
+    NoteTypesManager._.shouldAssert(
+      1,
+      NoteTypesManager._tryConstruct,
+      undefined,
+      "myName",
+      setting
+    )
+    NoteTypesManager._.shouldAssert(
+      2,
+      NoteTypesManager._tryConstruct,
+      {},
+      undefined,
+      setting
+    )
+    NoteTypesManager._.shouldAssert(
+      3,
+      NoteTypesManager._tryConstruct,
+      {},
+      "myName",
+      undefined
+    )
+    NoteTypesManager._.assert(
+      4,
+      NoteTypesManager._tryConstruct,
+      {},
+      "my Name",
+      setting
+    )
+    NoteTypesManager._.assert(
+      5,
+      NoteTypesManager._tryConstruct,
+      {},
+      22,
+      setting
+    )
+    NoteTypesManager._.assert(
+      6,
+      NoteTypesManager._tryConstruct,
+      {},
+      Symbol("a"),
+      setting
+    )
     let typeMan = new NoteTypesManager({}, "myName", setting)
-    NoteTypesManager._.bassert(7, typeMan instanceof BreadCrumbs, "'NoteTypesManager' has to be an instance of 'BreadCrumbs'")
-    NoteTypesManager._.bassert(8, typeMan.constructor==NoteTypesManager, "the constructor property is not 'NoteTypesManager'")
-    NoteTypesManager._.shouldAssert(9, NoteTypesManager._tryConstruct, {}, "NOTETYPES", breadCrumbs)
+    NoteTypesManager._.bassert(
+      7,
+      typeMan instanceof BreadCrumbs,
+      "'NoteTypesManager' has to be an instance of 'BreadCrumbs'"
+    )
+    NoteTypesManager._.bassert(
+      8,
+      typeMan.constructor == NoteTypesManager,
+      "the constructor property is not 'NoteTypesManager'"
+    )
+    NoteTypesManager._.shouldAssert(
+      9,
+      NoteTypesManager._tryConstruct,
+      {},
+      "NOTETYPES",
+      breadCrumbs
+    )
     typeMan = new NoteTypesManager({}, "myName", setting)
-    NoteTypesManager._.bassert(10, BreadCrumbs.isOfType(typeMan.notetypes, "object"), "for empty literal NoteTypesManager should construct object, but does not")
+    NoteTypesManager._.bassert(
+      10,
+      BreadCrumbs.isOfType(typeMan.notetypes, "object"),
+      "for empty literal NoteTypesManager should construct object, but does not"
+    )
     let typeKeys = Object.keys(typeMan.notetypes)
-    NoteTypesManager._.bassert(11, typeKeys.length == 0, "For empty literal NoteTypesManager with no types should be created")
+    NoteTypesManager._.bassert(
+      11,
+      typeKeys.length == 0,
+      "For empty literal NoteTypesManager with no types should be created"
+    )
     let defaultType = typeMan.defaultType
-    NoteTypesManager._.bassert(12, BreadCrumbs.isOfType(defaultType,"object"),"default type should always be present, but here it is not")
+    NoteTypesManager._.bassert(
+      12,
+      BreadCrumbs.isOfType(defaultType, "object"),
+      "default type should always be present, but here it is not"
+    )
     let defaultTypeKeys = Object.keys(defaultType)
     let typesKeys = NoteTypesManager.TYPES_KEYS
-    NoteTypesManager._.bassert(13, typesKeys.length = defaultTypeKeys.length, "defaultType should have as many keys as 'NoteTypesManager.TYPES_KEYS'")
-    NoteTypesManager._.bassert(14, defaultTypeKeys.every((key) => {return typesKeys.includes(key)}),"any key of 'NoteTypesManager.TYPES_KEYS' should be contained in defaultType, but is not")
+    NoteTypesManager._.bassert(
+      13,
+      (typesKeys.length = defaultTypeKeys.length),
+      "defaultType should have as many keys as 'NoteTypesManager.TYPES_KEYS'"
+    )
+    NoteTypesManager._.bassert(
+      14,
+      defaultTypeKeys.every((key) => {
+        return typesKeys.includes(key)
+      }),
+      "any key of 'NoteTypesManager.TYPES_KEYS' should be contained in defaultType, but is not"
+    )
   }
   static toStringTest() {
     let setting = new Setting({}, "its Name")
     let str = new NoteTypesManager({}, "myName", setting).toString()
-    NoteTypesManager._.bassert(1, str.contains("myName"), "result does not contain name string")
+    NoteTypesManager._.bassert(
+      1,
+      str.contains("myName"),
+      "result does not contain name string"
+    )
   }
   static isHandlerKeyTest() {
-    NoteTypesManager._.bassert(1, NoteTypesManager.isHandlerKey("NOTETYPES"), "key is not identified as 'NOTETYPES'")
-    NoteTypesManager._.bassert(2, !NoteTypesManager.isHandlerKey("_NOTETYPES"), "'_NOTETYPES' is accepted as key")
+    NoteTypesManager._.bassert(
+      1,
+      NoteTypesManager.isHandlerKey("NOTETYPES"),
+      "key is not identified as 'NOTETYPES'"
+    )
+    NoteTypesManager._.bassert(
+      2,
+      !NoteTypesManager.isHandlerKey("_NOTETYPES"),
+      "'_NOTETYPES' is accepted as key"
+    )
   }
 
   static _tryConstruct(arg1, arg2, arg3) {
     let specMan = new NoteTypesManager(arg1, arg2, arg3)
   }
-//  #endregion NoteTypesManager tests
+  //  #endregion NoteTypesManager tests
 }
-//#endregion code 
+//#endregion code
 /** Runs all tests, if TESTING is set output to current note (indirect)
- * @param {*} outputObj 
+ * @param {*} outputObj
  */
 function test(outputObj) {
-  if(TESTING) {
+  if (TESTING) {
     Dispatcher.test(outputObj)
     Setting.test(outputObj)
   }
@@ -1129,27 +1600,28 @@ function test(outputObj) {
 /** exported function
  * @param {Object} tp - templater object
  * @param {Object} app - obsidian api object
- * @returns 
+ * @returns
  */
 async function main(tp, app) {
   let testYAML = {}
   test(testYAML)
   let frontmatterYAML = {}
-  let renderYAML = {"____": "" }
+  let renderYAML = {____: ""}
   try {
-    let setting = new Setting(Test,undefined,undefined)
+    let setting = new Setting(Test, undefined, undefined)
     let dlgStatus = await setting.createNote(tp)
     frontmatterYAML = setting.frontmatterYAML
     Object.assign(renderYAML, setting.renderYAML)
-  } catch(e) {/* returns errYAML or rethrows */
-    if(e instanceof FotyError) {
+  } catch (e) {
+    /* returns errYAML or rethrows */
+    if (e instanceof FotyError) {
       let errYAML = {}
-      if(e instanceof SettingError) {
+      if (e instanceof SettingError) {
         errYAML = {
           "!": e.name + " in " + e.section,
           "-": e.message,
         }
-      } else if(e instanceof CodingError) {
+      } else if (e instanceof CodingError) {
         errYAML = {
           "!": e.name + " in " + e.section,
           "-": e.message,
@@ -1161,10 +1633,13 @@ async function main(tp, app) {
         }
       }
       return errYAML
-    } else {aut("RETHROWING"); throw(e) }
+    } else {
+      aut("RETHROWING")
+      throw e
+    }
   }
   let dbgYAML = {
-    __notePath: tp.file.path(true/*relative*/),
+    __notePath: tp.file.path(true /*relative*/),
     __noteTitle: tp.file.title,
     __activeFile: tp.config.active_file.path,
     __runMode: tp.config.run_mode,
@@ -1173,17 +1648,17 @@ async function main(tp, app) {
   }
 
   let developCheck = false
-  if(developCheck) {
+  if (developCheck) {
     let setting = new Setting()
     let developYAML = {}
     let e = new Event()
     e["key"] = "val"
     let d = Object.hasOwn(e, "addListener")
-    developYAML = {"DEV": d }
+    developYAML = {DEV: d}
     console.log(d)
     return developYAML
   }
 
-  if(!DEBUG) dbgYAML = undefined
+  if (!DEBUG) dbgYAML = undefined
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
