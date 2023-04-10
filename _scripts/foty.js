@@ -128,7 +128,7 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
-const TESTING = true
+const TESTING = false
 if(TESTING) DEBUG = false
 // nach @todo und @remove suchen
 
@@ -718,8 +718,8 @@ class Setting extends BreadCrumbs {
   //#region member variables
   static #ROOT_KEY = "/"
   #children = {}
-  #notetypes = {}
   #spec = {}
+  #notetypes = {}
   #frontmatterYAML = {}
   #renderYAML = {}
   get spec() {return this.#spec }
@@ -733,7 +733,7 @@ class Setting extends BreadCrumbs {
     this.#notetypes = new NoteTypesManager(this.literal, undefined, this)
     for (const [key, value] of Object.entries(this.literal)) {
       if(BreadCrumbs.isOfType(value, "object")) {
-        if(!this.#isHandlersKey(key)) {
+        if(!Setting.#isHandlersKey(key)) {
           this.#children[key] = new Setting(value, key, this)  
         } else {
         }
@@ -745,7 +745,7 @@ class Setting extends BreadCrumbs {
       }
     }
   }
-  #isHandlersKey(key) {
+  static #isHandlersKey(key) {
     return SpecManager.isHandlerKey(key) || 
            NoteTypesManager.isHandlerKey(key)
   }
@@ -787,9 +787,11 @@ class Setting extends BreadCrumbs {
   static test(outputObj) {
     BreadCrumbs.test(outputObj)
     SpecManager.test(outputObj)
+    NoteTypesManager.test(outputObj)
     Setting._ = new TestSuite("Setting", outputObj)
     Setting._.run(Setting.constructorTest)
     Setting._.run(Setting.toStringTest)
+    Setting._.run(Setting.isHandlersKeyTest)
     Setting._.run(Setting.getFrontmatterYAMLTest)
     Setting._.run(Setting.getRenderYAMLTest)
     Setting._.run(Setting.getterTest)
@@ -812,6 +814,15 @@ class Setting extends BreadCrumbs {
     str = new Setting({}, "my Name").toString()
     Setting._.bassert(2, str.contains("my Name"), "result does not contain Setting key")
     let setting = new Setting({}, "my Name")
+  }
+  static isHandlersKeyTest() {
+    Setting._.bassert(1, Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key, but isn't")
+    Setting._.bassert(2, Setting.#isHandlersKey(NoteTypesManager.NOTETYPES_KEY), NoteTypesManager.NOTETYPES_KEY + " should be recognized as handler key, but isn't")
+    Setting._.bassert(3, !Setting.#isHandlersKey(NoteTypesManager.TYPES_KEYS[0]),NoteTypesManager.TYPES_KEYS[0] + " should not be recognized as handlers key, but is")
+    Setting._.bassert(4, !Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key, but is")
+    Setting._.bassert(5, !Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key, but is")
+    Setting._.bassert(6, !Setting.#isHandlersKey(22),"22 should not be recognized as handlers key, but is")
+    Setting._.bassert(7, !Setting.#isHandlersKey(),"no argument should not be recognized as handlers key, but is")
   }
   static getFrontmatterYAMLTest() {
     const lit1 = {a: 23 }
@@ -940,6 +951,10 @@ class SpecManager extends BreadCrumbs {
     SpecManager._.bassert(7, specMan instanceof BreadCrumbs, "'SpecManager' has to be an instance of 'BreadCrumbs'")
     SpecManager._.bassert(8, specMan.constructor==SpecManager, "the constructor property is not 'SpecManager'")
     SpecManager._.shouldAssert(9, SpecManager._tryConstruct, {}, "SPEC", breadCrumbs)
+    specMan = new SpecManager({}, "myName", setting)
+    SpecManager._.bassert(10, BreadCrumbs.isOfType(specMan, "object"), "for empty literal SpecManager should construct object, but does not")
+    let render = specMan.render
+    SpecManager._.bassert(11, render != undefined, "For empty literal SpecManager should create render attribute, but does not")
   }
   static toStringTest() {
     let setting = new Setting({}, "its Name")
@@ -1070,10 +1085,20 @@ class NoteTypesManager extends BreadCrumbs {
     NoteTypesManager._.assert(4, NoteTypesManager._tryConstruct, {}, "my Name", setting)
     NoteTypesManager._.assert(5, NoteTypesManager._tryConstruct, {}, 22, setting)
     NoteTypesManager._.assert(6, NoteTypesManager._tryConstruct, {}, Symbol('a'), setting)
-    let specMan = new NoteTypesManager({}, "myName", setting)
-    NoteTypesManager._.bassert(7, specMan instanceof BreadCrumbs, "'NoteTypesManager' has to be an instance of 'BreadCrumbs'")
-    NoteTypesManager._.bassert(8, specMan.constructor==NoteTypesManager, "the constructor property is not 'NoteTypesManager'")
-    NoteTypesManager._.shouldAssert(9, NoteTypesManager._tryConstruct, {}, "SPEC", breadCrumbs)
+    let typeMan = new NoteTypesManager({}, "myName", setting)
+    NoteTypesManager._.bassert(7, typeMan instanceof BreadCrumbs, "'NoteTypesManager' has to be an instance of 'BreadCrumbs'")
+    NoteTypesManager._.bassert(8, typeMan.constructor==NoteTypesManager, "the constructor property is not 'NoteTypesManager'")
+    NoteTypesManager._.shouldAssert(9, NoteTypesManager._tryConstruct, {}, "NOTETYPES", breadCrumbs)
+    typeMan = new NoteTypesManager({}, "myName", setting)
+    NoteTypesManager._.bassert(10, BreadCrumbs.isOfType(typeMan.notetypes, "object"), "for empty literal NoteTypesManager should construct object, but does not")
+    let typeKeys = Object.keys(typeMan.notetypes)
+    NoteTypesManager._.bassert(11, typeKeys.length == 0, "For empty literal NoteTypesManager with no types should be created")
+    let defaultType = typeMan.defaultType
+    NoteTypesManager._.bassert(12, BreadCrumbs.isOfType(defaultType,"object"),"default type should always be present, but here it is not")
+    let defaultTypeKeys = Object.keys(defaultType)
+    let typesKeys = NoteTypesManager.TYPES_KEYS
+    NoteTypesManager._.bassert(13, typesKeys.length = defaultTypeKeys.length, "defaultType should have as many keys as 'NoteTypesManager.TYPES_KEYS'")
+    NoteTypesManager._.bassert(14, defaultTypeKeys.every((key) => {return typesKeys.includes(key)}),"any key of 'NoteTypesManager.TYPES_KEYS' should be contained in defaultType, but is not")
   }
   static toStringTest() {
     let setting = new Setting({}, "its Name")
