@@ -100,6 +100,10 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
 const TYPE_PROMPT = "Typ wählen"
 const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
 const Test = {
+  FOLDER2TYPE: {
+    diary: ["diary"],
+    others: ["citation"],
+  },
   NOTETYPES: {
     diary: {
       MARKER: "",
@@ -133,7 +137,7 @@ const Test2 = {
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
-const TESTING = false
+const TESTING = true
 if (TESTING) DEBUG = false
 // nach @todo und @remove suchen
 
@@ -646,20 +650,16 @@ class Dispatcher {
 }
 //#endregion helper classes
 //#region code
-/** superclass for all settings classes */
+/** superclass for all settings classes
+ * @classdesc
+ */
 class BreadCrumbs {
   //  #region member variables
-  #literal
   #key
   #caller
+  #literal
   get literal() {
     return this.#literal
-  }
-  get key() {
-    return this.#key
-  }
-  get caller() {
-    return this.#caller
   }
   //  #endregion member variables
   constructor(literal, key, caller) {
@@ -669,14 +669,14 @@ class BreadCrumbs {
     this.throwIfUndefined(key, "key")
   }
   toString() {
-    return "°°°" + this.constructor.name + " " + this.key
+    return "°°°" + this.constructor.name + " " + this.#key
   }
 
   toBreadCrumbs() {
     let breadcrumbs = ""
     let sep = ""
-    if (BreadCrumbs.isDefined(this.caller)) {
-      breadcrumbs += this.caller.toBreadCrumbs()
+    if (BreadCrumbs.isDefined(this.#caller)) {
+      breadcrumbs += this.#caller.toBreadCrumbs()
       sep = "."
     }
     breadcrumbs += sep + this.#key
@@ -684,7 +684,11 @@ class BreadCrumbs {
   }
 
   isRoot() {
-    return !BreadCrumbs.isDefined(this.caller)
+    return !BreadCrumbs.isDefined(this.#caller)
+  }
+
+  isFirstGeneration() {
+    return this.#caller.isRoot()
   }
 
   throwIfUndefined(
@@ -739,6 +743,9 @@ class BreadCrumbs {
           break
         case "Option":
           answer = val instanceof Option
+          break
+        case "Object": // object but not an array
+          answer = !Array.isArray(val)
           break
         default:
           break
@@ -816,7 +823,7 @@ class BreadCrumbs {
     let breadcrumbs = new BreadCrumbs({}, "my name")
     BreadCrumbs._.bassert(
       1,
-      breadcrumbs.key == "my name",
+      breadcrumbs.#key == "my name",
       "does not return name given on construction "
     )
   }
@@ -834,7 +841,7 @@ class BreadCrumbs {
     let breadcrumbs = new BreadCrumbs({}, "my name", parent)
     BreadCrumbs._.bassert(
       1,
-      breadcrumbs.caller == parent,
+      breadcrumbs.#caller == parent,
       "does not return parent given on construction "
     )
   }
@@ -869,9 +876,15 @@ class Setting extends BreadCrumbs {
   static #ROOT_KEY = "/"
   #children = {}
   #spec = {}
-  #notetypes = {}
+  #types = {}
   #frontmatterYAML = {}
   #renderYAML = {}
+  get typeNames() {
+    return this.#types.names
+  }
+  get defaultType() {
+    return this.#types.defaultType
+  }
   get spec() {
     return this.#spec
   }
@@ -882,45 +895,25 @@ class Setting extends BreadCrumbs {
     return this.getRenderYAML()
   }
   //  #endregion member variables
-  constructor(literal, key = undefined, caller = undefined) {
+  constructor(
+    literal,
+    key = undefined,
+    caller = undefined,
+    callersSpec = undefined
+  ) {
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
     this.throwIfUndefined(literal)
-    this.#spec = new SpecManager(this.literal, undefined, this)
-    this.#notetypes = new NoteTypesManager(this.literal, undefined, this)
+    this.#spec = new SpecManager(this.literal, undefined, this, callersSpec)
+    this.#types = new NoteTypesManager(this.literal, undefined, this)
     for (const [key, value] of Object.entries(this.literal)) {
-      if (BreadCrumbs.isOfType(value, "object")) {
+      if (BreadCrumbs.isOfType(value, "Object")) {
         if (!Setting.#isHandlersKey(key)) {
-          this.#children[key] = new Setting(value, key, this)
+          this.#children[key] = new Setting(value, key, this, this.#spec)
         } else {
         }
       } else {
         if (this.spec.render) this.#renderYAML[key] = value
         else this.#frontmatterYAML[key] = value
-      }
-    }
-  }
-  static #isHandlersKey(key) {
-    return SpecManager.isHandlerKey(key) || NoteTypesManager.isHandlerKey(key)
-  }
-  async createNote(tp) {
-    let type
-    let typeKeys = Object.keys(this.#notetypes.notetypes)
-    if (typeKeys.length == 0) {
-      type = this.#notetypes.defaultType
-    } else if (typeKeys.length == 1) {
-      type = this.#notetypes.notetypes[typeKeys[0]]
-    } else if (typeKeys.length > 1) {
-      let typekey = await tp.system.suggester(
-        typeKeys,
-        typeKeys,
-        false,
-        TYPE_PROMPT,
-        TYPE_MAX_ENTRIES
-      )
-      if (!typekey) {
-        return Dialog.Cancel
-      } else {
-        type = this.#notetypes.notetypes[typekey]
       }
     }
   }
@@ -939,6 +932,12 @@ class Setting extends BreadCrumbs {
       Object.assign(renderYAML, value.getRenderYAML())
     }
     return renderYAML
+  }
+  getType(key) {
+    return this.#types.notetypes[key]
+  }
+  static #isHandlersKey(key) {
+    return SpecManager.isHandlerKey(key) || NoteTypesManager.isHandlerKey(key)
   }
   //  #region Setting tests
   static _ = null
@@ -1183,7 +1182,7 @@ class SpecManager extends BreadCrumbs {
     return this.#render
   }
   //  #endregion member variables
-  constructor(literal, key, caller) {
+  constructor(literal, key, caller, callersParentSpec) {
     let specLiteral
     if (literal != undefined) specLiteral = literal[SpecManager.SPEC_KEY]
     super(specLiteral, key === undefined ? SpecManager.SPEC_KEY : key, caller)
@@ -1192,10 +1191,6 @@ class SpecManager extends BreadCrumbs {
     this.throwIfUndefined(caller)
     this.throwIfIsNotOfType(caller, "Setting")
     let callersParent = caller.caller
-    let callersParentSpec
-    if (callersParent != undefined) {
-      callersParentSpec = callersParent.spec
-    }
     // render
     // ======
     let defaultRender = false
@@ -1387,6 +1382,9 @@ class NoteTypesManager extends BreadCrumbs {
   get notetypes() {
     return this.#notetypes
   }
+  get names() {
+    return this.getTypeNames()
+  }
   //  #endregion member variables
   constructor(literal, key, caller) {
     let typesLiteral
@@ -1399,7 +1397,7 @@ class NoteTypesManager extends BreadCrumbs {
     )
     this.throwIfUndefined(caller)
     this.throwIfIsNotOfType(caller, "Setting")
-    if (this.literal != undefined && !this.caller.isRoot())
+    if (this.literal != undefined && !this.isFirstGeneration())
       throw new SettingError(
         this.constructor.name + " " + constructor,
         "Breadcrumbs: '" +
@@ -1452,6 +1450,9 @@ class NoteTypesManager extends BreadCrumbs {
   }
   static isHandlerKey(key) {
     return key == NoteTypesManager.NOTETYPES_KEY
+  }
+  getTypeNames() {
+    return Object.keys(this.#notetypes)
   }
   //  #region NoteTypesManager tests
   static _ = null
@@ -1597,6 +1598,29 @@ function test(outputObj) {
   }
 }
 
+async function createNote(tp, setting) {
+  let type
+  let typeKeys = setting.typeNames
+  if (typeKeys.length == 0) {
+    type = setting.defaultType
+  } else if (typeKeys.length == 1) {
+    type = setting.getType(typeKeys[0])
+  } else if (typeKeys.length > 1) {
+    let typekey = await tp.system.suggester(
+      typeKeys,
+      typeKeys,
+      false,
+      TYPE_PROMPT,
+      TYPE_MAX_ENTRIES
+    )
+    if (!typekey) {
+      return Dialog.Cancel
+    } else {
+      type = setting.getType(typekey)
+    }
+  }
+  return Dialog.Ok
+}
 /** exported function
  * @param {Object} tp - templater object
  * @param {Object} app - obsidian api object
@@ -1609,7 +1633,7 @@ async function main(tp, app) {
   let renderYAML = {____: ""}
   try {
     let setting = new Setting(Test, undefined, undefined)
-    let dlgStatus = await setting.createNote(tp)
+    await createNote(tp, setting)
     frontmatterYAML = setting.frontmatterYAML
     Object.assign(renderYAML, setting.renderYAML)
   } catch (e) {
