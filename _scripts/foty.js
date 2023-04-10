@@ -173,7 +173,7 @@ function dbg(...strs) {
  * @param {String} c - foreground color
  */
 function aut(str, b = "yellow", c = "red") {
-  console.log("%c" + str, `background:${b}color:${c}font-weight:normal`)
+  console.log("%c" + str, `background:${b};color:${c};font-weight:normal`)
 }
 
 /** logs 'vn' and 'v' colored to console
@@ -197,9 +197,9 @@ class FotyError extends Error {
 
 /** User Error thrown from Setting tree */
 class SettingError extends FotyError {
-  //  #region member variables
+  //#region member variables
   section
-  //  #endregion member variables
+  //#endregion member variables
   constructor(section = "Setting", ...params) {
     super(...params)
     this.name = "Setting Error"
@@ -209,9 +209,9 @@ class SettingError extends FotyError {
 
 /** Programming Error */
 class CodingError extends FotyError {
-  //  #region member variables
+  //#region member variables
   section
-  //  #endregion member variables
+  //#endregion member variables
   constructor(section = "Setting", ...params) {
     super(...params)
     this.name = "Coding Error"
@@ -221,7 +221,7 @@ class CodingError extends FotyError {
 
 /** Runs unit tests */
 class TestSuite {
-  //  #region member variables
+  //#region member variables
   static ok = "\u2713"
   static nok = "\u2718"
   #name
@@ -239,7 +239,7 @@ class TestSuite {
     return this.#name
   }
   e = "none"
-  //  #endregion member variables
+  //#endregion member variables
 
   /** Sets up the suite
    * @param {String} name - name of the suite
@@ -427,9 +427,10 @@ class TestSuite {
    * @param {Function} fn
    * @param {...} ...params
    */
-  shouldAssert(errcase, fn, message, ...params) {
+  shouldAssert(errcase, fn, ...params) {
     this.#cases++
     let hasAsserted = false
+    let message = params.pop()
     try {
       //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
       fn(...params)
@@ -501,10 +502,10 @@ const Dialog = {
  *
  */
 class Event {
-  //  #region member variables
+  //#region member variables
   name
   callbacks
-  //  #endregion member variables
+  //#endregion member variables
 
   constructor(name) {
     this.name = name
@@ -516,7 +517,7 @@ class Event {
   registerCallback(callback, instance) {
     this.callbacks.push([callback, instance])
   }
-  //  #region Event tests
+  //#region Event tests
   static _ = null
   static test(outputObj) {
     Event._ = new TestSuite("Event", outputObj)
@@ -553,16 +554,16 @@ class Event {
     let e = new Event("eventname")
     e.registerCallback(arg1, arg2)
   }
-  //  #endregion Event tests
+  //#endregion Event tests
 }
 
 /** Event manager
  *
  */
 class Dispatcher {
-  //  #region member variables
+  //#region member variables
   events
-  //  #endregion member variables
+  //#endregion member variables
   constructor() {
     this.events = {}
   }
@@ -583,7 +584,7 @@ class Dispatcher {
       callback(instance, eventArgs)
     })
   }
-  //  #region Dispatcher tests
+  //#region Dispatcher tests
   static _ = null
   static test(outputObj) {
     Dispatcher._ = new TestSuite("Dispatcher", outputObj)
@@ -646,30 +647,53 @@ class Dispatcher {
     d.registerEvent(name)
     d.dispatchEvent(name, args)
   }
-  //  #endregion Dispatcher tests
+  //#endregion Dispatcher tests
 }
 //#endregion helper classes
 //#region code
 /** superclass for all settings classes
  * @classdesc
+ * settings are organized in collections and items. A collection contains other
+ * collections and items,each identified by a key. Content of collection/item
+ * is given as literal description. So every collection has a key and a literal.
+ * Besides root collection every collection has a parent. Only literal is
+ * specific for a subclass
+ *
+ * BreadCrumbs as superclass handles what all subclasses have in common: key and
+ * parent; they are nothing the subclasses have to care with,so those are as
+ * private members named differently: #ident and #caller.
  */
 class BreadCrumbs {
-  //  #region member variables
-  #key
+  //#region member variables
+  #ident
   #caller
   #literal
+  /**
+   * @returns literal given in BreadCrumbs constructor
+   */
   get literal() {
     return this.#literal
   }
-  //  #endregion member variables
-  constructor(literal, key, caller) {
+  //#endregion member variables
+  /** Constructs a new BreadCrumbs
+   * @desc
+   * @constructor
+   * @param {*} literal
+   * @param {string|symbol} key
+   * @param {undefined|BreadCrumbs} caller
+   * @throws {SettingError} on wrong parameter types
+   */
+  constructor(literal, key, parent) {
     this.#literal = literal
-    this.#key = key
-    this.#caller = caller
+    this.#ident = key
+    this.#caller = parent
     this.throwIfUndefined(key, "key")
+    this.throwIfIsNotOfType(key, ["string", "symbol"])
+    if (parent !== undefined) this.throwIfIsNotOfType(parent, "BreadCrumbs")
   }
+
   toString() {
-    return "°°°" + this.constructor.name + " " + this.#key
+    return "°°°" + this.constructor.name + " " + this.#ident
   }
 
   toBreadCrumbs() {
@@ -679,7 +703,7 @@ class BreadCrumbs {
       breadcrumbs += this.#caller.toBreadCrumbs()
       sep = "."
     }
-    breadcrumbs += sep + this.#key
+    breadcrumbs += sep + this.#ident
     return breadcrumbs
   }
 
@@ -709,7 +733,23 @@ class BreadCrumbs {
     funame = "constructor",
     msg = "is not of javascript type"
   ) {
-    if (!BreadCrumbs.isOfType(val, type))
+    if (Array.isArray(type)) {
+      if (
+        !type.some((t) => {
+          return BreadCrumbs.isOfType(val, t)
+        })
+      )
+        throw new SettingError(
+          this.constructor.name + " " + funame,
+          "Breadcrumbs: '" +
+            this.toBreadCrumbs() +
+            "'\n   " +
+            msg +
+            " '" +
+            type.join(" or ") +
+            "'"
+        )
+    } else if (!BreadCrumbs.isOfType(val, type))
       throw new SettingError(
         this.constructor.name + " " + funame,
         "Breadcrumbs: '" +
@@ -732,6 +772,9 @@ class BreadCrumbs {
     if (type == "array" && typeof val == "object") answer = Array.isArray(val)
     else if (typeof val == "object" && type != "object")
       switch (type) {
+        case "BreadCrumbs":
+          answer = val instanceof BreadCrumbs
+          break
         case "Setting":
           answer = val instanceof Setting
           break
@@ -740,9 +783,6 @@ class BreadCrumbs {
           break
         case "NoteTypesManager":
           answer = val instanceof NoteTypesManager
-          break
-        case "Option":
-          answer = val instanceof Option
           break
         case "Object": // object but not an array
           answer = !Array.isArray(val)
@@ -754,7 +794,7 @@ class BreadCrumbs {
     return answer
   }
 
-  //  #region BreadCrumbs tests
+  //#region BreadCrumbs tests
   static _ = null
   static test(outputObj) {
     BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj)
@@ -768,25 +808,38 @@ class BreadCrumbs {
     BreadCrumbs._.destruct()
     BreadCrumbs._ = null
   }
+  // prettier-ignore
   static constructorTest() {
-    BreadCrumbs._.shouldAssert(1, BreadCrumbs._tryConstruct, {}, undefined)
-    BreadCrumbs._.assert(2, BreadCrumbs._tryConstruct, undefined, "myName")
-    let breadcrumbs = new BreadCrumbs(undefined, "TEST KEY")
-    BreadCrumbs._.bassert(
-      3,
-      breadcrumbs instanceof Object,
-      "'BreadCrumbs' has to be an instance of 'Object'"
-    )
-    BreadCrumbs._.bassert(
-      4,
-      breadcrumbs instanceof BreadCrumbs,
-      "'BreadCrumbs' has to be an instance of 'BreadCrumbs'"
-    )
-    BreadCrumbs._.bassert(
-      5,
-      breadcrumbs.constructor == BreadCrumbs,
-      "the constructor property is not 'BreadCrumbs'"
-    )
+    BreadCrumbs._.assert(1,BreadCrumbs._tryConstruct,undefined,"myName")
+    BreadCrumbs._.assert(2,BreadCrumbs._tryConstruct,{},"myName")
+    BreadCrumbs._.assert(3,BreadCrumbs._tryConstruct,2,"myName")
+    BreadCrumbs._.assert(4,BreadCrumbs._tryConstruct,null,"myName")
+    BreadCrumbs._.assert(5,BreadCrumbs._tryConstruct,new Error(),"myName")
+    BreadCrumbs._.assert(6,BreadCrumbs._tryConstruct,["a","b"],"myName")
+    BreadCrumbs._.assert(7,BreadCrumbs._tryConstruct,Symbol(),"myName")
+
+    BreadCrumbs._.assert(8,BreadCrumbs._tryConstruct,undefined,Symbol())
+    BreadCrumbs._.shouldAssert(9,BreadCrumbs._tryConstruct,{},undefined,undefined,"key has to be defined")
+    BreadCrumbs._.shouldAssert(10,BreadCrumbs._tryConstruct,{},2,undefined,"key can not be a number")
+    BreadCrumbs._.shouldAssert(11,BreadCrumbs._tryConstruct,{},null,undefined,"key may not be 'null'")
+    BreadCrumbs._.shouldAssert(12,BreadCrumbs._tryConstruct,{},{},undefined,"key may not be an object")
+    BreadCrumbs._.shouldAssert(13,BreadCrumbs._tryConstruct,{},new Error(),undefined,"key may not be 'Error' instance")
+    BreadCrumbs._.shouldAssert(14,BreadCrumbs._tryConstruct,{},["a","b"],undefined,"key may not be an array")
+
+    let breadcrumbs = new BreadCrumbs(undefined,"myName")
+    let setting = new Setting({},"myName")
+    BreadCrumbs._.assert(15,BreadCrumbs._tryConstruct,undefined,"myName",breadcrumbs)
+    BreadCrumbs._.assert(16,BreadCrumbs._tryConstruct,undefined,"myName",setting)
+    BreadCrumbs._.shouldAssert(17,BreadCrumbs._tryConstruct,undefined,"myName",null,"parent may not be 'null'")
+    BreadCrumbs._.shouldAssert(18,BreadCrumbs._tryConstruct,undefined,"myName",new Error(),"parent may not be 'Error' instance")
+    BreadCrumbs._.shouldAssert(19,BreadCrumbs._tryConstruct,undefined,"myName",{},"parent may not be an object")
+    BreadCrumbs._.shouldAssert(20,BreadCrumbs._tryConstruct,undefined,"myName",2,"parent may not be a number")
+    BreadCrumbs._.shouldAssert(21,BreadCrumbs._tryConstruct,undefined,"myName",["a","b"],"parent may not be an array")
+    BreadCrumbs._.shouldAssert(22,BreadCrumbs._tryConstruct,undefined,"myName",Symbol(),"parent may not be a symbol")
+
+    BreadCrumbs._.bassert(23,breadcrumbs instanceof Object,"'BreadCrumbs' has to be an instance of 'Object'")
+    BreadCrumbs._.bassert(24,breadcrumbs instanceof BreadCrumbs,"'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
+    BreadCrumbs._.bassert(25,breadcrumbs.constructor == BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
   }
   static toStringTest() {
     let str = new BreadCrumbs(undefined, "my name").toString()
@@ -823,7 +876,7 @@ class BreadCrumbs {
     let breadcrumbs = new BreadCrumbs({}, "my name")
     BreadCrumbs._.bassert(
       1,
-      breadcrumbs.#key == "my name",
+      breadcrumbs.#ident == "my name",
       "does not return name given on construction "
     )
   }
@@ -862,17 +915,17 @@ class BreadCrumbs {
       "undefined accepted as defined"
     )
   }
-  static _tryConstruct(arg1, arg2) {
-    let breadcrumbs = new BreadCrumbs(arg1, arg2)
+  static _tryConstruct(arg1, arg2, arg3) {
+    let breadcrumbs = new BreadCrumbs(arg1, arg2, arg3)
   }
-  //  #endregion BreadCrumbs tests
+  //#endregion BreadCrumbs tests
 }
 
 /** most elaborated subclass
  *
  */
 class Setting extends BreadCrumbs {
-  //  #region member variables
+  //#region member variables
   static #ROOT_KEY = "/"
   #children = {}
   #spec = {}
@@ -894,7 +947,7 @@ class Setting extends BreadCrumbs {
   get renderYAML() {
     return this.getRenderYAML()
   }
-  //  #endregion member variables
+  //#endregion member variables
   constructor(
     literal,
     key = undefined,
@@ -939,7 +992,7 @@ class Setting extends BreadCrumbs {
   static #isHandlersKey(key) {
     return SpecManager.isHandlerKey(key) || NoteTypesManager.isHandlerKey(key)
   }
-  //  #region Setting tests
+  //#region Setting tests
   static _ = null
   static test(outputObj) {
     BreadCrumbs.test(outputObj)
@@ -955,23 +1008,16 @@ class Setting extends BreadCrumbs {
     Setting._.destruct()
     Setting._ = null
   }
+  // prettier-ignore
   static constructorTest() {
-    Setting._.shouldAssert(1, Setting._tryConstruct, undefined)
+    Setting._.shouldAssert(1, Setting._tryConstruct, undefined, undefined, "msg")
     Setting._.assert(2, Setting._tryConstruct, {}, "myName")
     Setting._.assert(3, Setting._tryConstruct, {}, "my Name")
-    Setting._.assert(4, Setting._tryConstruct, {}, 22)
+    Setting._.assert(4, Setting._tryConstruct, {}, "22")
     Setting._.assert(5, Setting._tryConstruct, {}, Symbol("a"))
     let setting = new Setting({}, "myName")
-    Setting._.bassert(
-      6,
-      setting instanceof BreadCrumbs,
-      "'Setting' has to be an instance of 'BreadCrumbs'"
-    )
-    Setting._.bassert(
-      7,
-      setting.constructor == Setting,
-      "the constructor property is not 'Setting'"
-    )
+    Setting._.bassert(6,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
+    Setting._.bassert(7,setting.constructor == Setting,"the constructor property is not 'Setting'")
   }
   static toStringTest() {
     let str = new Setting({}).toString()
@@ -992,39 +1038,39 @@ class Setting extends BreadCrumbs {
     Setting._.bassert(
       1,
       Setting.#isHandlersKey(SpecManager.SPEC_KEY),
-      SpecManager.SPEC_KEY + " should be recognized as handler key, but isn't"
+      SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't"
     )
     Setting._.bassert(
       2,
       Setting.#isHandlersKey(NoteTypesManager.NOTETYPES_KEY),
       NoteTypesManager.NOTETYPES_KEY +
-        " should be recognized as handler key, but isn't"
+        " should be recognized as handler key,but isn't"
     )
     Setting._.bassert(
       3,
       !Setting.#isHandlersKey(NoteTypesManager.TYPES_KEYS[0]),
       NoteTypesManager.TYPES_KEYS[0] +
-        " should not be recognized as handlers key, but is"
+        " should not be recognized as handlers key,but is"
     )
     Setting._.bassert(
       4,
       !Setting.#isHandlersKey("no"),
-      "'no' should not be recognized as handlers key, but is"
+      "'no' should not be recognized as handlers key,but is"
     )
     Setting._.bassert(
       5,
       !Setting.#isHandlersKey(""),
-      "empty string should not be recognized as handlers key, but is"
+      "empty string should not be recognized as handlers key,but is"
     )
     Setting._.bassert(
       6,
       !Setting.#isHandlersKey(22),
-      "22 should not be recognized as handlers key, but is"
+      "22 should not be recognized as handlers key,but is"
     )
     Setting._.bassert(
       7,
       !Setting.#isHandlersKey(),
-      "no argument should not be recognized as handlers key, but is"
+      "no argument should not be recognized as handlers key,but is"
     )
   }
   static getFrontmatterYAMLTest() {
@@ -1053,35 +1099,35 @@ class Setting extends BreadCrumbs {
       JSON.stringify(answ1f) == expAnsw1f,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ1f
-      )}', but should be:'${expAnsw1f}'`
+      )}',but should be:'${expAnsw1f}'`
     )
     Setting._.bassert(
       2,
       JSON.stringify(answ2f) == expAnsw2f,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ2f
-      )}', but should be:'${expAnsw2f}'`
+      )}',but should be:'${expAnsw2f}'`
     )
     Setting._.bassert(
       3,
       JSON.stringify(answ3f) == expAnsw3f,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ3f
-      )}', but should be:'${expAnsw3f}'`
+      )}',but should be:'${expAnsw3f}'`
     )
     Setting._.bassert(
       4,
       JSON.stringify(answ4f) == expAnsw4f,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ4f
-      )}', but should be:'${expAnsw4f}'`
+      )}',but should be:'${expAnsw4f}'`
     )
     Setting._.bassert(
       5,
       JSON.stringify(answ5f) == expAnsw5f,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ5f
-      )}', but should be:'${expAnsw5f}'`
+      )}',but should be:'${expAnsw5f}'`
     )
   }
   static getRenderYAMLTest() {
@@ -1102,21 +1148,21 @@ class Setting extends BreadCrumbs {
       JSON.stringify(answ1) == expAnsw1,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ1
-      )}', but should be:'${expAnsw1}'`
+      )}',but should be:'${expAnsw1}'`
     )
     Setting._.bassert(
       2,
       JSON.stringify(answ2) == expAnsw2,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ2
-      )}', but should be:'${expAnsw2}'`
+      )}',but should be:'${expAnsw2}'`
     )
     Setting._.bassert(
       3,
       JSON.stringify(answ3) == expAnsw3,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ3
-      )}', but should be:'${expAnsw3}'`
+      )}',but should be:'${expAnsw3}'`
     )
     const lit6 = {
       c: {
@@ -1133,7 +1179,7 @@ class Setting extends BreadCrumbs {
       JSON.stringify(answ6r) == expAnsw6r,
       `output of JSON.stringify(result) is:'${JSON.stringify(
         answ6r
-      )}', but should be:'${expAnsw6r}'`
+      )}',but should be:'${expAnsw6r}'`
     )
   }
   static getterTest() {
@@ -1170,18 +1216,18 @@ class Setting extends BreadCrumbs {
   static _tryConstruct(arg1, arg2) {
     let settings = new Setting(arg1, arg2)
   }
-  //  #endregion Setting tests
+  //#endregion Setting tests
 }
 
 /** specification parser */
 class SpecManager extends BreadCrumbs {
-  //  #region member variables
+  //#region member variables
   static SPEC_KEY = "_SPEC"
   #render = false
   get render() {
     return this.#render
   }
-  //  #endregion member variables
+  //#endregion member variables
   constructor(literal, key, caller, callersParentSpec) {
     let specLiteral
     if (literal != undefined) specLiteral = literal[SpecManager.SPEC_KEY]
@@ -1208,7 +1254,7 @@ class SpecManager extends BreadCrumbs {
   static isHandlerKey(key) {
     return key == SpecManager.SPEC_KEY
   }
-  //  #region SpecManager tests
+  //#region SpecManager tests
   static _ = null
   static test(outputObj) {
     SpecManager._ = new TestSuite("SpecManager", outputObj)
@@ -1219,32 +1265,15 @@ class SpecManager extends BreadCrumbs {
     SpecManager._.destruct()
     SpecManager._ = null
   }
+  // prettier-ignore
   static constructorTest() {
     let setting = new Setting({}, "its Name")
     let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    SpecManager._.shouldAssert(
-      1,
-      SpecManager._tryConstruct,
-      undefined,
-      "myName",
-      setting
-    )
-    SpecManager._.shouldAssert(
-      2,
-      SpecManager._tryConstruct,
-      {},
-      undefined,
-      setting
-    )
-    SpecManager._.shouldAssert(
-      3,
-      SpecManager._tryConstruct,
-      {},
-      "myName",
-      undefined
-    )
+    SpecManager._.shouldAssert(1,SpecManager._tryConstruct,undefined,"myName",setting,"msg")
+    //SpecManager._.shouldAssert(2,SpecManager._tryConstruct,{},undefined,setting,"msg")
+    SpecManager._.shouldAssert(3,SpecManager._tryConstruct,{},"myName",undefined,"msg")
     SpecManager._.assert(4, SpecManager._tryConstruct, {}, "my Name", setting)
-    SpecManager._.assert(5, SpecManager._tryConstruct, {}, 22, setting)
+    SpecManager._.assert(5, SpecManager._tryConstruct, {}, "22", setting)
     SpecManager._.assert(6, SpecManager._tryConstruct, {}, Symbol("a"), setting)
     let specMan = new SpecManager({}, "myName", setting)
     SpecManager._.bassert(
@@ -1257,24 +1286,18 @@ class SpecManager extends BreadCrumbs {
       specMan.constructor == SpecManager,
       "the constructor property is not 'SpecManager'"
     )
-    SpecManager._.shouldAssert(
-      9,
-      SpecManager._tryConstruct,
-      {},
-      "SPEC",
-      breadCrumbs
-    )
+    SpecManager._.shouldAssert(9,SpecManager._tryConstruct,{},"SPEC",breadCrumbs,"msg")
     specMan = new SpecManager({}, "myName", setting)
     SpecManager._.bassert(
       10,
       BreadCrumbs.isOfType(specMan, "object"),
-      "for empty literal SpecManager should construct object, but does not"
+      "for empty literal SpecManager should construct object,but does not"
     )
     let render = specMan.render
     SpecManager._.bassert(
       11,
       render != undefined,
-      "For empty literal SpecManager should create render attribute, but does not"
+      "For empty literal SpecManager should create render attribute,but does not"
     )
   }
   static toStringTest() {
@@ -1311,17 +1334,17 @@ class SpecManager extends BreadCrumbs {
     SpecManager._.bassert(
       1,
       !spec1.render,
-      "unset OPTION 'render' defaults to false, but here it is true."
+      "unset OPTION 'render' defaults to false,but here it is true."
     )
     SpecManager._.bassert(
       2,
       spec2.render,
-      "OPTION 'render' is set to true in 'literal', but here it is false."
+      "OPTION 'render' is set to true in 'literal',but here it is false."
     )
     SpecManager._.bassert(
       3,
       !spec3.render,
-      "OPTION 'render' is set to false in 'literal', but here it is true."
+      "OPTION 'render' is set to false in 'literal',but here it is true."
     )
     let literal4 = {a: {b: {c: {d: true}}}}
     let setting4 = new Setting(literal4)
@@ -1361,12 +1384,12 @@ class SpecManager extends BreadCrumbs {
   static _tryConstruct(arg1, arg2, arg3) {
     let specMan = new SpecManager(arg1, arg2, arg3)
   }
-  //  #endregion SpecManager tests
+  //#endregion SpecManager tests
 }
 
 /** notetypes parser */
 class NoteTypesManager extends BreadCrumbs {
-  //  #region member variables
+  //#region member variables
   static NOTETYPES_KEY = "NOTETYPES"
   static TYPES_KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
   static #DEFAULT_TYPE = {
@@ -1385,7 +1408,7 @@ class NoteTypesManager extends BreadCrumbs {
   get names() {
     return this.getTypeNames()
   }
-  //  #endregion member variables
+  //#endregion member variables
   constructor(literal, key, caller) {
     let typesLiteral
     if (literal != undefined)
@@ -1454,7 +1477,7 @@ class NoteTypesManager extends BreadCrumbs {
   getTypeNames() {
     return Object.keys(this.#notetypes)
   }
-  //  #region NoteTypesManager tests
+  //#region NoteTypesManager tests
   static _ = null
   static test(outputObj) {
     NoteTypesManager._ = new TestSuite("NoteTypesManager", outputObj)
@@ -1464,30 +1487,13 @@ class NoteTypesManager extends BreadCrumbs {
     NoteTypesManager._.destruct()
     NoteTypesManager._ = null
   }
+  // prettier-ignore
   static constructorTest() {
     let setting = new Setting({}, "its Name")
     let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    NoteTypesManager._.shouldAssert(
-      1,
-      NoteTypesManager._tryConstruct,
-      undefined,
-      "myName",
-      setting
-    )
-    NoteTypesManager._.shouldAssert(
-      2,
-      NoteTypesManager._tryConstruct,
-      {},
-      undefined,
-      setting
-    )
-    NoteTypesManager._.shouldAssert(
-      3,
-      NoteTypesManager._tryConstruct,
-      {},
-      "myName",
-      undefined
-    )
+    NoteTypesManager._.shouldAssert(1,NoteTypesManager._tryConstruct,undefined,"myName",setting,"msg")
+    //NoteTypesManager._.shouldAssert(2,NoteTypesManager._tryConstruct,{},undefined,setting,"msg")
+    NoteTypesManager._.shouldAssert(3,NoteTypesManager._tryConstruct,{},"myName",undefined,"msg")
     NoteTypesManager._.assert(
       4,
       NoteTypesManager._tryConstruct,
@@ -1499,7 +1505,7 @@ class NoteTypesManager extends BreadCrumbs {
       5,
       NoteTypesManager._tryConstruct,
       {},
-      22,
+      "22",
       setting
     )
     NoteTypesManager._.assert(
@@ -1531,7 +1537,7 @@ class NoteTypesManager extends BreadCrumbs {
     NoteTypesManager._.bassert(
       10,
       BreadCrumbs.isOfType(typeMan.notetypes, "object"),
-      "for empty literal NoteTypesManager should construct object, but does not"
+      "for empty literal NoteTypesManager should construct object,but does not"
     )
     let typeKeys = Object.keys(typeMan.notetypes)
     NoteTypesManager._.bassert(
@@ -1543,7 +1549,7 @@ class NoteTypesManager extends BreadCrumbs {
     NoteTypesManager._.bassert(
       12,
       BreadCrumbs.isOfType(defaultType, "object"),
-      "default type should always be present, but here it is not"
+      "default type should always be present,but here it is not"
     )
     let defaultTypeKeys = Object.keys(defaultType)
     let typesKeys = NoteTypesManager.TYPES_KEYS
@@ -1557,7 +1563,7 @@ class NoteTypesManager extends BreadCrumbs {
       defaultTypeKeys.every((key) => {
         return typesKeys.includes(key)
       }),
-      "any key of 'NoteTypesManager.TYPES_KEYS' should be contained in defaultType, but is not"
+      "any key of 'NoteTypesManager.TYPES_KEYS' should be contained in defaultType,but is not"
     )
   }
   static toStringTest() {
@@ -1585,10 +1591,10 @@ class NoteTypesManager extends BreadCrumbs {
   static _tryConstruct(arg1, arg2, arg3) {
     let specMan = new NoteTypesManager(arg1, arg2, arg3)
   }
-  //  #endregion NoteTypesManager tests
+  //#endregion NoteTypesManager tests
 }
 //#endregion code
-/** Runs all tests, if TESTING is set output to current note (indirect)
+/** Runs all tests,if TESTING is set output to current note (indirect)
  * @param {*} outputObj
  */
 function test(outputObj) {
