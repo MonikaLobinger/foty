@@ -1086,14 +1086,14 @@ class Setting extends BreadCrumbs {
   #types = {}
   #frontmatterYAML = {}
   #renderYAML = {}
+  get spec() {
+    return this.#spec
+  }
   get typeNames() {
     return this.#types.names
   }
   get defaultType() {
     return this.#types.defaultType
-  }
-  get spec() {
-    return this.#spec
   }
   get frontmatterYAML() {
     return this.getFrontmatterYAML()
@@ -1146,231 +1146,118 @@ class Setting extends BreadCrumbs {
   static #isHandlersKey(key) {
     return SpecManager.isHandlerKey(key) || TypesManager.isHandlerKey(key)
   }
-  //#region Setting tests
-  static _ = null
+
+  // prettier-ignore
   static test(outputObj) {
+    let _ = null
     BreadCrumbs.test(outputObj)
     SpecManager.test(outputObj)
     TypesManager.test(outputObj)
-    Setting._ = new TestSuite("Setting", outputObj)
-    Setting._.run(Setting.constructorTest)
-    Setting._.run(Setting.toStringTest)
-    Setting._.run(Setting.isHandlersKeyTest)
-    Setting._.run(Setting.getFrontmatterYAMLTest)
-    Setting._.run(Setting.getRenderYAMLTest)
-    Setting._.run(Setting.getterTest)
-    Setting._.destruct()
-    Setting._ = null
-  }
-  // prettier-ignore
-  static constructorTest() {
-    Setting._.shouldAssert(1, Setting._tryConstruct, undefined, undefined, "msg")
-    Setting._.assert(2, Setting._tryConstruct, {}, "myName")
-    Setting._.assert(3, Setting._tryConstruct, {}, "my Name")
-    Setting._.assert(4, Setting._tryConstruct, {}, "22")
-    Setting._.assert(5, Setting._tryConstruct, {}, Symbol("a"))
-    let setting = new Setting({}, "myName")
-    Setting._.bassert(6,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
-    Setting._.bassert(7,setting.constructor == Setting,"the constructor property is not 'Setting'")
-  }
-  static toStringTest() {
-    let str = new Setting({}).toString()
-    Setting._.bassert(
-      1,
-      str.contains(Setting.#ROOT_KEY),
-      "result does not contain root string"
-    )
-    str = new Setting({}, "my Name").toString()
-    Setting._.bassert(
-      2,
-      str.contains("my Name"),
-      "result does not contain Setting key"
-    )
-    let setting = new Setting({}, "my Name")
-  }
-  static isHandlersKeyTest() {
-    Setting._.bassert(
-      1,
-      Setting.#isHandlersKey(SpecManager.SPEC_KEY),
-      SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't"
-    )
-    Setting._.bassert(
-      2,
-      Setting.#isHandlersKey(TypesManager.NOTETYPES_KEY),
-      TypesManager.NOTETYPES_KEY +
-        " should be recognized as handler key,but isn't"
-    )
-    Setting._.bassert(
-      3,
-      !Setting.#isHandlersKey(TypesManager.TYPES_KEYS[0]),
-      TypesManager.TYPES_KEYS[0] +
-        " should not be recognized as handlers key,but is"
-    )
-    Setting._.bassert(
-      4,
-      !Setting.#isHandlersKey("no"),
-      "'no' should not be recognized as handlers key,but is"
-    )
-    Setting._.bassert(
-      5,
-      !Setting.#isHandlersKey(""),
-      "empty string should not be recognized as handlers key,but is"
-    )
-    Setting._.bassert(
-      6,
-      !Setting.#isHandlersKey(22),
-      "22 should not be recognized as handlers key,but is"
-    )
-    Setting._.bassert(
-      7,
-      !Setting.#isHandlersKey(),
-      "no argument should not be recognized as handlers key,but is"
-    )
-  }
-  static getFrontmatterYAMLTest() {
-    const lit1 = {a: 23}
-    const lit2 = {a: 23, b: "ja"}
-    const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
-    const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-    const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
-    let setting1 = new Setting(lit1)
-    let setting2 = new Setting(lit2)
-    let setting3 = new Setting(lit3)
-    let setting4 = new Setting(lit4)
-    let setting5 = new Setting(lit5)
-    let answ1f = setting1.getFrontmatterYAML()
-    let answ2f = setting2.getFrontmatterYAML()
-    let answ3f = setting3.getFrontmatterYAML()
-    let answ4f = setting4.getFrontmatterYAML()
-    let answ5f = setting5.getFrontmatterYAML()
-    let expAnsw1f = '{"a":23}'
-    let expAnsw2f = '{"a":23,"b":"ja"}'
-    let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
-    let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
-    let expAnsw5f = '{"a":23}'
-    Setting._.bassert(
-      1,
-      JSON.stringify(answ1f) == expAnsw1f,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ1f
-      )}',but should be:'${expAnsw1f}'`
-    )
-    Setting._.bassert(
-      2,
-      JSON.stringify(answ2f) == expAnsw2f,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ2f
-      )}',but should be:'${expAnsw2f}'`
-    )
-    Setting._.bassert(
-      3,
-      JSON.stringify(answ3f) == expAnsw3f,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ3f
-      )}',but should be:'${expAnsw3f}'`
-    )
-    Setting._.bassert(
-      4,
-      JSON.stringify(answ4f) == expAnsw4f,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ4f
-      )}',but should be:'${expAnsw4f}'`
-    )
-    Setting._.bassert(
-      5,
-      JSON.stringify(answ5f) == expAnsw5f,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ5f
-      )}',but should be:'${expAnsw5f}'`
-    )
-  }
-  static getRenderYAMLTest() {
-    const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-    const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
-    const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
-    let setting1 = new Setting(lit1)
-    let setting2 = new Setting(lit2)
-    let setting3 = new Setting(lit3)
-    let answ1 = setting1.getRenderYAML()
-    let answ2 = setting2.getRenderYAML()
-    let answ3 = setting3.getRenderYAML()
-    let expAnsw1 = "{}"
-    let expAnsw2 = '{"pict":"ja"}'
-    let expAnsw3 = "{}"
-    Setting._.bassert(
-      1,
-      JSON.stringify(answ1) == expAnsw1,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ1
-      )}',but should be:'${expAnsw1}'`
-    )
-    Setting._.bassert(
-      2,
-      JSON.stringify(answ2) == expAnsw2,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ2
-      )}',but should be:'${expAnsw2}'`
-    )
-    Setting._.bassert(
-      3,
-      JSON.stringify(answ3) == expAnsw3,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ3
-      )}',but should be:'${expAnsw3}'`
-    )
-    const lit6 = {
-      c: {
-        _SPEC: {render: true},
-        pict: "ja",
-        d: {_SPEC: {render: false}, private: true},
-      },
+
+    if(_ = new TestSuite("Setting", outputObj)) {
+    _.run(getterTest)
+    _.run(constructorTest)
+    _.run(toStringTest)
+    _.run(isHandlersKeyTest)
+    _.run(getFrontmatterYAMLTest)
+    _.run(getRenderYAMLTest)
+    _.destruct()
+    _ = null
     }
-    let setting6 = new Setting(lit6)
-    let answ6r = setting6.getRenderYAML()
-    let expAnsw6r = '{"pict":"ja"}'
-    Setting._.bassert(
-      5,
-      JSON.stringify(answ6r) == expAnsw6r,
-      `output of JSON.stringify(result) is:'${JSON.stringify(
-        answ6r
-      )}',but should be:'${expAnsw6r}'`
-    )
+    function getterTest() {
+      // check whether getter assigned to correct function
+      const desc1 = Object.getOwnPropertyDescriptor(Setting.prototype,"frontmatterYAML")
+      const desc2 = Object.getOwnPropertyDescriptor(Setting.prototype,"renderYAML")
+      _.bassert(1,typeof desc1.get == "function",`getter for 'frontmatterYAML' is not 'function'`)
+      _.bassert(2,typeof desc2.get == "function",`getter for 'renderYAML' is not 'function'`)
+      _.bassert(3,desc1.get.toString().contains("getFrontmatterYAML"),`getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`)
+      _.bassert(4,desc2.get.toString().contains("getRenderYAML"),`getter for 'renderYAML' is not 'getRenderYAML'`)
+    }
+    function constructorTest() {
+      _.shouldAssert(1, _tryConstruct, undefined, undefined, "msg")
+      _.assert(2, _tryConstruct, {}, "myName")
+      _.assert(3, _tryConstruct, {}, "my Name")
+      _.assert(4, _tryConstruct, {}, "22")
+      _.assert(5, _tryConstruct, {}, Symbol("a"))
+      let setting = new Setting({}, "myName")
+      _.bassert(6,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
+      _.bassert(7,setting.constructor == Setting,"the constructor property is not 'Setting'")
+    }
+    function toStringTest() {
+      let str = new Setting({}).toString()
+        _.bassert(1,str.contains(Setting.#ROOT_KEY),"result does not contain root string")
+        str = new Setting({}, "my Name").toString()
+        _.bassert(2,str.contains("my Name"),"result does not contain Setting key")
+        let setting = new Setting({}, "my Name")
+    }
+    function isHandlersKeyTest() {
+      _.bassert(1,Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't")
+      _.bassert(2,Setting.#isHandlersKey(TypesManager.NOTETYPES_KEY),TypesManager.NOTETYPES_KEY +  " should be recognized as handler key,but isn't")
+      _.bassert(3,!Setting.#isHandlersKey(TypesManager.TYPES_KEYS[0]),TypesManager.TYPES_KEYS[0] +  " should not be recognized as handlers key,but is")
+      _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
+      _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
+      _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
+      _.bassert(7,!Setting.#isHandlersKey(),"no argument should not be recognized as handlers key,but is")
+    }
+    function getFrontmatterYAMLTest() {
+      const lit1 = {a: 23}
+      const lit2 = {a: 23, b: "ja"}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let setting5 = new Setting(lit5)
+      let answ1f = setting1.getFrontmatterYAML()
+      let answ2f = setting2.getFrontmatterYAML()
+      let answ3f = setting3.getFrontmatterYAML()
+      let answ4f = setting4.getFrontmatterYAML()
+      let answ5f = setting5.getFrontmatterYAML()
+      let expAnsw1f = '{"a":23}'
+      let expAnsw2f = '{"a":23,"b":"ja"}'
+      let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
+      let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
+      let expAnsw5f = '{"a":23}'
+      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
+      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
+      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
+      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
+      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
+    }
+    function getRenderYAMLTest() {
+      const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let answ1 = setting1.getRenderYAML()
+      let answ2 = setting2.getRenderYAML()
+      let answ3 = setting3.getRenderYAML()
+      let expAnsw1 = "{}"
+      let expAnsw2 = '{"pict":"ja"}'
+      let expAnsw3 = "{}"
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      const lit6 = {
+        c: {
+          _SPEC: {render: true},
+          pict: "ja",
+          d: {_SPEC: {render: false}, private: true},
+        },
+      }
+      let setting6 = new Setting(lit6)
+      let answ6r = setting6.getRenderYAML()
+      let expAnsw6r = '{"pict":"ja"}'
+      _.bassert(5,JSON.stringify(answ6r) == expAnsw6r,`output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}',but should be:'${expAnsw6r}'`)
+    }
+    function _tryConstruct(arg1, arg2) {
+      let settings = new Setting(arg1, arg2)
+    }
   }
-  static getterTest() {
-    // check whether getter assigned to correct function
-    const desc1 = Object.getOwnPropertyDescriptor(
-      Setting.prototype,
-      "frontmatterYAML"
-    )
-    const desc2 = Object.getOwnPropertyDescriptor(
-      Setting.prototype,
-      "renderYAML"
-    )
-    Setting._.bassert(
-      1,
-      typeof desc1.get == "function",
-      `getter for 'frontmatterYAML' is not 'function'`
-    )
-    Setting._.bassert(
-      2,
-      typeof desc2.get == "function",
-      `getter for 'renderYAML' is not 'function'`
-    )
-    Setting._.bassert(
-      1,
-      desc1.get.toString().contains("getFrontmatterYAML"),
-      `getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`
-    )
-    Setting._.bassert(
-      2,
-      desc2.get.toString().contains("getRenderYAML"),
-      `getter for 'renderYAML' is not 'getRenderYAML'`
-    )
-  }
-  static _tryConstruct(arg1, arg2) {
-    let settings = new Setting(arg1, arg2)
-  }
-  //#endregion Setting tests
 }
 
 /** specification parser */
@@ -1408,137 +1295,84 @@ class SpecManager extends BreadCrumbs {
   static isHandlerKey(key) {
     return key == SpecManager.SPEC_KEY
   }
-  //#region SpecManager tests
-  static _ = null
-  static test(outputObj) {
-    SpecManager._ = new TestSuite("SpecManager", outputObj)
-    SpecManager._.run(SpecManager.constructorTest)
-    SpecManager._.run(SpecManager.toStringTest)
-    SpecManager._.run(SpecManager.isHandlerKeyTest)
-    SpecManager._.run(SpecManager.renderOptionTest)
-    SpecManager._.destruct()
-    SpecManager._ = null
-  }
   // prettier-ignore
-  static constructorTest() {
-    let setting = new Setting({}, "its Name")
-    let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    SpecManager._.shouldAssert(1,SpecManager._tryConstruct,undefined,"myName",setting,"msg")
-    //SpecManager._.shouldAssert(2,SpecManager._tryConstruct,{},undefined,setting,"msg")
-    SpecManager._.shouldAssert(3,SpecManager._tryConstruct,{},"myName",undefined,"msg")
-    SpecManager._.assert(4, SpecManager._tryConstruct, {}, "my Name", setting)
-    SpecManager._.assert(5, SpecManager._tryConstruct, {}, "22", setting)
-    SpecManager._.assert(6, SpecManager._tryConstruct, {}, Symbol("a"), setting)
-    let specMan = new SpecManager({}, "myName", setting)
-    SpecManager._.bassert(
-      7,
-      specMan instanceof BreadCrumbs,
-      "'SpecManager' has to be an instance of 'BreadCrumbs'"
-    )
-    SpecManager._.bassert(
-      8,
-      specMan.constructor == SpecManager,
-      "the constructor property is not 'SpecManager'"
-    )
-    SpecManager._.shouldAssert(9,SpecManager._tryConstruct,{},"SPEC",breadCrumbs,"msg")
-    specMan = new SpecManager({}, "myName", setting)
-    SpecManager._.bassert(
-      10,
-      BreadCrumbs.isOfType(specMan, "object"),
-      "for empty literal SpecManager should construct object,but does not"
-    )
-    let render = specMan.render
-    SpecManager._.bassert(
-      11,
-      render != undefined,
-      "For empty literal SpecManager should create render attribute,but does not"
-    )
-  }
-  static toStringTest() {
-    let setting = new Setting({}, "its Name")
-    let str = new SpecManager({}, "myName", setting).toString()
-    SpecManager._.bassert(
-      1,
-      str.contains("myName"),
-      "result does not contain name string"
-    )
-  }
-  static isHandlerKeyTest() {
-    SpecManager._.bassert(
-      1,
-      SpecManager.isHandlerKey("_SPEC"),
-      "key is not identified as '_SPEC'"
-    )
-    SpecManager._.bassert(
-      2,
-      !SpecManager.isHandlerKey("SPEC"),
-      "'SPEC' is accepted as key"
-    )
-  }
-  static renderOptionTest() {
-    let literal1 = {}
-    let literal2 = {_SPEC: {render: true}}
-    let literal3 = {_SPEC: {render: false}}
-    let setting1 = new Setting(literal1)
-    let setting2 = new Setting(literal2)
-    let setting3 = new Setting(literal3)
-    let spec1 = setting1.spec
-    let spec2 = setting2.spec
-    let spec3 = setting3.spec
-    SpecManager._.bassert(
-      1,
-      !spec1.render,
-      "unset OPTION 'render' defaults to false,but here it is true."
-    )
-    SpecManager._.bassert(
-      2,
-      spec2.render,
-      "OPTION 'render' is set to true in 'literal',but here it is false."
-    )
-    SpecManager._.bassert(
-      3,
-      !spec3.render,
-      "OPTION 'render' is set to false in 'literal',but here it is true."
-    )
-    let literal4 = {a: {b: {c: {d: true}}}}
-    let setting4 = new Setting(literal4)
-    let f = setting4.frontmatterYAML
-    let r = setting4.renderYAML
-    SpecManager._.bassert(
-      4,
-      f.d == true && r.d == undefined,
-      "Value should appear in frontmatter output and should not appear in render output"
-    )
-    let literal5 = {a: {_SPEC: {render: true}, b: {c: {d: true}}}}
-    let setting5 = new Setting(literal5)
-    f = setting5.frontmatterYAML
-    r = setting5.renderYAML
-    SpecManager._.bassert(
-      5,
-      f.d == undefined && r.d == true,
-      "Value should not appear in frontmatter output and should appear in render output"
-    )
-    let literal6 = {
-      a: {
-        _SPEC: {render: true},
-        b: {
-          c: {_SPEC: {render: false}, d: true},
-        },
-      },
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("SpecManager", outputObj)) {
+      _.run(constructorTest)
+      _.run(toStringTest)
+      _.run(isHandlerKeyTest)
+      _.run(renderOptionTest)
+      _.destruct()
+      _ = null
     }
-    let setting6 = new Setting(literal6)
-    f = setting6.frontmatterYAML
-    r = setting6.renderYAML
-    SpecManager._.bassert(
-      6,
-      f.d == true && r.d == undefined,
-      "Value should appear in frontmatter output and should not appear in render output"
-    )
+    function constructorTest() {
+      let setting = new Setting({}, "its Name")
+      let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
+      _.shouldAssert(1,_tryConstruct,undefined,"myName",setting,"msg")
+      //_.shouldAssert(2,_tryConstruct,{},undefined,setting,"msg")
+      _.shouldAssert(3,_tryConstruct,{},"myName",undefined,"msg")
+      _.assert(4, _tryConstruct, {}, "my Name", setting)
+      _.assert(5, _tryConstruct, {}, "22", setting)
+      _.assert(6, _tryConstruct, {}, Symbol("a"), setting)
+      let specMan = new SpecManager({}, "myName", setting)
+      _.bassert(7,specMan instanceof BreadCrumbs,"'SpecManager' has to be an instance of 'BreadCrumbs'")
+      _.bassert(8,specMan.constructor == SpecManager,"the constructor property is not 'SpecManager'")
+      _.shouldAssert(9,_tryConstruct,{},"SPEC",breadCrumbs,"msg")
+      specMan = new SpecManager({}, "myName", setting)
+      _.bassert(10,BreadCrumbs.isOfType(specMan, "object"),"for empty literal SpecManager should construct object,but does not")
+      let render = specMan.render
+      _.bassert(11,render != undefined,"For empty literal SpecManager should create render attribute,but does not")
+    }
+    function toStringTest() {
+      let setting = new Setting({}, "its Name")
+      let str = new SpecManager({}, "myName", setting).toString()
+      _.bassert(1,str.contains("myName"),"result does not contain name string"    )
+    }
+    function isHandlerKeyTest() {
+      _.bassert(1,SpecManager.isHandlerKey("_SPEC"),"key is not identified as '_SPEC'")
+      _.bassert(2,!SpecManager.isHandlerKey("SPEC"),"'SPEC' is accepted as key")
+    }
+    function renderOptionTest() {
+      let literal1 = {}
+      let literal2 = {_SPEC: {render: true}}
+      let literal3 = {_SPEC: {render: false}}
+      let setting1 = new Setting(literal1)
+      let setting2 = new Setting(literal2)
+      let setting3 = new Setting(literal3)
+      let spec1 = setting1.spec
+      let spec2 = setting2.spec
+      let spec3 = setting3.spec
+      _.bassert(1,!spec1.render,"unset OPTION 'render' defaults to false,but here it is true.")
+      _.bassert(2,spec2.render,"OPTION 'render' is set to true in 'literal',but here it is false.")
+      _.bassert(3,!spec3.render,"OPTION 'render' is set to false in 'literal',but here it is true.")
+      let literal4 = {a: {b: {c: {d: true}}}}
+      let setting4 = new Setting(literal4)
+      let f = setting4.frontmatterYAML
+      let r = setting4.renderYAML
+      _.bassert(4,f.d == true && r.d == undefined,"Value should appear in frontmatter output and should not appear in render output")
+      let literal5 = {a: {_SPEC: {render: true}, b: {c: {d: true}}}}
+      let setting5 = new Setting(literal5)
+      f = setting5.frontmatterYAML
+      r = setting5.renderYAML
+      _.bassert(5,f.d == undefined && r.d == true,"Value should not appear in frontmatter output and should appear in render output")
+      let literal6 = {
+        a: {
+          _SPEC: {render: true},
+          b: {
+            c: {_SPEC: {render: false}, d: true},
+          },
+        },
+      }
+      let setting6 = new Setting(literal6)
+      f = setting6.frontmatterYAML
+      r = setting6.renderYAML
+      _.bassert(6,f.d == true && r.d == undefined,"Value should appear in frontmatter output and should not appear in render output")
+    }
+    function _tryConstruct(arg1, arg2, arg3) {
+      let specMan = new SpecManager(arg1, arg2, arg3)
+    }
   }
-  static _tryConstruct(arg1, arg2, arg3) {
-    let specMan = new SpecManager(arg1, arg2, arg3)
-  }
-  //#endregion SpecManager tests
 }
 
 /** notetypes parser */
@@ -1630,121 +1464,53 @@ class TypesManager extends BreadCrumbs {
   getTypeNames() {
     return Object.keys(this.#notetypes)
   }
-  //#region TypesManager tests
-  static _ = null
-  static test(outputObj) {
-    TypesManager._ = new TestSuite("TypesManager", outputObj)
-    TypesManager._.run(TypesManager.constructorTest)
-    TypesManager._.run(TypesManager.toStringTest)
-    TypesManager._.run(TypesManager.isHandlerKeyTest)
-    TypesManager._.destruct()
-    TypesManager._ = null
-  }
   // prettier-ignore
-  static constructorTest() {
-    let setting = new Setting({}, "its Name")
-    let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    TypesManager._.shouldAssert(1,TypesManager._tryConstruct,undefined,"myName",setting,"msg")
-    //TypesManager._.shouldAssert(2,TypesManager._tryConstruct,{},undefined,setting,"msg")
-    TypesManager._.shouldAssert(3,TypesManager._tryConstruct,{},"myName",undefined,"msg")
-    TypesManager._.assert(
-      4,
-      TypesManager._tryConstruct,
-      {},
-      "my Name",
-      setting
-    )
-    TypesManager._.assert(
-      5,
-      TypesManager._tryConstruct,
-      {},
-      "22",
-      setting
-    )
-    TypesManager._.assert(
-      6,
-      TypesManager._tryConstruct,
-      {},
-      Symbol("a"),
-      setting
-    )
-    let typeMan = new TypesManager({}, "myName", setting)
-    TypesManager._.bassert(
-      7,
-      typeMan instanceof BreadCrumbs,
-      "'TypesManager' has to be an instance of 'BreadCrumbs'"
-    )
-    TypesManager._.bassert(
-      8,
-      typeMan.constructor == TypesManager,
-      "the constructor property is not 'TypesManager'"
-    )
-    TypesManager._.shouldAssert(
-      9,
-      TypesManager._tryConstruct,
-      {},
-      "NOTETYPES",
-      breadCrumbs
-    )
-    typeMan = new TypesManager({}, "myName", setting)
-    TypesManager._.bassert(
-      10,
-      BreadCrumbs.isOfType(typeMan.notetypes, "object"),
-      "for empty literal TypesManager should construct object,but does not"
-    )
-    let typeKeys = Object.keys(typeMan.notetypes)
-    TypesManager._.bassert(
-      11,
-      typeKeys.length == 0,
-      "For empty literal TypesManager with no types should be created"
-    )
-    let defaultType = typeMan.defaultType
-    TypesManager._.bassert(
-      12,
-      BreadCrumbs.isOfType(defaultType, "object"),
-      "default type should always be present,but here it is not"
-    )
-    let defaultTypeKeys = Object.keys(defaultType)
-    let typesKeys = TypesManager.TYPES_KEYS
-    TypesManager._.bassert(
-      13,
-      (typesKeys.length = defaultTypeKeys.length),
-      "defaultType should have as many keys as 'TypesManager.TYPES_KEYS'"
-    )
-    TypesManager._.bassert(
-      14,
-      defaultTypeKeys.every((key) => {
-        return typesKeys.includes(key)
-      }),
-      "any key of 'TypesManager.TYPES_KEYS' should be contained in defaultType,but is not"
-    )
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("TypesManager", outputObj)) {
+      _.run(constructorTest)
+      _.run(toStringTest)
+      _.run(isHandlerKeyTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      let setting = new Setting({}, "its Name")
+      let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
+      _.shouldAssert(1,_tryConstruct,undefined,"myName",setting,"msg")
+      //_.shouldAssert(2,_tryConstruct,{},undefined,setting,"msg")
+      _.shouldAssert(3,_tryConstruct,{},"myName",undefined,"msg")
+      _.assert(4,_tryConstruct,{},"my Name",setting)
+      _.assert(5,_tryConstruct,{},"22",setting )
+      _.assert(6,_tryConstruct,{},Symbol("a"),setting)
+      let typeMan = new TypesManager({}, "myName", setting)
+      _.bassert(7,typeMan instanceof BreadCrumbs,"'TypesManager' has to be an instance of 'BreadCrumbs'")
+      _.bassert(8,typeMan.constructor == TypesManager,"the constructor property is not 'TypesManager'")
+      _.shouldAssert(9,_tryConstruct,{},"NOTETYPES",breadCrumbs)
+      typeMan = new TypesManager({}, "myName", setting)
+      _.bassert(10,BreadCrumbs.isOfType(typeMan.notetypes, "object"),"for empty literal TypesManager should construct object,but does not")
+      let typeKeys = Object.keys(typeMan.notetypes)
+      _.bassert(11,typeKeys.length == 0,"For empty literal TypesManager with no types should be created")
+      let defaultType = typeMan.defaultType
+      _.bassert(12,BreadCrumbs.isOfType(defaultType, "object"),"default type should always be present,but here it is not")
+      let defaultTypeKeys = Object.keys(defaultType)
+      let typesKeys = TypesManager.TYPES_KEYS
+      _.bassert(13,(typesKeys.length = defaultTypeKeys.length),"defaultType should have as many keys as 'TypesManager.TYPES_KEYS'")
+      _.bassert(14,defaultTypeKeys.every((key) => {return typesKeys.includes(key)}),"any key of 'TypesManager.TYPES_KEYS' should be contained in defaultType,but is not")
+    }
+    function toStringTest() {
+      let setting = new Setting({}, "its Name")
+      let str = new TypesManager({}, "myName", setting).toString()
+      _.bassert(1,str.contains("myName"),"result does not contain name string")
+    }
+    function isHandlerKeyTest() {
+      _.bassert(1,TypesManager.isHandlerKey("NOTETYPES"),"key is not identified as 'NOTETYPES'")
+      _.bassert(2,!TypesManager.isHandlerKey("_NOTETYPES"),"'_NOTETYPES' is accepted as key")
+    }
+    function _tryConstruct(arg1, arg2, arg3) {
+      let specMan = new TypesManager(arg1, arg2, arg3)
+    }
   }
-  static toStringTest() {
-    let setting = new Setting({}, "its Name")
-    let str = new TypesManager({}, "myName", setting).toString()
-    TypesManager._.bassert(
-      1,
-      str.contains("myName"),
-      "result does not contain name string"
-    )
-  }
-  static isHandlerKeyTest() {
-    TypesManager._.bassert(
-      1,
-      TypesManager.isHandlerKey("NOTETYPES"),
-      "key is not identified as 'NOTETYPES'"
-    )
-    TypesManager._.bassert(
-      2,
-      !TypesManager.isHandlerKey("_NOTETYPES"),
-      "'_NOTETYPES' is accepted as key"
-    )
-  }
-
-  static _tryConstruct(arg1, arg2, arg3) {
-    let specMan = new TypesManager(arg1, arg2, arg3)
-  }
-  //#endregion TypesManager tests
 }
 //#endregion code
 /** Runs all tests,if TESTING is set output to current note (indirect)
