@@ -676,7 +676,6 @@ class BreadCrumbs {
   }
   //#endregion member variables
   /** Constructs a new BreadCrumbs
-   * @desc
    * @constructor
    * @param {*} literal
    * @param {string|symbol} key
@@ -694,13 +693,19 @@ class BreadCrumbs {
   }
 
   /** returns string representing class instance for superclass and subclasses
-   * @returns string containing class name of deepest subclass and key as given
-   *          in BreadCrumbs constructor
+   * @returns {string} string containing class name of deepest subclass and key
+   *          as given in BreadCrumbs constructor
    */
   toString() {
     return "°°°" + this.constructor.name + " " + this.#ident
   }
 
+  /** returns breadcrumbs with instances keys given in BreadCrumbs constructor
+   *
+   * For this instance and its ancestors keys are returned, separated by
+   * punctuation marks
+   * @returns {string}
+   */
   toBreadCrumbs() {
     let breadcrumbs = ""
     let sep = ""
@@ -860,21 +865,9 @@ class BreadCrumbs {
       let parentStr = parent.toBreadCrumbs()
       let childStr = child.toBreadCrumbs()
       let grandChildStr = grandChild.toBreadCrumbs()
-      _.bassert(
-        1,
-        parentStr == "parent",
-        "breadCrumbs: '" + parentStr + "' are wrong"
-      )
-      _.bassert(
-        2,
-        childStr == "parent.child",
-        "breadCrumbs: '" + childStr + "' are wrong"
-      )
-      _.bassert(
-        3,
-        grandChildStr == "parent.child.grandChild",
-        "breadCrumbs: '" + grandChildStr + "' are wrong"
-      )
+      _.bassert(1,parentStr == "parent","breadCrumbs '" + parentStr + "' are wrong")
+      _.bassert(2,childStr == "parent.child","breadCrumbs '" + childStr + "' are wrong")
+      _.bassert(3,grandChildStr == "parent.child.grandChild","breadCrumbs '" + grandChildStr + "' are wrong")
     }
     function getKeyTest() {
       let breadcrumbs = new BreadCrumbs({}, "my name")
