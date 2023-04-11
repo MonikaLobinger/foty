@@ -687,9 +687,9 @@ class BreadCrumbs {
     this.#ident = key
     this.#caller = parent
     this.throwIfUndefined(key, "key")
-    this.throwIfIsNotOfType(key, ["string", "symbol"])
+    this.throwIfNotOfType(key, ["string", "symbol"])
     if (BreadCrumbs.isDefined(parent))
-      this.throwIfIsNotOfType(parent, "BreadCrumbs")
+      this.throwIfNotOfType(parent, "BreadCrumbs")
   }
 
   /** Returns string representing class instance for superclass and subclasses
@@ -709,11 +709,11 @@ class BreadCrumbs {
    * punctuation marks
    * @returns {String}
    */
-  toBreadCrumbs() {
+  toBreadcrumbs() {
     let breadcrumbs = ""
     let sep = ""
     if (BreadCrumbs.isDefined(this.#caller)) {
-      breadcrumbs += this.#caller.toBreadCrumbs()
+      breadcrumbs += this.#caller.toBreadcrumbs()
       sep = "."
     }
     breadcrumbs += sep + this.#ident
@@ -727,31 +727,45 @@ class BreadCrumbs {
     return !BreadCrumbs.isDefined(this.#caller)
   }
 
-  /** Returns whether instances ancestor is root
+  /** Returns whether ancestor of instance is root
    * @returns {Boolean}
    */
   isFirstGeneration() {
     return !this.isRoot() && this.#caller.isRoot()
   }
 
-  throwIfUndefined(
-    val,
-    valname = "literal",
-    funame = "constructor",
-    msg = "' is undefined"
-  ) {
+  /** Throws if val is not strictly undefined (null is defined)
+   *
+   * Does not throw on parameter type errors
+   * @param {*} val
+   * @param {String} vname - becomes part of Error message
+   * @param {String} [funame="constructor"] - becomes part of Error message
+   * @param {String} [msg] - becomes part of Error message
+   * @throws {SettingError}
+   */
+  throwIfUndefined(val, vname, funame = "constructor", msg = "is undefined") {
+    if (typeof vname != "string") vname = ""
+    if (typeof funame != "string") funame = ""
+    if (typeof msg != "string") msg = "' is undefined"
     if (!BreadCrumbs.isDefined(val))
       throw new SettingError(
         this.constructor.name + " " + funame,
-        "Breadcrumbs: '" + this.toBreadCrumbs() + "'\n   '" + valname + msg
+        "Breadcrumbs: '" + this.toBreadcrumbs() + "'\n   '" + vname + "' " + msg
       )
   }
-  throwIfIsNotOfType(
-    val,
-    type = "object",
-    funame = "constructor",
-    msg = "is not of javascript type"
-  ) {
+
+  /** Throws if val is not of type or of one of the entries in type array
+   *
+   * Does not throw on other parameters type errors
+   * @param {*} val
+   * @param {({Array.<String}|String)} type
+   * @param {String} [funame="constructor"] - becomes part of Error message
+   * @param {String} [msg] - becomes part of Error message
+   * @throws {SettingError}
+   */
+  throwIfNotOfType(val, type, funame = "constructor", msg = "is not of type") {
+    if (typeof funame != "string") funame = ""
+    if (typeof msg != "string") msg = "' is undefined"
     if (Array.isArray(type)) {
       if (
         !type.some((t) => {
@@ -761,7 +775,7 @@ class BreadCrumbs {
         throw new SettingError(
           this.constructor.name + " " + funame,
           "Breadcrumbs: '" +
-            this.toBreadCrumbs() +
+            this.toBreadcrumbs() +
             "'\n   " +
             msg +
             " '" +
@@ -772,7 +786,7 @@ class BreadCrumbs {
       throw new SettingError(
         this.constructor.name + " " + funame,
         "Breadcrumbs: '" +
-          this.toBreadCrumbs() +
+          this.toBreadcrumbs() +
           "'\n   " +
           msg +
           " '" +
@@ -781,7 +795,7 @@ class BreadCrumbs {
       )
   }
 
-  /** static Returns whether val is not strictly undefined; null is be defined
+  /** static Returns whether val is not strictly undefined (null is defined)
    * @param {*} val
    * @returns {Boolean}
    */
@@ -796,12 +810,12 @@ class BreadCrumbs {
    * @param {String} type - js types have to be written lowercase
    *                        "Null" accepts Null
    *                        "Array" accepts Arrays
-   *                        "Object" accepts js Object beside Null and Array
+   *                        "Object" accepts js Object besides Null and Array
    *                        "BreadCrumbs" accepts BreadCrumb instance
    *                                      and subclass instance
    *                        "Setting" accepts Setting instance
    *                        "SpecManager" accepts SpecManager instance
-   *                        "NoteTypesManager" accepts NoteTypesManager
+   *                        "TypesManager" accepts TypesManager
    *                                           instance
    * @returns {Boolean} - true, if val is of type
    *                      false, if val is not of type
@@ -829,8 +843,8 @@ class BreadCrumbs {
         case "SpecManager":
           answer = val instanceof SpecManager
           break
-        case "NoteTypesManager":
-          answer = val instanceof NoteTypesManager
+        case "TypesManager":
+          answer = val instanceof TypesManager
           break
         case "Object": // object but not null or an array
           answer = val == undefined ? false : Array.isArray(val) ? false : true
@@ -852,6 +866,8 @@ class BreadCrumbs {
       _.run(toBreadCrumbsTest)
       _.run(isRootTest)
       _.run(isFirstGenerationTest)
+      _.run(throwIfUndefinedTest)
+      _.run(throwIfNotOfTypeTest)
       _.run(isDefinedTest)
       _.run(isOfTypeTest)
       _.destruct()
@@ -910,9 +926,9 @@ class BreadCrumbs {
       let parent = new BreadCrumbs(undefined, "parent")
       let child = new BreadCrumbs(undefined, "child", parent)
       let grandChild = new BreadCrumbs(undefined, "grandChild", child)
-      let parentStr = parent.toBreadCrumbs()
-      let childStr = child.toBreadCrumbs()
-      let grandChildStr = grandChild.toBreadCrumbs()
+      let parentStr = parent.toBreadcrumbs()
+      let childStr = child.toBreadcrumbs()
+      let grandChildStr = grandChild.toBreadcrumbs()
       _.bassert(1,parentStr == "parent","breadCrumbs '" + parentStr + "' are wrong")
       _.bassert(2,childStr == "parent.child","breadCrumbs '" + childStr + "' are wrong")
       _.bassert(3,grandChildStr == "parent.child.grandChild","breadCrumbs '" + grandChildStr + "' are wrong")
@@ -932,6 +948,19 @@ class BreadCrumbs {
       _.bassert(1,!parent.isFirstGeneration(),"root parent should not be first generation")
       _.bassert(2,child.isFirstGeneration(),"root child should be first generation")
       _.bassert(3,!grandChild.isFirstGeneration(),"root grandchild should not be first generation")
+    }
+    function throwIfUndefinedTest() {
+      let vname
+      _.assert(1,_tryThrowIfUndefined,22,undefined,undefined,undefined,"should accept all types for all parameter")
+      _.shouldAssert(2, _tryThrowIfUndefined,vname, "vname", "test",undefined,"Should throw as 'vname' is undefined")
+      _.assert(3,_tryThrowIfUndefined,null,undefined,undefined,undefined,"should not throw for null")
+    }
+    function throwIfNotOfTypeTest() {
+      let str = "String"
+      _.assert(1,_tryThrowIfNotOfType,22,"number",undefined,undefined,"should accept all types for all parameter, besides 2nd")
+      _.shouldAssert(2, _tryThrowIfNotOfType,22, undefined, undefined,undefined,"should throw for 22 and no type given")
+      _.shouldAssert(3, _tryThrowIfNotOfType,str, "String", "test",undefined,"should throw as 'String' is no valid type to check against")
+      _.assert(4, _tryThrowIfNotOfType,str, ["String","string"], "test",undefined,"should not throw as 'string' is correct type and is contained in 2nd parameter")
     }
     function isDefinedTest() {
       _.bassert(1,BreadCrumbs.isDefined(""),"Empty String should be defined")
@@ -966,7 +995,7 @@ class BreadCrumbs {
       let setting1 = new Setting({},"root")
       let setting2 = new Setting({},"setting1", setting1)
       let spec1 = new SpecManager({},"spec", setting1)
-      let type1 = new NoteTypesManager({},"type", setting1)
+      let type1 = new TypesManager({},"type", setting1)
 
       _.bassert(1,!BreadCrumbs.isOfType(str2,"Unknown"), "Unknown" + " is not an accepted type")
       _.bassert(2,!BreadCrumbs.isOfType(undef,undef), "type of type 'Undefined' is not an accepted type")
@@ -1017,7 +1046,7 @@ class BreadCrumbs {
       _.bassert(47,BreadCrumbs.isOfType(type1,"object"), type1 + " should be of type " + "object")
       _.bassert(48,BreadCrumbs.isOfType(type1,"Object"), type1 + " should be of type " + "Object")
       _.bassert(49,BreadCrumbs.isOfType(type1,"BreadCrumbs"), type1 + " should be of type " + "BreadCrumbs")
-      _.bassert(50,BreadCrumbs.isOfType(type1,"NoteTypesManager"), type1 + " should be of type " + "NoteTypesManager")
+      _.bassert(50,BreadCrumbs.isOfType(type1,"TypesManager"), type1 + " should be of type " + "TypesManager")
 
       _.bassert(101,!BreadCrumbs.isOfType(undef,"object"), undef + " should not be of type " + "object")
       _.bassert(102,!BreadCrumbs.isOfType(undef,"Object"), undef + " should not be of type " + "Object")
@@ -1029,11 +1058,19 @@ class BreadCrumbs {
       _.bassert(108,!BreadCrumbs.isOfType(obj1,"BreadCrumbs"), obj1 + " should not be of type " + "BreadCrumbs")
       _.bassert(109,!BreadCrumbs.isOfType(breadcrumb2,"Setting"), breadcrumb2 + " should not be of type " + "Setting")
       _.bassert(110,!BreadCrumbs.isOfType(setting2,"SpecManager"), setting2 + " should not be of type " + "SpecManager")
-      _.bassert(111,!BreadCrumbs.isOfType(spec1,"NoteTypesManager"), spec1 + " should not be of type " + "NoteTypesManager")
+      _.bassert(111,!BreadCrumbs.isOfType(spec1,"TypesManager"), spec1 + " should not be of type " + "TypesManager")
       _.bassert(112,!BreadCrumbs.isOfType(type1,"SpecManager"), type1 + " should not be of type " + "SpecManager")
     }
     function _tryConstruct(arg1, arg2, arg3) {
       let breadcrumbs = new BreadCrumbs(arg1, arg2, arg3)
+    }
+    function _tryThrowIfUndefined(arg1, arg2, arg3, arg4) {
+      let breadCrumbs = new BreadCrumbs({},"key")
+      breadCrumbs.throwIfUndefined(arg1, arg2, arg3, arg4)
+    }
+    function _tryThrowIfNotOfType(arg1, arg2, arg3, arg4) {
+      let breadCrumbs = new BreadCrumbs({},"key")
+      breadCrumbs.throwIfNotOfType(arg1, arg2, arg3, arg4)
     }
   }
 }
@@ -1072,9 +1109,9 @@ class Setting extends BreadCrumbs {
     callersSpec = undefined
   ) {
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
-    this.throwIfUndefined(literal)
+    this.throwIfUndefined(literal, "literal")
     this.#spec = new SpecManager(this.literal, undefined, this, callersSpec)
-    this.#types = new NoteTypesManager(this.literal, undefined, this)
+    this.#types = new TypesManager(this.literal, undefined, this)
     for (const [key, value] of Object.entries(this.literal)) {
       if (BreadCrumbs.isOfType(value, "Object")) {
         if (!Setting.#isHandlersKey(key)) {
@@ -1107,14 +1144,14 @@ class Setting extends BreadCrumbs {
     return this.#types.notetypes[key]
   }
   static #isHandlersKey(key) {
-    return SpecManager.isHandlerKey(key) || NoteTypesManager.isHandlerKey(key)
+    return SpecManager.isHandlerKey(key) || TypesManager.isHandlerKey(key)
   }
   //#region Setting tests
   static _ = null
   static test(outputObj) {
     BreadCrumbs.test(outputObj)
     SpecManager.test(outputObj)
-    NoteTypesManager.test(outputObj)
+    TypesManager.test(outputObj)
     Setting._ = new TestSuite("Setting", outputObj)
     Setting._.run(Setting.constructorTest)
     Setting._.run(Setting.toStringTest)
@@ -1159,14 +1196,14 @@ class Setting extends BreadCrumbs {
     )
     Setting._.bassert(
       2,
-      Setting.#isHandlersKey(NoteTypesManager.NOTETYPES_KEY),
-      NoteTypesManager.NOTETYPES_KEY +
+      Setting.#isHandlersKey(TypesManager.NOTETYPES_KEY),
+      TypesManager.NOTETYPES_KEY +
         " should be recognized as handler key,but isn't"
     )
     Setting._.bassert(
       3,
-      !Setting.#isHandlersKey(NoteTypesManager.TYPES_KEYS[0]),
-      NoteTypesManager.TYPES_KEYS[0] +
+      !Setting.#isHandlersKey(TypesManager.TYPES_KEYS[0]),
+      TypesManager.TYPES_KEYS[0] +
         " should not be recognized as handlers key,but is"
     )
     Setting._.bassert(
@@ -1350,9 +1387,9 @@ class SpecManager extends BreadCrumbs {
     if (literal != undefined) specLiteral = literal[SpecManager.SPEC_KEY]
     super(specLiteral, key === undefined ? SpecManager.SPEC_KEY : key, caller)
     specLiteral = undefined
-    this.throwIfUndefined(literal)
-    this.throwIfUndefined(caller)
-    this.throwIfIsNotOfType(caller, "Setting")
+    this.throwIfUndefined(literal, "literal")
+    this.throwIfUndefined(caller, "caller")
+    this.throwIfNotOfType(caller, "Setting")
     let callersParent = caller.caller
     // render
     // ======
@@ -1505,7 +1542,7 @@ class SpecManager extends BreadCrumbs {
 }
 
 /** notetypes parser */
-class NoteTypesManager extends BreadCrumbs {
+class TypesManager extends BreadCrumbs {
   //#region member variables
   static NOTETYPES_KEY = "NOTETYPES"
   static TYPES_KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
@@ -1517,7 +1554,7 @@ class NoteTypesManager extends BreadCrumbs {
   }
   #notetypes = {}
   get defaultType() {
-    return NoteTypesManager.#DEFAULT_TYPE
+    return TypesManager.#DEFAULT_TYPE
   }
   get notetypes() {
     return this.#notetypes
@@ -1528,39 +1565,38 @@ class NoteTypesManager extends BreadCrumbs {
   //#endregion member variables
   constructor(literal, key, caller) {
     let typesLiteral
-    if (literal != undefined)
-      typesLiteral = literal[NoteTypesManager.NOTETYPES_KEY]
+    if (literal != undefined) typesLiteral = literal[TypesManager.NOTETYPES_KEY]
     super(
       typesLiteral,
-      key === undefined ? NoteTypesManager.NOTETYPES_KEY : key,
+      key === undefined ? TypesManager.NOTETYPES_KEY : key,
       caller
     )
-    this.throwIfUndefined(caller)
-    this.throwIfIsNotOfType(caller, "Setting")
+    this.throwIfUndefined(caller, "caller")
+    this.throwIfNotOfType(caller, "Setting")
     if (this.literal != undefined && !this.isFirstGeneration())
       throw new SettingError(
         this.constructor.name + " " + constructor,
         "Breadcrumbs: '" +
-          this.toBreadCrumbs() +
+          this.toBreadcrumbs() +
           "'\n   " +
           "notetypes can only be defined at root level" +
           "\n   " +
           "Move your 'NOTETYPES' definition up."
       )
-    this.throwIfUndefined(literal)
+    this.throwIfUndefined(literal, "literal")
     if (this.literal == undefined) return
     this.createNoteTypesOrThrow()
   }
   createNoteTypesOrThrow() {
     for (const [name, entry] of Object.entries(this.literal)) {
-      this.throwIfIsNotOfType(entry, "object")
+      this.throwIfNotOfType(entry, "object")
       for (const [key, value] of Object.entries(entry)) {
-        let allowedKeys = NoteTypesManager.TYPES_KEYS
+        let allowedKeys = TypesManager.TYPES_KEYS
         if (!allowedKeys.contains(key))
           throw new SettingError(
             this.constructor.name + " " + constructor,
             "Breadcrumbs: '" +
-              this.toBreadCrumbs() +
+              this.toBreadcrumbs() +
               "'\n   '" +
               value +
               "' is no known note type definition key." +
@@ -1572,143 +1608,143 @@ class NoteTypesManager extends BreadCrumbs {
           )
         switch (key) {
           case "DATE":
-            this.throwIfIsNotOfType(value, "boolean")
+            this.throwIfNotOfType(value, "boolean")
             break
           case "MARKER":
           case "TITLE":
           case "DATEFORMAT":
-            this.throwIfIsNotOfType(value, "string")
+            this.throwIfNotOfType(value, "string")
             break
         }
       }
       this.#notetypes[name] = Object.assign(
         {},
-        NoteTypesManager.#DEFAULT_TYPE,
+        TypesManager.#DEFAULT_TYPE,
         entry
       )
     }
   }
   static isHandlerKey(key) {
-    return key == NoteTypesManager.NOTETYPES_KEY
+    return key == TypesManager.NOTETYPES_KEY
   }
   getTypeNames() {
     return Object.keys(this.#notetypes)
   }
-  //#region NoteTypesManager tests
+  //#region TypesManager tests
   static _ = null
   static test(outputObj) {
-    NoteTypesManager._ = new TestSuite("NoteTypesManager", outputObj)
-    NoteTypesManager._.run(NoteTypesManager.constructorTest)
-    NoteTypesManager._.run(NoteTypesManager.toStringTest)
-    NoteTypesManager._.run(NoteTypesManager.isHandlerKeyTest)
-    NoteTypesManager._.destruct()
-    NoteTypesManager._ = null
+    TypesManager._ = new TestSuite("TypesManager", outputObj)
+    TypesManager._.run(TypesManager.constructorTest)
+    TypesManager._.run(TypesManager.toStringTest)
+    TypesManager._.run(TypesManager.isHandlerKeyTest)
+    TypesManager._.destruct()
+    TypesManager._ = null
   }
   // prettier-ignore
   static constructorTest() {
     let setting = new Setting({}, "its Name")
     let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-    NoteTypesManager._.shouldAssert(1,NoteTypesManager._tryConstruct,undefined,"myName",setting,"msg")
-    //NoteTypesManager._.shouldAssert(2,NoteTypesManager._tryConstruct,{},undefined,setting,"msg")
-    NoteTypesManager._.shouldAssert(3,NoteTypesManager._tryConstruct,{},"myName",undefined,"msg")
-    NoteTypesManager._.assert(
+    TypesManager._.shouldAssert(1,TypesManager._tryConstruct,undefined,"myName",setting,"msg")
+    //TypesManager._.shouldAssert(2,TypesManager._tryConstruct,{},undefined,setting,"msg")
+    TypesManager._.shouldAssert(3,TypesManager._tryConstruct,{},"myName",undefined,"msg")
+    TypesManager._.assert(
       4,
-      NoteTypesManager._tryConstruct,
+      TypesManager._tryConstruct,
       {},
       "my Name",
       setting
     )
-    NoteTypesManager._.assert(
+    TypesManager._.assert(
       5,
-      NoteTypesManager._tryConstruct,
+      TypesManager._tryConstruct,
       {},
       "22",
       setting
     )
-    NoteTypesManager._.assert(
+    TypesManager._.assert(
       6,
-      NoteTypesManager._tryConstruct,
+      TypesManager._tryConstruct,
       {},
       Symbol("a"),
       setting
     )
-    let typeMan = new NoteTypesManager({}, "myName", setting)
-    NoteTypesManager._.bassert(
+    let typeMan = new TypesManager({}, "myName", setting)
+    TypesManager._.bassert(
       7,
       typeMan instanceof BreadCrumbs,
-      "'NoteTypesManager' has to be an instance of 'BreadCrumbs'"
+      "'TypesManager' has to be an instance of 'BreadCrumbs'"
     )
-    NoteTypesManager._.bassert(
+    TypesManager._.bassert(
       8,
-      typeMan.constructor == NoteTypesManager,
-      "the constructor property is not 'NoteTypesManager'"
+      typeMan.constructor == TypesManager,
+      "the constructor property is not 'TypesManager'"
     )
-    NoteTypesManager._.shouldAssert(
+    TypesManager._.shouldAssert(
       9,
-      NoteTypesManager._tryConstruct,
+      TypesManager._tryConstruct,
       {},
       "NOTETYPES",
       breadCrumbs
     )
-    typeMan = new NoteTypesManager({}, "myName", setting)
-    NoteTypesManager._.bassert(
+    typeMan = new TypesManager({}, "myName", setting)
+    TypesManager._.bassert(
       10,
       BreadCrumbs.isOfType(typeMan.notetypes, "object"),
-      "for empty literal NoteTypesManager should construct object,but does not"
+      "for empty literal TypesManager should construct object,but does not"
     )
     let typeKeys = Object.keys(typeMan.notetypes)
-    NoteTypesManager._.bassert(
+    TypesManager._.bassert(
       11,
       typeKeys.length == 0,
-      "For empty literal NoteTypesManager with no types should be created"
+      "For empty literal TypesManager with no types should be created"
     )
     let defaultType = typeMan.defaultType
-    NoteTypesManager._.bassert(
+    TypesManager._.bassert(
       12,
       BreadCrumbs.isOfType(defaultType, "object"),
       "default type should always be present,but here it is not"
     )
     let defaultTypeKeys = Object.keys(defaultType)
-    let typesKeys = NoteTypesManager.TYPES_KEYS
-    NoteTypesManager._.bassert(
+    let typesKeys = TypesManager.TYPES_KEYS
+    TypesManager._.bassert(
       13,
       (typesKeys.length = defaultTypeKeys.length),
-      "defaultType should have as many keys as 'NoteTypesManager.TYPES_KEYS'"
+      "defaultType should have as many keys as 'TypesManager.TYPES_KEYS'"
     )
-    NoteTypesManager._.bassert(
+    TypesManager._.bassert(
       14,
       defaultTypeKeys.every((key) => {
         return typesKeys.includes(key)
       }),
-      "any key of 'NoteTypesManager.TYPES_KEYS' should be contained in defaultType,but is not"
+      "any key of 'TypesManager.TYPES_KEYS' should be contained in defaultType,but is not"
     )
   }
   static toStringTest() {
     let setting = new Setting({}, "its Name")
-    let str = new NoteTypesManager({}, "myName", setting).toString()
-    NoteTypesManager._.bassert(
+    let str = new TypesManager({}, "myName", setting).toString()
+    TypesManager._.bassert(
       1,
       str.contains("myName"),
       "result does not contain name string"
     )
   }
   static isHandlerKeyTest() {
-    NoteTypesManager._.bassert(
+    TypesManager._.bassert(
       1,
-      NoteTypesManager.isHandlerKey("NOTETYPES"),
+      TypesManager.isHandlerKey("NOTETYPES"),
       "key is not identified as 'NOTETYPES'"
     )
-    NoteTypesManager._.bassert(
+    TypesManager._.bassert(
       2,
-      !NoteTypesManager.isHandlerKey("_NOTETYPES"),
+      !TypesManager.isHandlerKey("_NOTETYPES"),
       "'_NOTETYPES' is accepted as key"
     )
   }
 
   static _tryConstruct(arg1, arg2, arg3) {
-    let specMan = new NoteTypesManager(arg1, arg2, arg3)
+    let specMan = new TypesManager(arg1, arg2, arg3)
   }
-  //#endregion NoteTypesManager tests
+  //#endregion TypesManager tests
 }
 //#endregion code
 /** Runs all tests,if TESTING is set output to current note (indirect)
