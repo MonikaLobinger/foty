@@ -697,7 +697,10 @@ class BreadCrumbs {
    *          as given in BreadCrumbs constructor
    */
   toString() {
-    return "°°°" + this.constructor.name + " " + this.#ident
+    if (typeof this.#ident == "string")
+      return "°°°" + this.constructor.name + " " + this.#ident
+    else if (typeof this.#ident == "symbol")
+      return "°°°" + this.constructor.name + " " + this.#ident.toString()
   }
 
   /** Returns line of ancestors with keys given in BreadCrumbs constructor
@@ -778,16 +781,45 @@ class BreadCrumbs {
       )
   }
 
+  /** static Returns whether val is not strictly undefined; null is be defined
+   * @param {*} val
+   * @returns {Boolean}
+   */
   static isDefined(val) {
     return typeof val != "undefined"
   }
+
+  /** static Returns whether val is of js type or BreadCrumbs (+ sub) instance
+   * Returns whether val is of type, if type is js type (written in lowercase)
+   * or "Array" or "BreadCrumbs" or class name of class derived from BreadCrumbs
+   * @param {*} val
+   * @param {String} type - js types have to be written lowercase
+   *                        "Null" accepts Null
+   *                        "Array" accepts Arrays
+   *                        "Object" accepts js Object beside Null and Array
+   *                        "BreadCrumbs" accepts BreadCrumb instance
+   *                                      and subclass instance
+   *                        "Setting" accepts Setting instance
+   *                        "SpecManager" accepts SpecManager instance
+   *                        "NoteTypesManager" accepts NoteTypesManager
+   *                                           instance
+   * @returns {Boolean} - true, if val is of type
+   *                      false, if val is not of type
+   *                      false, if type is not a String or no known String
+   */
   static isOfType(val, type) {
-    // + array null Setting SpecMan Option
+    if (typeof type != "string" || type.length < 1) return false
     let answer = false
-    if (type == "null" && val === null) answer = true
-    if (type == "array" && typeof val == "object") answer = Array.isArray(val)
-    else if (typeof val == "object" && type != "object")
+    if (type[0].toLowerCase() == type[0]) {
+      answer = typeof val == type
+    } else if (typeof val == "object") {
       switch (type) {
+        case "Null":
+          answer = val == undefined
+          break
+        case "Array":
+          answer = Array.isArray(val)
+          break
         case "BreadCrumbs":
           answer = val instanceof BreadCrumbs
           break
@@ -800,13 +832,13 @@ class BreadCrumbs {
         case "NoteTypesManager":
           answer = val instanceof NoteTypesManager
           break
-        case "Object": // object but not an array
-          answer = !Array.isArray(val)
+        case "Object": // object but not null or an array
+          answer = val == undefined ? false : Array.isArray(val) ? false : true
           break
         default:
           break
       }
-    else answer = typeof val == type
+    }
     return answer
   }
 
@@ -814,17 +846,25 @@ class BreadCrumbs {
   static test(outputObj) {
     let _ = null
     if(_ = new TestSuite("BreadCrumbs", outputObj)) {
+      _.run(getterLiteralTest)
       _.run(constructorTest)
       _.run(toStringTest)
       _.run(toBreadCrumbsTest)
       _.run(isRootTest)
       _.run(isFirstGenerationTest)
-      _.run(getKeyTest)
-      _.run(getLiteralTest)
-      _.run(getCrumbTest)
       _.run(isDefinedTest)
+      _.run(isOfTypeTest)
       _.destruct()
       _ = null
+    }
+    function getterLiteralTest() {
+      const sym = Symbol("Symbol Descriptor")
+      let breadcrumbs = new BreadCrumbs({sym: 87673}, "my name")
+      _.bassert(
+        1,
+        breadcrumbs.literal.sym == 87673,
+        "does not return literal given on construction "
+      )
     }
     function constructorTest() {
       _.assert(1,_tryConstruct,undefined,"myName")
@@ -881,60 +921,116 @@ class BreadCrumbs {
       let parent = new BreadCrumbs(undefined, "parent")
       let child = new BreadCrumbs(undefined, "child", parent)
       let grandChild = new BreadCrumbs(undefined, "grandChild", child)
-      _.bassert(1,parent.isRoot(),"first parent is root")
-      _.bassert(2,!child.isRoot(),"child is not root")
-      _.bassert(3,!grandChild.isRoot(),"grandchild is not root")
+      _.bassert(1,parent.isRoot(),"first parent should be root")
+      _.bassert(2,!child.isRoot(),"child should not be root")
+      _.bassert(3,!grandChild.isRoot(),"grandchild should not be root")
     } 
     function isFirstGenerationTest() {
       let parent = new BreadCrumbs(undefined, "parent")
       let child = new BreadCrumbs(undefined, "child", parent)
       let grandChild = new BreadCrumbs(undefined, "grandChild", child)
-      _.bassert(1,!parent.isFirstGeneration(),"root parent is not first generation")
-      _.bassert(2,child.isFirstGeneration(),"root child is first generation")
-      _.bassert(3,!grandChild.isFirstGeneration(),"root grandchild is not first generation")
-    }
-    function getKeyTest() {
-      let breadcrumbs = new BreadCrumbs({}, "my name")
-      _.bassert(
-        1,
-        breadcrumbs.#ident == "my name",
-        "does not return name given on construction "
-      )
-    }
-    function getLiteralTest() {
-      const sym = Symbol("Symbol Descriptor")
-      let breadcrumbs = new BreadCrumbs({sym: 87673}, "my name")
-      _.bassert(
-        1,
-        breadcrumbs.literal.sym == 87673,
-        "does not return literal given on construction "
-      )
-    }
-    function getCrumbTest() {
-      let parent = new BreadCrumbs(undefined, "parent")
-      let breadcrumbs = new BreadCrumbs({}, "my name", parent)
-      _.bassert(
-        1,
-        breadcrumbs.#caller == parent,
-        "does not return parent given on construction "
-      )
+      _.bassert(1,!parent.isFirstGeneration(),"root parent should not be first generation")
+      _.bassert(2,child.isFirstGeneration(),"root child should be first generation")
+      _.bassert(3,!grandChild.isFirstGeneration(),"root grandchild should not be first generation")
     }
     function isDefinedTest() {
-      _.bassert(
-        1,
-        BreadCrumbs.isDefined(""),
-        "Empty String is not accepted as defined"
-      )
-      _.bassert(
-        2,
-        BreadCrumbs.isDefined(null),
-        "null is not accepted as defined"
-      )
-      _.bassert(
-        3,
-        !BreadCrumbs.isDefined(undefined),
-        "undefined accepted as defined"
-      )
+      _.bassert(1,BreadCrumbs.isDefined(""),"Empty String should be defined")
+      _.bassert(2,BreadCrumbs.isDefined(null),"null should be defined")
+      _.bassert(3,!BreadCrumbs.isDefined(undefined),"undefined should not be defined")
+    }
+    function isOfTypeTest() {
+      let undef = undefined
+      let nul   = null
+      let bool1 = true
+      let bool2 = false
+      let num1 = 0
+      let num2 = 22
+      let num3 = -128
+      let num4 = 45.7
+      let num5 = -854.7234
+      let num6 = NaN
+      let num7 = Infinity
+      let num8 = -Infinity
+      let bigI1 = BigInt(Number.MAX_SAFE_INTEGER)+1n;
+      let str1 = ""
+      let str2 = "String"
+      let sym1 = Symbol()
+      let sym2 = Symbol("name")
+      let sym3 = Symbol("name")
+      let obj1 = {}
+      let obj2 = {a: 1, b: 2,}
+      let arr1 = []
+      let arr2 = ["a", "b", 2,]
+      let breadcrumb1 = new BreadCrumbs(1,"name")
+      let breadcrumb2 = new BreadCrumbs(1,Symbol("name"))
+      let setting1 = new Setting({},"root")
+      let setting2 = new Setting({},"setting1", setting1)
+      let spec1 = new SpecManager({},"spec", setting1)
+      let type1 = new NoteTypesManager({},"type", setting1)
+
+      _.bassert(1,!BreadCrumbs.isOfType(str2,"Unknown"), "Unknown" + " is not an accepted type")
+      _.bassert(2,!BreadCrumbs.isOfType(undef,undef), "type of type 'Undefined' is not an accepted type")
+      _.bassert(3,!BreadCrumbs.isOfType(num1,num1), "type of Type 'Number' is not an accepted type")
+      _.bassert(4,BreadCrumbs.isOfType(undef,"undefined"), undef + " should be of type " + "undefined")
+      _.bassert(5,BreadCrumbs.isOfType(nul,"object"), nul + " should be of type " + "object")
+      _.bassert(6,BreadCrumbs.isOfType(bool1,"boolean"), bool1 + " should be of type " + "boolean")
+      _.bassert(7,BreadCrumbs.isOfType(bool2,"boolean"), bool2 + " should be of type " + "boolean")
+      _.bassert(8,BreadCrumbs.isOfType(num1,"number"), num1 + " should be of type " + "number")
+      _.bassert(9,BreadCrumbs.isOfType(num2,"number"), num2 + " should be of type " + "number")
+      _.bassert(10,BreadCrumbs.isOfType(num3,"number"), num3 + " should be of type " + "number")
+      _.bassert(11,BreadCrumbs.isOfType(num4,"number"), num4 + " should be of type " + "number")
+      _.bassert(12,BreadCrumbs.isOfType(num5,"number"), num5 + " should be of type " + "number")
+      _.bassert(13,BreadCrumbs.isOfType(num6,"number"), num6 + " should be of type " + "number")
+      _.bassert(14,BreadCrumbs.isOfType(num7,"number"), num7 + " should be of type " + "number")
+      _.bassert(15,BreadCrumbs.isOfType(num8,"number"), num8 + " should be of type " + "number")
+      _.bassert(16,BreadCrumbs.isOfType(bigI1,"bigint"), bigI1 + " should be of type " + "bigint")
+      _.bassert(17,BreadCrumbs.isOfType(str1,"string"), str1 + " should be of type " + "string")
+      _.bassert(18,BreadCrumbs.isOfType(str2,"string"), str2 + " should be of type " + "string")
+      _.bassert(19,BreadCrumbs.isOfType(sym1,"symbol"), "Symbol()" + " should be of type " + "symbol")
+      _.bassert(20,BreadCrumbs.isOfType(sym2,"symbol"), "Symbol(arg)" + " should be of type " + "symbol")
+      _.bassert(21,BreadCrumbs.isOfType(sym3,"symbol"), "Symbol(arg)" + " should be of type " + "symbol")
+      _.bassert(22,BreadCrumbs.isOfType(obj1,"object"), obj1 + " should be of type " + "object")
+      _.bassert(23,BreadCrumbs.isOfType(obj2,"object"), obj2 + " should be of type " + "object")
+      _.bassert(24,BreadCrumbs.isOfType(arr1,"object"), "Empty Array" + " should be of type " + "object")
+      _.bassert(25,BreadCrumbs.isOfType(arr2,"object"), arr2 + " should be of type " + "object")
+      _.bassert(26,BreadCrumbs.isOfType(nul,"Null"), nul + " should be of type " + "Null")
+      _.bassert(27,BreadCrumbs.isOfType(arr1,"Array"), "Empty Array" + " should be of type " + "Array")
+      _.bassert(28,BreadCrumbs.isOfType(arr2,"Array"), arr2 + " should be of type " + "Array")
+      _.bassert(29,BreadCrumbs.isOfType(breadcrumb1,"object"), breadcrumb1 + " should be of type " + "object")
+      _.bassert(30,BreadCrumbs.isOfType(breadcrumb1,"Object"), breadcrumb1 + " should be of type " + "Object")
+      _.bassert(31,BreadCrumbs.isOfType(breadcrumb1,"BreadCrumbs"), breadcrumb1 + " should be of type " + "BreadCrumbs")
+      _.bassert(32,BreadCrumbs.isOfType(breadcrumb2,"object"), breadcrumb2 + " should be of type " + "object")
+      _.bassert(33,BreadCrumbs.isOfType(breadcrumb2,"Object"), breadcrumb2 + " should be of type " + "Object")
+      _.bassert(34,BreadCrumbs.isOfType(breadcrumb2,"BreadCrumbs"), breadcrumb2 + " should be of type " + "BreadCrumbs")
+      _.bassert(35,BreadCrumbs.isOfType(setting1,"object"), setting1 + " should be of type " + "object")
+      _.bassert(36,BreadCrumbs.isOfType(setting1,"Object"), setting1 + " should be of type " + "Object")
+      _.bassert(37,BreadCrumbs.isOfType(setting1,"BreadCrumbs"), setting1 + " should be of type " + "BreadCrumbs")
+      _.bassert(38,BreadCrumbs.isOfType(setting1,"Setting"), setting1 + " should be of type " + "Setting")
+      _.bassert(39,BreadCrumbs.isOfType(setting2,"object"), setting2 + " should be of type " + "object")
+      _.bassert(40,BreadCrumbs.isOfType(setting2,"Object"), setting2 + " should be of type " + "Object")
+      _.bassert(41,BreadCrumbs.isOfType(setting2,"BreadCrumbs"), setting2 + " should be of type " + "BreadCrumbs")
+      _.bassert(42,BreadCrumbs.isOfType(setting2,"Setting"), setting2 + " should be of type " + "Setting")
+      _.bassert(43,BreadCrumbs.isOfType(spec1,"object"), spec1 + " should be of type " + "object")
+      _.bassert(44,BreadCrumbs.isOfType(spec1,"Object"), spec1 + " should be of type " + "Object")
+      _.bassert(45,BreadCrumbs.isOfType(spec1,"BreadCrumbs"), spec1 + " should be of type " + "BreadCrumbs")
+      _.bassert(46,BreadCrumbs.isOfType(spec1,"SpecManager"), spec1 + " should be of type " + "SpecManager")
+      _.bassert(47,BreadCrumbs.isOfType(type1,"object"), type1 + " should be of type " + "object")
+      _.bassert(48,BreadCrumbs.isOfType(type1,"Object"), type1 + " should be of type " + "Object")
+      _.bassert(49,BreadCrumbs.isOfType(type1,"BreadCrumbs"), type1 + " should be of type " + "BreadCrumbs")
+      _.bassert(50,BreadCrumbs.isOfType(type1,"NoteTypesManager"), type1 + " should be of type " + "NoteTypesManager")
+
+      _.bassert(101,!BreadCrumbs.isOfType(undef,"object"), undef + " should not be of type " + "object")
+      _.bassert(102,!BreadCrumbs.isOfType(undef,"Object"), undef + " should not be of type " + "Object")
+      _.bassert(103,!BreadCrumbs.isOfType(undef,"Null"), undef + " should not be of type " + "Null")
+      _.bassert(104,!BreadCrumbs.isOfType(nul,"undefined"), nul + " should not be of type " + "undefined")
+      _.bassert(105,!BreadCrumbs.isOfType(nul,"Object"), nul + " should not be of type " + "Object")
+      _.bassert(106,!BreadCrumbs.isOfType(arr1,"Object"), "Empty Array" + " should not be of type " + "Object")
+      _.bassert(107,!BreadCrumbs.isOfType(arr2,"Object"), arr2 + " should not be of type " + "Object")
+      _.bassert(108,!BreadCrumbs.isOfType(obj1,"BreadCrumbs"), obj1 + " should not be of type " + "BreadCrumbs")
+      _.bassert(109,!BreadCrumbs.isOfType(breadcrumb2,"Setting"), breadcrumb2 + " should not be of type " + "Setting")
+      _.bassert(110,!BreadCrumbs.isOfType(setting2,"SpecManager"), setting2 + " should not be of type " + "SpecManager")
+      _.bassert(111,!BreadCrumbs.isOfType(spec1,"NoteTypesManager"), spec1 + " should not be of type " + "NoteTypesManager")
+      _.bassert(112,!BreadCrumbs.isOfType(type1,"SpecManager"), type1 + " should not be of type " + "SpecManager")
     }
     function _tryConstruct(arg1, arg2, arg3) {
       let breadcrumbs = new BreadCrumbs(arg1, arg2, arg3)
