@@ -387,9 +387,9 @@ class TestSuite {
   }
 
   /** asserts boolean one case in a test, shows message on failure
-   * @param {number} errcase
-   * @param {boolean} isTrue
-   * @param {string} message
+   * @param {Number} errcase
+   * @param {Boolean} isTrue
+   * @param {String} message
    */
   bassert(errcase, isTrue, message) {
     this.#cases++
@@ -404,7 +404,7 @@ class TestSuite {
   }
 
   /** asserts catching exceptions one case in a test, shows message on failure
-   * @param {number} errcase
+   * @param {Number} errcase
    * @param {Function} fn
    * @param {...} ...params
    */
@@ -423,7 +423,7 @@ class TestSuite {
   }
 
   /** silents exception of one testcase, asserts & shows message if no exception
-   * @param {number} errcase
+   * @param {Number} errcase
    * @param {Function} fn
    * @param {...} ...params
    */
@@ -449,7 +449,7 @@ class TestSuite {
   }
 
   /** output to current note (indirect) and for failures on console
-   * @param {string} str
+   * @param {String} str
    */
   #praut(key, str) {
     if (key != this.s && key != this.f && key != this.d) {
@@ -678,8 +678,8 @@ class BreadCrumbs {
   /** Constructs a new BreadCrumbs
    * @constructor
    * @param {*} literal
-   * @param {string|symbol} key
-   * @param {undefined|BreadCrumbs} parent
+   * @param {String|Symbol} key
+   * @param {Undefined|BreadCrumbs} parent
    * @throws {SettingError} on wrong parameter types
    */
   constructor(literal, key, parent) {
@@ -692,19 +692,19 @@ class BreadCrumbs {
       this.throwIfIsNotOfType(parent, "BreadCrumbs")
   }
 
-  /** returns string representing class instance for superclass and subclasses
-   * @returns {string} string containing class name of deepest subclass and key
+  /** Returns string representing class instance for superclass and subclasses
+   * @returns {String} string containing class name of deepest subclass and key
    *          as given in BreadCrumbs constructor
    */
   toString() {
     return "°°°" + this.constructor.name + " " + this.#ident
   }
 
-  /** returns breadcrumbs with instances keys given in BreadCrumbs constructor
+  /** Returns line of ancestors with keys given in BreadCrumbs constructor
    *
    * For this instance and its ancestors keys are returned, separated by
    * punctuation marks
-   * @returns {string}
+   * @returns {String}
    */
   toBreadCrumbs() {
     let breadcrumbs = ""
@@ -717,12 +717,18 @@ class BreadCrumbs {
     return breadcrumbs
   }
 
+  /** Returns whether instance has no ancestor
+   * @returns {Boolean}
+   */
   isRoot() {
     return !BreadCrumbs.isDefined(this.#caller)
   }
 
+  /** Returns whether instances ancestor is root
+   * @returns {Boolean}
+   */
   isFirstGeneration() {
-    return this.#caller.isRoot()
+    return !this.isRoot() && this.#caller.isRoot()
   }
 
   throwIfUndefined(
@@ -811,6 +817,8 @@ class BreadCrumbs {
       _.run(constructorTest)
       _.run(toStringTest)
       _.run(toBreadCrumbsTest)
+      _.run(isRootTest)
+      _.run(isFirstGenerationTest)
       _.run(getKeyTest)
       _.run(getLiteralTest)
       _.run(getCrumbTest)
@@ -868,6 +876,22 @@ class BreadCrumbs {
       _.bassert(1,parentStr == "parent","breadCrumbs '" + parentStr + "' are wrong")
       _.bassert(2,childStr == "parent.child","breadCrumbs '" + childStr + "' are wrong")
       _.bassert(3,grandChildStr == "parent.child.grandChild","breadCrumbs '" + grandChildStr + "' are wrong")
+    }
+    function isRootTest() {
+      let parent = new BreadCrumbs(undefined, "parent")
+      let child = new BreadCrumbs(undefined, "child", parent)
+      let grandChild = new BreadCrumbs(undefined, "grandChild", child)
+      _.bassert(1,parent.isRoot(),"first parent is root")
+      _.bassert(2,!child.isRoot(),"child is not root")
+      _.bassert(3,!grandChild.isRoot(),"grandchild is not root")
+    } 
+    function isFirstGenerationTest() {
+      let parent = new BreadCrumbs(undefined, "parent")
+      let child = new BreadCrumbs(undefined, "child", parent)
+      let grandChild = new BreadCrumbs(undefined, "grandChild", child)
+      _.bassert(1,!parent.isFirstGeneration(),"root parent is not first generation")
+      _.bassert(2,child.isFirstGeneration(),"root child is first generation")
+      _.bassert(3,!grandChild.isFirstGeneration(),"root grandchild is not first generation")
     }
     function getKeyTest() {
       let breadcrumbs = new BreadCrumbs({}, "my name")
