@@ -654,10 +654,10 @@ class Dispatcher {
 /** superclass for all settings classes
  * @classdesc
  * settings are organized in collections and items. A collection contains other
- * collections and items,each identified by a key. Content of collection/item
+ * collections and items, each identified by a key. Content of collection/item
  * is given as literal description. So every collection has a key and a literal.
  * Besides root collection every collection has a parent. Only literal is
- * specific for a subclass
+ * handled specific by subclasses.
  *
  * BreadCrumbs as superclass handles what all subclasses have in common: key and
  * parent; they are nothing the subclasses have to care with,so those are as
@@ -1075,192 +1075,9 @@ class BreadCrumbs {
   }
 }
 
-/** most elaborated subclass
- *
+/** specification parser
+ * @classdesc
  */
-class Setting extends BreadCrumbs {
-  //#region member variables
-  static #ROOT_KEY = "/"
-  #children = {}
-  #spec = {}
-  #types = {}
-  #frontmatterYAML = {}
-  #renderYAML = {}
-  get spec() {
-    return this.#spec
-  }
-  get typeNames() {
-    return this.#types.names
-  }
-  get defaultType() {
-    return this.#types.defaultType
-  }
-  get frontmatterYAML() {
-    return this.getFrontmatterYAML()
-  }
-  get renderYAML() {
-    return this.getRenderYAML()
-  }
-  //#endregion member variables
-  constructor(
-    literal,
-    key = undefined,
-    caller = undefined,
-    callersSpec = undefined
-  ) {
-    super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
-    this.throwIfUndefined(literal, "literal")
-    this.#spec = new SpecManager(this.literal, undefined, this, callersSpec)
-    this.#types = new TypesManager(this.literal, undefined, this)
-    for (const [key, value] of Object.entries(this.literal)) {
-      if (BreadCrumbs.isOfType(value, "Object")) {
-        if (!Setting.#isHandlersKey(key)) {
-          this.#children[key] = new Setting(value, key, this, this.#spec)
-        } else {
-        }
-      } else {
-        if (this.spec.render) this.#renderYAML[key] = value
-        else this.#frontmatterYAML[key] = value
-      }
-    }
-  }
-  getFrontmatterYAML() {
-    let frontmatterYAML = {}
-    Object.assign(frontmatterYAML, this.#frontmatterYAML)
-    for (const [key, value] of Object.entries(this.#children)) {
-      Object.assign(frontmatterYAML, value.getFrontmatterYAML())
-    }
-    return frontmatterYAML
-  }
-  getRenderYAML() {
-    let renderYAML = {}
-    Object.assign(renderYAML, this.#renderYAML)
-    for (const [key, value] of Object.entries(this.#children)) {
-      Object.assign(renderYAML, value.getRenderYAML())
-    }
-    return renderYAML
-  }
-  getType(key) {
-    return this.#types.notetypes[key]
-  }
-  static #isHandlersKey(key) {
-    return SpecManager.isHandlerKey(key) || TypesManager.isHandlerKey(key)
-  }
-
-  // prettier-ignore
-  static test(outputObj) {
-    let _ = null
-    BreadCrumbs.test(outputObj)
-    SpecManager.test(outputObj)
-    TypesManager.test(outputObj)
-
-    if(_ = new TestSuite("Setting", outputObj)) {
-    _.run(getterTest)
-    _.run(constructorTest)
-    _.run(toStringTest)
-    _.run(isHandlersKeyTest)
-    _.run(getFrontmatterYAMLTest)
-    _.run(getRenderYAMLTest)
-    _.destruct()
-    _ = null
-    }
-    function getterTest() {
-      // check whether getter assigned to correct function
-      const desc1 = Object.getOwnPropertyDescriptor(Setting.prototype,"frontmatterYAML")
-      const desc2 = Object.getOwnPropertyDescriptor(Setting.prototype,"renderYAML")
-      _.bassert(1,typeof desc1.get == "function",`getter for 'frontmatterYAML' is not 'function'`)
-      _.bassert(2,typeof desc2.get == "function",`getter for 'renderYAML' is not 'function'`)
-      _.bassert(3,desc1.get.toString().contains("getFrontmatterYAML"),`getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`)
-      _.bassert(4,desc2.get.toString().contains("getRenderYAML"),`getter for 'renderYAML' is not 'getRenderYAML'`)
-    }
-    function constructorTest() {
-      _.shouldAssert(1, _tryConstruct, undefined, undefined, "msg")
-      _.assert(2, _tryConstruct, {}, "myName")
-      _.assert(3, _tryConstruct, {}, "my Name")
-      _.assert(4, _tryConstruct, {}, "22")
-      _.assert(5, _tryConstruct, {}, Symbol("a"))
-      let setting = new Setting({}, "myName")
-      _.bassert(6,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
-      _.bassert(7,setting.constructor == Setting,"the constructor property is not 'Setting'")
-    }
-    function toStringTest() {
-      let str = new Setting({}).toString()
-        _.bassert(1,str.contains(Setting.#ROOT_KEY),"result does not contain root string")
-        str = new Setting({}, "my Name").toString()
-        _.bassert(2,str.contains("my Name"),"result does not contain Setting key")
-        let setting = new Setting({}, "my Name")
-    }
-    function isHandlersKeyTest() {
-      _.bassert(1,Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't")
-      _.bassert(2,Setting.#isHandlersKey(TypesManager.NOTETYPES_KEY),TypesManager.NOTETYPES_KEY +  " should be recognized as handler key,but isn't")
-      _.bassert(3,!Setting.#isHandlersKey(TypesManager.TYPES_KEYS[0]),TypesManager.TYPES_KEYS[0] +  " should not be recognized as handlers key,but is")
-      _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
-      _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
-      _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
-      _.bassert(7,!Setting.#isHandlersKey(),"no argument should not be recognized as handlers key,but is")
-    }
-    function getFrontmatterYAMLTest() {
-      const lit1 = {a: 23}
-      const lit2 = {a: 23, b: "ja"}
-      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
-      const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
-      let setting1 = new Setting(lit1)
-      let setting2 = new Setting(lit2)
-      let setting3 = new Setting(lit3)
-      let setting4 = new Setting(lit4)
-      let setting5 = new Setting(lit5)
-      let answ1f = setting1.getFrontmatterYAML()
-      let answ2f = setting2.getFrontmatterYAML()
-      let answ3f = setting3.getFrontmatterYAML()
-      let answ4f = setting4.getFrontmatterYAML()
-      let answ5f = setting5.getFrontmatterYAML()
-      let expAnsw1f = '{"a":23}'
-      let expAnsw2f = '{"a":23,"b":"ja"}'
-      let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
-      let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
-      let expAnsw5f = '{"a":23}'
-      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
-      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
-      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
-      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
-      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
-    }
-    function getRenderYAMLTest() {
-      const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
-      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
-      let setting1 = new Setting(lit1)
-      let setting2 = new Setting(lit2)
-      let setting3 = new Setting(lit3)
-      let answ1 = setting1.getRenderYAML()
-      let answ2 = setting2.getRenderYAML()
-      let answ3 = setting3.getRenderYAML()
-      let expAnsw1 = "{}"
-      let expAnsw2 = '{"pict":"ja"}'
-      let expAnsw3 = "{}"
-      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
-      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
-      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
-      const lit6 = {
-        c: {
-          _SPEC: {render: true},
-          pict: "ja",
-          d: {_SPEC: {render: false}, private: true},
-        },
-      }
-      let setting6 = new Setting(lit6)
-      let answ6r = setting6.getRenderYAML()
-      let expAnsw6r = '{"pict":"ja"}'
-      _.bassert(5,JSON.stringify(answ6r) == expAnsw6r,`output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}',but should be:'${expAnsw6r}'`)
-    }
-    function _tryConstruct(arg1, arg2) {
-      let settings = new Setting(arg1, arg2)
-    }
-  }
-}
-
-/** specification parser */
 class SpecManager extends BreadCrumbs {
   //#region member variables
   static SPEC_KEY = "_SPEC"
@@ -1512,6 +1329,192 @@ class TypesManager extends BreadCrumbs {
     }
   }
 }
+
+/** most elaborated subclass
+ *
+ */
+class Setting extends BreadCrumbs {
+  //#region member variables
+  static #ROOT_KEY = "/"
+  #children = {}
+  #spec = {}
+  #types = {}
+  #frontmatterYAML = {}
+  #renderYAML = {}
+  get spec() {
+    return this.#spec
+  }
+  get typeNames() {
+    return this.#types.names
+  }
+  get defaultType() {
+    return this.#types.defaultType
+  }
+  get frontmatterYAML() {
+    return this.getFrontmatterYAML()
+  }
+  get renderYAML() {
+    return this.getRenderYAML()
+  }
+  //#endregion member variables
+  constructor(
+    literal,
+    key = undefined,
+    caller = undefined,
+    callersSpec = undefined
+  ) {
+    super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
+    this.throwIfUndefined(literal, "literal")
+    this.#spec = new SpecManager(this.literal, undefined, this, callersSpec)
+    this.#types = new TypesManager(this.literal, undefined, this)
+    for (const [key, value] of Object.entries(this.literal)) {
+      if (BreadCrumbs.isOfType(value, "Object")) {
+        if (!Setting.#isHandlersKey(key)) {
+          this.#children[key] = new Setting(value, key, this, this.#spec)
+        } else {
+        }
+      } else {
+        if (this.spec.render) this.#renderYAML[key] = value
+        else this.#frontmatterYAML[key] = value
+      }
+    }
+  }
+  getFrontmatterYAML() {
+    let frontmatterYAML = {}
+    Object.assign(frontmatterYAML, this.#frontmatterYAML)
+    for (const [key, value] of Object.entries(this.#children)) {
+      Object.assign(frontmatterYAML, value.getFrontmatterYAML())
+    }
+    return frontmatterYAML
+  }
+  getRenderYAML() {
+    let renderYAML = {}
+    Object.assign(renderYAML, this.#renderYAML)
+    for (const [key, value] of Object.entries(this.#children)) {
+      Object.assign(renderYAML, value.getRenderYAML())
+    }
+    return renderYAML
+  }
+  getType(key) {
+    return this.#types.notetypes[key]
+  }
+  static #isHandlersKey(key) {
+    return SpecManager.isHandlerKey(key) || TypesManager.isHandlerKey(key)
+  }
+
+  // prettier-ignore
+  static test(outputObj) {
+    let _ = null
+    BreadCrumbs.test(outputObj)
+    SpecManager.test(outputObj)
+    TypesManager.test(outputObj)
+
+    if(_ = new TestSuite("Setting", outputObj)) {
+    _.run(getterTest)
+    _.run(constructorTest)
+    _.run(toStringTest)
+    _.run(isHandlersKeyTest)
+    _.run(getFrontmatterYAMLTest)
+    _.run(getRenderYAMLTest)
+    _.destruct()
+    _ = null
+    }
+    function getterTest() {
+      // check whether getter assigned to correct function
+      const desc1 = Object.getOwnPropertyDescriptor(Setting.prototype,"frontmatterYAML")
+      const desc2 = Object.getOwnPropertyDescriptor(Setting.prototype,"renderYAML")
+      _.bassert(1,typeof desc1.get == "function",`getter for 'frontmatterYAML' is not 'function'`)
+      _.bassert(2,typeof desc2.get == "function",`getter for 'renderYAML' is not 'function'`)
+      _.bassert(3,desc1.get.toString().contains("getFrontmatterYAML"),`getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`)
+      _.bassert(4,desc2.get.toString().contains("getRenderYAML"),`getter for 'renderYAML' is not 'getRenderYAML'`)
+    }
+    function constructorTest() {
+      _.shouldAssert(1, _tryConstruct, undefined, undefined, "msg")
+      _.assert(2, _tryConstruct, {}, "myName")
+      _.assert(3, _tryConstruct, {}, "my Name")
+      _.assert(4, _tryConstruct, {}, "22")
+      _.assert(5, _tryConstruct, {}, Symbol("a"))
+      let setting = new Setting({}, "myName")
+      _.bassert(6,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
+      _.bassert(7,setting.constructor == Setting,"the constructor property is not 'Setting'")
+    }
+    function toStringTest() {
+      let str = new Setting({}).toString()
+        _.bassert(1,str.contains(Setting.#ROOT_KEY),"result does not contain root string")
+        str = new Setting({}, "my Name").toString()
+        _.bassert(2,str.contains("my Name"),"result does not contain Setting key")
+        let setting = new Setting({}, "my Name")
+    }
+    function isHandlersKeyTest() {
+      _.bassert(1,Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't")
+      _.bassert(2,Setting.#isHandlersKey(TypesManager.NOTETYPES_KEY),TypesManager.NOTETYPES_KEY +  " should be recognized as handler key,but isn't")
+      _.bassert(3,!Setting.#isHandlersKey(TypesManager.TYPES_KEYS[0]),TypesManager.TYPES_KEYS[0] +  " should not be recognized as handlers key,but is")
+      _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
+      _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
+      _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
+      _.bassert(7,!Setting.#isHandlersKey(),"no argument should not be recognized as handlers key,but is")
+    }
+    function getFrontmatterYAMLTest() {
+      const lit1 = {a: 23}
+      const lit2 = {a: 23, b: "ja"}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let setting5 = new Setting(lit5)
+      let answ1f = setting1.getFrontmatterYAML()
+      let answ2f = setting2.getFrontmatterYAML()
+      let answ3f = setting3.getFrontmatterYAML()
+      let answ4f = setting4.getFrontmatterYAML()
+      let answ5f = setting5.getFrontmatterYAML()
+      let expAnsw1f = '{"a":23}'
+      let expAnsw2f = '{"a":23,"b":"ja"}'
+      let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
+      let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
+      let expAnsw5f = '{"a":23}'
+      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
+      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
+      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
+      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
+      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
+    }
+    function getRenderYAMLTest() {
+      const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let answ1 = setting1.getRenderYAML()
+      let answ2 = setting2.getRenderYAML()
+      let answ3 = setting3.getRenderYAML()
+      let expAnsw1 = "{}"
+      let expAnsw2 = '{"pict":"ja"}'
+      let expAnsw3 = "{}"
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      const lit6 = {
+        c: {
+          _SPEC: {render: true},
+          pict: "ja",
+          d: {_SPEC: {render: false}, private: true},
+        },
+      }
+      let setting6 = new Setting(lit6)
+      let answ6r = setting6.getRenderYAML()
+      let expAnsw6r = '{"pict":"ja"}'
+      _.bassert(5,JSON.stringify(answ6r) == expAnsw6r,`output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}',but should be:'${expAnsw6r}'`)
+    }
+    function _tryConstruct(arg1, arg2) {
+      let settings = new Setting(arg1, arg2)
+    }
+  }
+}
+
 //#endregion code
 /** Runs all tests,if TESTING is set output to current note (indirect)
  * @param {*} outputObj
