@@ -184,7 +184,7 @@ function aut(str, b = "yellow", c = "red") {
  */
 function vaut(vn, v, b = "yellow", c = "red") {
   let str = vn + ": " + v
-  console.log("%c" + str, `background:${b}color:${c}font-weight:normal`)
+  console.log("%c" + str, `background:${b};color:${c};font-weight:normal`)
 }
 
 /** superclass for all Foty Errors (but not unit test Errors) */
@@ -680,7 +680,7 @@ class BreadCrumbs {
    * @constructor
    * @param {*} literal
    * @param {string|symbol} key
-   * @param {undefined|BreadCrumbs} caller
+   * @param {undefined|BreadCrumbs} parent
    * @throws {SettingError} on wrong parameter types
    */
   constructor(literal, key, parent) {
@@ -689,9 +689,14 @@ class BreadCrumbs {
     this.#caller = parent
     this.throwIfUndefined(key, "key")
     this.throwIfIsNotOfType(key, ["string", "symbol"])
-    if (parent !== undefined) this.throwIfIsNotOfType(parent, "BreadCrumbs")
+    if (BreadCrumbs.isDefined(parent))
+      this.throwIfIsNotOfType(parent, "BreadCrumbs")
   }
 
+  /** returns string representing class instance for superclass and subclasses
+   * @returns string containing class name of deepest subclass and key as given
+   *          in BreadCrumbs constructor
+   */
   toString() {
     return "°°°" + this.constructor.name + " " + this.#ident
   }
@@ -794,131 +799,130 @@ class BreadCrumbs {
     return answer
   }
 
-  //#region BreadCrumbs tests
-  static _ = null
-  static test(outputObj) {
-    BreadCrumbs._ = new TestSuite("BreadCrumbs", outputObj)
-    BreadCrumbs._.run(BreadCrumbs.constructorTest)
-    BreadCrumbs._.run(BreadCrumbs.toStringTest)
-    BreadCrumbs._.run(BreadCrumbs.toBreadCrumbsTest)
-    BreadCrumbs._.run(BreadCrumbs.getKeyTest)
-    BreadCrumbs._.run(BreadCrumbs.getLiteralTest)
-    BreadCrumbs._.run(BreadCrumbs.getCrumbTest)
-    BreadCrumbs._.run(BreadCrumbs.isDefinedTest)
-    BreadCrumbs._.destruct()
-    BreadCrumbs._ = null
-  }
   // prettier-ignore
-  static constructorTest() {
-    BreadCrumbs._.assert(1,BreadCrumbs._tryConstruct,undefined,"myName")
-    BreadCrumbs._.assert(2,BreadCrumbs._tryConstruct,{},"myName")
-    BreadCrumbs._.assert(3,BreadCrumbs._tryConstruct,2,"myName")
-    BreadCrumbs._.assert(4,BreadCrumbs._tryConstruct,null,"myName")
-    BreadCrumbs._.assert(5,BreadCrumbs._tryConstruct,new Error(),"myName")
-    BreadCrumbs._.assert(6,BreadCrumbs._tryConstruct,["a","b"],"myName")
-    BreadCrumbs._.assert(7,BreadCrumbs._tryConstruct,Symbol(),"myName")
-
-    BreadCrumbs._.assert(8,BreadCrumbs._tryConstruct,undefined,Symbol())
-    BreadCrumbs._.shouldAssert(9,BreadCrumbs._tryConstruct,{},undefined,undefined,"key has to be defined")
-    BreadCrumbs._.shouldAssert(10,BreadCrumbs._tryConstruct,{},2,undefined,"key can not be a number")
-    BreadCrumbs._.shouldAssert(11,BreadCrumbs._tryConstruct,{},null,undefined,"key may not be 'null'")
-    BreadCrumbs._.shouldAssert(12,BreadCrumbs._tryConstruct,{},{},undefined,"key may not be an object")
-    BreadCrumbs._.shouldAssert(13,BreadCrumbs._tryConstruct,{},new Error(),undefined,"key may not be 'Error' instance")
-    BreadCrumbs._.shouldAssert(14,BreadCrumbs._tryConstruct,{},["a","b"],undefined,"key may not be an array")
-
-    let breadcrumbs = new BreadCrumbs(undefined,"myName")
-    let setting = new Setting({},"myName")
-    BreadCrumbs._.assert(15,BreadCrumbs._tryConstruct,undefined,"myName",breadcrumbs)
-    BreadCrumbs._.assert(16,BreadCrumbs._tryConstruct,undefined,"myName",setting)
-    BreadCrumbs._.shouldAssert(17,BreadCrumbs._tryConstruct,undefined,"myName",null,"parent may not be 'null'")
-    BreadCrumbs._.shouldAssert(18,BreadCrumbs._tryConstruct,undefined,"myName",new Error(),"parent may not be 'Error' instance")
-    BreadCrumbs._.shouldAssert(19,BreadCrumbs._tryConstruct,undefined,"myName",{},"parent may not be an object")
-    BreadCrumbs._.shouldAssert(20,BreadCrumbs._tryConstruct,undefined,"myName",2,"parent may not be a number")
-    BreadCrumbs._.shouldAssert(21,BreadCrumbs._tryConstruct,undefined,"myName",["a","b"],"parent may not be an array")
-    BreadCrumbs._.shouldAssert(22,BreadCrumbs._tryConstruct,undefined,"myName",Symbol(),"parent may not be a symbol")
-
-    BreadCrumbs._.bassert(23,breadcrumbs instanceof Object,"'BreadCrumbs' has to be an instance of 'Object'")
-    BreadCrumbs._.bassert(24,breadcrumbs instanceof BreadCrumbs,"'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
-    BreadCrumbs._.bassert(25,breadcrumbs.constructor == BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("BreadCrumbs", outputObj)) {
+      _.run(constructorTest)
+      _.run(toStringTest)
+      _.run(toBreadCrumbsTest)
+      _.run(getKeyTest)
+      _.run(getLiteralTest)
+      _.run(getCrumbTest)
+      _.run(isDefinedTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      _.assert(1,_tryConstruct,undefined,"myName")
+      _.assert(2,_tryConstruct,{},"myName")
+      _.assert(3,_tryConstruct,2,"myName")
+      _.assert(4,_tryConstruct,null,"myName")
+      _.assert(5,_tryConstruct,new Error(),"myName")
+      _.assert(6,_tryConstruct,["a","b"],"myName")
+      _.assert(7,_tryConstruct,Symbol(),"myName")
+  
+      _.assert(8,_tryConstruct,undefined,Symbol())
+      _.shouldAssert(9,_tryConstruct,{},undefined,undefined,"key has to be defined")
+      _.shouldAssert(10,_tryConstruct,{},2,undefined,"key can not be a number")
+      _.shouldAssert(11,_tryConstruct,{},null,undefined,"key may not be 'null'")
+      _.shouldAssert(12,_tryConstruct,{},{},undefined,"key may not be an object")
+      _.shouldAssert(13,_tryConstruct,{},new Error(),undefined,"key may not be 'Error' instance")
+      _.shouldAssert(14,_tryConstruct,{},["a","b"],undefined,"key may not be an array")
+  
+      let breadcrumbs = new BreadCrumbs(undefined,"myName")
+      let setting = new Setting({},"myName")
+      _.assert(15,_tryConstruct,undefined,"myName",breadcrumbs)
+      _.assert(16,_tryConstruct,undefined,"myName",setting)
+      _.shouldAssert(17,_tryConstruct,undefined,"myName",null,"parent may not be 'null'")
+      _.shouldAssert(18,_tryConstruct,undefined,"myName",new Error(),"parent may not be 'Error' instance")
+      _.shouldAssert(19,_tryConstruct,undefined,"myName",{},"parent may not be an object")
+      _.shouldAssert(20,_tryConstruct,undefined,"myName",2,"parent may not be a number")
+      _.shouldAssert(21,_tryConstruct,undefined,"myName",["a","b"],"parent may not be an array")
+      _.shouldAssert(22,_tryConstruct,undefined,"myName",Symbol(),"parent may not be a symbol")
+  
+      _.bassert(23,breadcrumbs instanceof Object,"'BreadCrumbs' has to be an instance of 'Object'")
+      _.bassert(24,breadcrumbs instanceof BreadCrumbs,"'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
+      _.bassert(25,breadcrumbs.constructor == BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
+    }
+    function toStringTest() {
+      let str = new BreadCrumbs(undefined, "my name").toString()
+      _.bassert(1,str.contains("my name"),"result does not contain name given on construction")
+      _.bassert(2,str.contains("BreadCrumbs"),"result does not contain class name")
+      str = new Setting({},"myName").toString()
+      _.bassert(3,str.contains("myName"),"result does not contain name given on construction")
+      _.bassert(4,str.contains("Setting"),"result does not contain class name")
+    }
+    function toBreadCrumbsTest() {
+      let parent = new BreadCrumbs(undefined, "parent")
+      let child = new BreadCrumbs(undefined, "child", parent)
+      let grandChild = new BreadCrumbs(undefined, "grandChild", child)
+      let parentStr = parent.toBreadCrumbs()
+      let childStr = child.toBreadCrumbs()
+      let grandChildStr = grandChild.toBreadCrumbs()
+      _.bassert(
+        1,
+        parentStr == "parent",
+        "breadCrumbs: '" + parentStr + "' are wrong"
+      )
+      _.bassert(
+        2,
+        childStr == "parent.child",
+        "breadCrumbs: '" + childStr + "' are wrong"
+      )
+      _.bassert(
+        3,
+        grandChildStr == "parent.child.grandChild",
+        "breadCrumbs: '" + grandChildStr + "' are wrong"
+      )
+    }
+    function getKeyTest() {
+      let breadcrumbs = new BreadCrumbs({}, "my name")
+      _.bassert(
+        1,
+        breadcrumbs.#ident == "my name",
+        "does not return name given on construction "
+      )
+    }
+    function getLiteralTest() {
+      const sym = Symbol("Symbol Descriptor")
+      let breadcrumbs = new BreadCrumbs({sym: 87673}, "my name")
+      _.bassert(
+        1,
+        breadcrumbs.literal.sym == 87673,
+        "does not return literal given on construction "
+      )
+    }
+    function getCrumbTest() {
+      let parent = new BreadCrumbs(undefined, "parent")
+      let breadcrumbs = new BreadCrumbs({}, "my name", parent)
+      _.bassert(
+        1,
+        breadcrumbs.#caller == parent,
+        "does not return parent given on construction "
+      )
+    }
+    function isDefinedTest() {
+      _.bassert(
+        1,
+        BreadCrumbs.isDefined(""),
+        "Empty String is not accepted as defined"
+      )
+      _.bassert(
+        2,
+        BreadCrumbs.isDefined(null),
+        "null is not accepted as defined"
+      )
+      _.bassert(
+        3,
+        !BreadCrumbs.isDefined(undefined),
+        "undefined accepted as defined"
+      )
+    }
+    function _tryConstruct(arg1, arg2, arg3) {
+      let breadcrumbs = new BreadCrumbs(arg1, arg2, arg3)
+    }
   }
-  static toStringTest() {
-    let str = new BreadCrumbs(undefined, "my name").toString()
-    BreadCrumbs._.bassert(
-      1,
-      str.contains("my name"),
-      "result does not contain name given on construction "
-    )
-  }
-  static toBreadCrumbsTest() {
-    let parent = new BreadCrumbs(undefined, "parent")
-    let child = new BreadCrumbs(undefined, "child", parent)
-    let grandChild = new BreadCrumbs(undefined, "grandChild", child)
-    let parentStr = parent.toBreadCrumbs()
-    let childStr = child.toBreadCrumbs()
-    let grandChildStr = grandChild.toBreadCrumbs()
-    BreadCrumbs._.bassert(
-      1,
-      parentStr == "parent",
-      "breadCrumbs: '" + parentStr + "' are wrong"
-    )
-    BreadCrumbs._.bassert(
-      2,
-      childStr == "parent.child",
-      "breadCrumbs: '" + childStr + "' are wrong"
-    )
-    BreadCrumbs._.bassert(
-      3,
-      grandChildStr == "parent.child.grandChild",
-      "breadCrumbs: '" + grandChildStr + "' are wrong"
-    )
-  }
-  static getKeyTest() {
-    let breadcrumbs = new BreadCrumbs({}, "my name")
-    BreadCrumbs._.bassert(
-      1,
-      breadcrumbs.#ident == "my name",
-      "does not return name given on construction "
-    )
-  }
-  static getLiteralTest() {
-    const sym = Symbol("Symbol Descriptor")
-    let breadcrumbs = new BreadCrumbs({sym: 87673}, "my name")
-    BreadCrumbs._.bassert(
-      1,
-      breadcrumbs.literal.sym == 87673,
-      "does not return literal given on construction "
-    )
-  }
-  static getCrumbTest() {
-    let parent = new BreadCrumbs(undefined, "parent")
-    let breadcrumbs = new BreadCrumbs({}, "my name", parent)
-    BreadCrumbs._.bassert(
-      1,
-      breadcrumbs.#caller == parent,
-      "does not return parent given on construction "
-    )
-  }
-  static isDefinedTest() {
-    BreadCrumbs._.bassert(
-      1,
-      BreadCrumbs.isDefined(""),
-      "Empty String is not accepted as defined"
-    )
-    BreadCrumbs._.bassert(
-      2,
-      BreadCrumbs.isDefined(null),
-      "null is not accepted as defined"
-    )
-    BreadCrumbs._.bassert(
-      3,
-      !BreadCrumbs.isDefined(undefined),
-      "undefined accepted as defined"
-    )
-  }
-  static _tryConstruct(arg1, arg2, arg3) {
-    let breadcrumbs = new BreadCrumbs(arg1, arg2, arg3)
-  }
-  //#endregion BreadCrumbs tests
 }
 
 /** most elaborated subclass
