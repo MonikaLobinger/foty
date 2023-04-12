@@ -692,8 +692,32 @@ class BreadCrumbs {
       return arg == undefined ? false : Array.isArray(arg) ? false : true
     },
   }
-  set objTypes(name) {
-    BreadCrumbs.#objTypes[name] = eval(name).instanceOfMe
+  /** Registers className for type checking with isOfType
+   *
+   * static function instanceOfMe has to be provided by caller
+   * @param {String} className - name of a defined object, which has member
+   *                             function instanceOfMe
+   */
+  set objTypes(className) {
+    try {
+      eval(className)
+    } catch (e) {
+      throw new SettingError(
+        this.constructor.name + " " + "set objTypes",
+        "Breadcrumbs: '" + this.toBreadcrumbs() + "'\n   " + e.message
+      )
+    }
+    if (!eval(className).instanceOfMe) {
+      throw new SettingError(
+        this.constructor.name + " " + "set objTypes",
+        "Breadcrumbs: '" +
+          this.toBreadcrumbs() +
+          "'\n   '" +
+          className +
+          ".instanceOfMe' has to be defined"
+      )
+    }
+    BreadCrumbs.#objTypes[className] = eval(className).instanceOfMe
   }
   /** Returns literal given in BreadCrumbs constructor
    * @returns {*}
@@ -702,7 +726,7 @@ class BreadCrumbs {
     return this.#literal
   }
   //#endregion member variables
-  /** Constructs a new BreadCrumbs
+  /** Constructs a new BreadCrumbs and registers its type
    * @constructor
    * @param {Undefined|Object} literal
    * @param {String|Symbol} key
@@ -720,6 +744,10 @@ class BreadCrumbs {
     if (!BreadCrumbs.#instanceCounter++) this.objTypes = "BreadCrumbs"
   }
 
+  /** Returns whether arg is instance of BreadCrumbs
+   * @param {String} arg
+   * @returns {Boolean}
+   */
   static instanceOfMe(arg) {
     return arg instanceof BreadCrumbs
   }
@@ -869,8 +897,10 @@ class BreadCrumbs {
   static test(outputObj) { // BreadCrumbs
     let _ = null
     if(_ = new TestSuite("BreadCrumbs", outputObj)) {
+      _.run(setterObjTypesTest)
       _.run(getterLiteralTest)
       _.run(constructorTest)
+      _.run(instanceOfMeTest)
       _.run(toStringTest)
       _.run(toBreadCrumbsTest)
       _.run(isRootTest)
@@ -881,6 +911,11 @@ class BreadCrumbs {
       _.run(isOfTypeTest)
       _.destruct()
       _ = null
+    }
+    function setterObjTypesTest() {
+      _.shouldAssert(1,_trySetterObjTypes,"Error","Error class has no 'instanceOfMe', should not be registered")
+      _.shouldAssert(2,_trySetterObjTypes,"BreadCrumbs1","'BreadCrumbs1' is undefined, should not be registered")
+      _.assert(3,_trySetterObjTypes,"BreadCrumbs", "BreadCrumbs should be registered")
     }
     function getterLiteralTest() {
       let breadcrumbs0 = new BreadCrumbs({}, "my name1")
@@ -920,6 +955,11 @@ class BreadCrumbs {
       _.bassert(101,breadcrumbs instanceof Object,"'BreadCrumbs' has to be an instance of 'Object'")
       _.bassert(102,breadcrumbs instanceof BreadCrumbs,"'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,breadcrumbs.constructor == BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
+    }
+    function instanceOfMeTest() {
+      let un
+      _.bassert(1,BreadCrumbs.instanceOfMe(new BreadCrumbs(un, "BInstance")),"BreadCrumbs instance should be an instance of BreadCrumbs")
+      _.bassert(2,!BreadCrumbs.instanceOfMe(new Error()),"Error instance should not be an instance of BreadCrumbs")
     }
     function toStringTest() {
       let str = new BreadCrumbs(undefined, "my name11").toString()
@@ -1047,6 +1087,11 @@ class BreadCrumbs {
       _.bassert(108,!BreadCrumbs.isOfType(obj1,"BreadCrumbs"), obj1 + " should not be of type " + "BreadCrumbs")
       _.bassert(109,!BreadCrumbs.isOfType(breadcrumb2,"Setting"), breadcrumb2 + " should not be of type " + "Setting")
     }
+    function _trySetterObjTypes(arg1) {
+      let un
+      let breadCrumbs = new BreadCrumbs(un,"ObjTypesTest",un)
+      breadCrumbs.objTypes = arg1
+    }
     function _tryConstruct(arg1, arg2, arg3) {
       new BreadCrumbs(arg1, arg2, arg3)
     }
@@ -1080,6 +1125,7 @@ class BreadCrumbs {
  */
 class SpecManager extends BreadCrumbs {
   //#region member variables
+  static #instanceCounter = 0
   static #SPEC_KEY = "_SPEC"
   #render = false
   /** Returns key for entry handled by SpecManager
@@ -1095,8 +1141,7 @@ class SpecManager extends BreadCrumbs {
     return this.#render
   }
   //#endregion member variables
-  static #instanceCounter = 0
-  /** Constructs a new SpecManager
+  /** Constructs a new SpecManager and registers its type
    *
    * @constructor
    * @param {Object} literal
@@ -1116,6 +1161,10 @@ class SpecManager extends BreadCrumbs {
     if (!SpecManager.#instanceCounter++) this.objTypes = "SpecManager"
   }
 
+  /** Returns whether arg is instance of BreadCrumbs
+   * @param {String} arg
+   * @returns {Boolean}
+   */
   static instanceOfMe(arg) {
     return arg instanceof SpecManager
   }
@@ -1150,8 +1199,10 @@ class SpecManager extends BreadCrumbs {
       _.run(getterHandlerKeyTest)
       _.run(getterLiteralTest)
       _.run(getterRenderTest)
+      _.run(instanceOfMeTest)
       _.run(constructorTest)
       _.run(toStringTest)
+      _.run(isOfTypeTest)
       _.run(setOptionRenderTest)
       _.destruct()
       _ = null
@@ -1178,6 +1229,9 @@ class SpecManager extends BreadCrumbs {
       _.bassert(3,!specMan1.literal.render,"render should be false, as set in _SPEC")
       //_.bassert(4,specMan2.literal.render,"render should be true, as set in _SPEC")
     }
+    function instanceOfMeTest() {
+
+    }
     function constructorTest() {
       let breadCrumbs = new BreadCrumbs(undefined, "breadcrumbs")
       _.assert(1,_tryConstruct, {},"name21",breadCrumbs,undefined,"instance should be created, all parameters are ok")
@@ -1199,6 +1253,9 @@ class SpecManager extends BreadCrumbs {
       let breadcrumbs = new BreadCrumbs({}, "its Name")
       let str = new SpecManager({}, "myName", breadcrumbs).toString()
       _.bassert(1,str.contains("myName"),"result does not contain name string"    )
+    }
+    function isOfTypeTest() {
+      
     }
     function setOptionRenderTest() {
 
