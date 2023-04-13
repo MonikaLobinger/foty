@@ -1348,8 +1348,9 @@ class SpecManager extends BreadCrumbs {
 /** notetypes parser */
 class TypesManager extends BreadCrumbs {
   //#region member variables
-  static NOTETYPES_KEY = "NOTETYPES"
-  static TYPES_KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
+  static #instanceCounter = 0
+  static #TYPES_KEY = "NOTETYPES"
+  static #KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
   static #DEFAULT_TYPE = {
     MARKER: "",
     DATE: false,
@@ -1357,24 +1358,46 @@ class TypesManager extends BreadCrumbs {
     DATEFORMAT: "YYYY-MM-DD",
   }
   #notetypes = {}
-  get defaultType() {
+  /** Returns key for entry handled by TypesManager
+   * @returns {String}
+   */
+  static get handlerKey() {
+    return TypesManager.#TYPES_KEY
+  }
+  /** Returns keys a notetype has
+   * @returns { @returns {Array.<String>}g}
+   */
+  static get keys() {
+    return TypesManager.#KEYS
+  }
+  /** Returns default notetype with all its keys set to default values
+   * @returns {Object.<String.*>}
+   */
+  static get defaultType() {
     return TypesManager.#DEFAULT_TYPE
   }
+  /** Returns Object with all notetypes, bound to their names
+   * @returns {Object.<String.Object.<String.*>>}
+   */
   get notetypes() {
     return this.#notetypes
   }
+  /** Returns names of notetypes
+   * @returns {Array.<String>}
+   */
   get names() {
     return this.getTypeNames()
   }
   //#endregion member variables
   constructor(literal, key, caller) {
     let typesLiteral
-    if (literal != undefined) typesLiteral = literal[TypesManager.NOTETYPES_KEY]
+    if (literal != undefined) typesLiteral = literal[TypesManager.#TYPES_KEY]
     super(
       typesLiteral,
-      key === undefined ? TypesManager.NOTETYPES_KEY : key,
+      key === undefined ? TypesManager.#TYPES_KEY : key,
       caller
     )
+    if (!TypesManager.#instanceCounter++) this.objTypes = "TypesManager"
     this.throwIfUndefined(caller, "caller")
     this.throwIfNotOfType(caller, "BreadCrumbs")
     if (this.literal != undefined && !this.isFirstGeneration())
@@ -1395,7 +1418,7 @@ class TypesManager extends BreadCrumbs {
     for (const [name, entry] of Object.entries(this.literal)) {
       this.throwIfNotOfType(entry, "object")
       for (const [key, value] of Object.entries(entry)) {
-        let allowedKeys = TypesManager.TYPES_KEYS
+        let allowedKeys = TypesManager.keys
         if (!allowedKeys.contains(key))
           throw new SettingError(
             this.constructor.name + " " + constructor,
@@ -1428,9 +1451,6 @@ class TypesManager extends BreadCrumbs {
       )
     }
   }
-  static isHandlerKey(key) {
-    return key == TypesManager.NOTETYPES_KEY
-  }
   getTypeNames() {
     return Object.keys(this.#notetypes)
   }
@@ -1440,7 +1460,6 @@ class TypesManager extends BreadCrumbs {
     if(_ = new TestSuite("TypesManager", outputObj)) {
       _.run(constructorTest)
       _.run(toStringTest)
-      _.run(isHandlerKeyTest)
       _.destruct()
       _ = null
     }
@@ -1461,21 +1480,17 @@ class TypesManager extends BreadCrumbs {
       _.bassert(10,BreadCrumbs.isOfType(typeMan.notetypes, "object"),"for empty literal TypesManager should construct object,but does not")
       let typeKeys = Object.keys(typeMan.notetypes)
       _.bassert(11,typeKeys.length == 0,"For empty literal TypesManager with no types should be created")
-      let defaultType = typeMan.defaultType
-      _.bassert(12,BreadCrumbs.isOfType(defaultType, "object"),"default type should always be present,but here it is not")
-      let defaultTypeKeys = Object.keys(defaultType)
-      let typesKeys = TypesManager.TYPES_KEYS
-      _.bassert(13,(typesKeys.length = defaultTypeKeys.length),"defaultType should have as many keys as 'TypesManager.TYPES_KEYS'")
-      _.bassert(14,defaultTypeKeys.every((key) => {return typesKeys.includes(key)}),"any key of 'TypesManager.TYPES_KEYS' should be contained in defaultType,but is not")
+      let defType = TypesManager.defaultType
+      _.bassert(12,BreadCrumbs.isOfType(defType, "object"),"default type should always be present,but here it is not")
+      let defaultTypeKeys = Object.keys(defType)
+      let typesKeys = TypesManager.keys
+      _.bassert(13,(typesKeys.length = defaultTypeKeys.length),"defaultType should have as many keys as 'TypesManager.#KEYS'")
+      _.bassert(14,defaultTypeKeys.every((key) => {return typesKeys.includes(key)}),"any key of 'TypesManager.#KEYS' should be contained in defaultType,but is not")
     }
     function toStringTest() {
       let parent = new BreadCrumbs({}, "its Name")
       let str = new TypesManager({}, "myName", parent).toString()
       _.bassert(1,str.contains("myName"),"result does not contain name string")
-    }
-    function isHandlerKeyTest() {
-      _.bassert(1,TypesManager.isHandlerKey("NOTETYPES"),"key is not identified as 'NOTETYPES'")
-      _.bassert(2,!TypesManager.isHandlerKey("_NOTETYPES"),"'_NOTETYPES' is accepted as key")
     }
     function _tryConstruct(arg1, arg2, arg3) {
       let specMan = new TypesManager(arg1, arg2, arg3)
@@ -1501,7 +1516,7 @@ class Setting extends BreadCrumbs {
     return this.#types.names
   }
   get defaultType() {
-    return this.#types.defaultType
+    return TypesManager.defaultType
   }
   get frontmatterYAML() {
     return this.getFrontmatterYAML()
@@ -1557,7 +1572,7 @@ class Setting extends BreadCrumbs {
     return this.#types.notetypes[key]
   }
   static #isHandlersKey(key) {
-    return SpecManager.handlerKey == key || TypesManager.isHandlerKey(key)
+    return SpecManager.handlerKey == key || TypesManager.handlerKey == key
   }
 
   // prettier-ignore
@@ -1609,8 +1624,8 @@ class Setting extends BreadCrumbs {
     }
     function isHandlersKeyTest() {
       //_.bassert(1,Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't")
-      _.bassert(2,Setting.#isHandlersKey(TypesManager.NOTETYPES_KEY),TypesManager.NOTETYPES_KEY +  " should be recognized as handler key,but isn't")
-      _.bassert(3,!Setting.#isHandlersKey(TypesManager.TYPES_KEYS[0]),TypesManager.TYPES_KEYS[0] +  " should not be recognized as handlers key,but is")
+      _.bassert(2,Setting.#isHandlersKey(TypesManager.TYPES_KEY),TypesManager.TYPES_KEY +  " should be recognized as handler key,but isn't")
+      _.bassert(3,!Setting.#isHandlersKey(TypesManager.keys[0]),TypesManager.keys[0] +  " should not be recognized as handlers key,but is")
       _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
       _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
       _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
@@ -1691,7 +1706,7 @@ async function createNote(tp, setting) {
   let type
   let typeKeys = setting.typeNames
   if (typeKeys.length == 0) {
-    type = setting.defaultType
+    type = TypesManager.defaultType
   } else if (typeKeys.length == 1) {
     type = setting.getType(typeKeys[0])
   } else if (typeKeys.length > 1) {
