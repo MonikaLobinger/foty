@@ -558,7 +558,7 @@ class Event {
     Event._.assert(3, Event._tryRegisterCallback, "eventname", e)
   }
   static _tryConstruct(arg1) {
-    let event = new Event(arg1)
+    new Event(arg1)
   }
   static _tryRegisterCallback(arg1, arg2) {
     let e = new Event("eventname")
@@ -642,7 +642,7 @@ class Dispatcher {
     Dispatcher._.assert(1, Dispatcher._tryDispatchEvent, "big bang", undefined)
   }
   static _tryConstruct() {
-    let d = new Dispatcher()
+    new Dispatcher()
   }
   static _tryRegisterEvent(name) {
     let d = new Dispatcher()
@@ -789,13 +789,6 @@ class BreadCrumbs {
     return !BreadCrumbs.isDefined(this.#caller)
   }
 
-  /** Returns whether ancestor of instance is root
-   * @returns {Boolean}
-   */
-  isFirstGeneration() {
-    return !this.isRoot() && this.#caller.isRoot()
-  }
-
   /** Throws if val is not strictly undefined (null is defined)
    *
    * Does not throw on parameter type errors
@@ -906,7 +899,6 @@ class BreadCrumbs {
       _.run(toStringTest)
       _.run(toBreadCrumbsTest)
       _.run(isRootTest)
-      _.run(isFirstGenerationTest)
       _.run(throwIfUndefinedTest)
       _.run(throwIfNotOfTypeTest)
       _.run(isDefinedTest)
@@ -992,14 +984,6 @@ class BreadCrumbs {
       _.bassert(2,!child.isRoot(),"child should not be root")
       _.bassert(3,!grandChild.isRoot(),"grandchild should not be root")
     } 
-    function isFirstGenerationTest() {
-      let parent = new BreadCrumbs(undefined, "parent21")
-      let child = new BreadCrumbs(undefined, "child21", parent)
-      let grandChild = new BreadCrumbs(undefined, "grandChild21", child)
-      _.bassert(1,!parent.isFirstGeneration(),"root parent should not be first generation")
-      _.bassert(2,child.isFirstGeneration(),"root child should be first generation")
-      _.bassert(3,!grandChild.isFirstGeneration(),"root grandchild should not be first generation")
-    }
     function throwIfUndefinedTest() {
       let un
       let vname
@@ -1165,7 +1149,7 @@ class SpecManager extends BreadCrumbs {
     this.#setOptionRender(grandParentsSpec)
   }
 
-  /** Returns whether arg is instance of BreadCrumbs
+  /** Returns whether arg is instance of SpecManager
    * @param {Object} arg
    * @returns {Boolean}
    */
@@ -1386,35 +1370,38 @@ class TypesManager extends BreadCrumbs {
    * @returns {Array.<String>}
    */
   get names() {
-    return this.getTypeNames()
+    return Object.keys(this.#notetypes)
   }
   //#endregion member variables
-  constructor(literal, key, caller) {
-    let typesLiteral
-    if (literal != undefined) typesLiteral = literal[TypesManager.#TYPES_KEY]
-    super(
-      typesLiteral,
-      key === undefined ? TypesManager.#TYPES_KEY : key,
-      caller
-    )
+  /** Constructs a new TypesManager and registers its type
+   * @constructor
+   * @param {Object} literal
+   * @param {String|Symbol} key
+   * @param {BreadCrumbs} parent
+   * @throws {SettingError} on wrong parameter types
+   */
+  constructor(literal, key, parent) {
+    super(literal, key, parent)
     if (!TypesManager.#instanceCounter++) this.objTypes = "TypesManager"
-    this.throwIfUndefined(caller, "caller")
-    this.throwIfNotOfType(caller, "BreadCrumbs")
-    if (this.literal != undefined && !this.isFirstGeneration())
-      throw new SettingError(
-        this.constructor.name + " " + constructor,
-        "Breadcrumbs: '" +
-          this.toBreadcrumbs() +
-          "'\n   " +
-          "notetypes can only be defined at root level" +
-          "\n   " +
-          "Move your 'NOTETYPES' definition up."
-      )
     this.throwIfUndefined(literal, "literal")
-    if (this.literal == undefined) return
-    this.createNoteTypesOrThrow()
+    // literal {undefined|Object} checked by superclass
+    // key {String|Symbol} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    // parent {Undefined|BreadCrumbs} checked by superclass
+    this.#createNoteTypesOrThrow()
   }
-  createNoteTypesOrThrow() {
+
+  /** Returns whether arg is instance of TypesManager
+   * @param {Object} arg
+   * @returns {Boolean}
+   */
+  static instanceOfMe(arg) {
+    return arg instanceof TypesManager
+  }
+
+  /** Creates the notetypes from literal, throws for wrong entries
+   */
+  #createNoteTypesOrThrow() {
     for (const [name, entry] of Object.entries(this.literal)) {
       this.throwIfNotOfType(entry, "object")
       for (const [key, value] of Object.entries(entry)) {
@@ -1451,49 +1438,60 @@ class TypesManager extends BreadCrumbs {
       )
     }
   }
-  getTypeNames() {
-    return Object.keys(this.#notetypes)
-  }
+
   // prettier-ignore
   static test(outputObj) { // TypesManager
     let _ = null
     if(_ = new TestSuite("TypesManager", outputObj)) {
+      _.run(getterHandlerKeyTest)
+      _.run(getterLiteralTest)
+      _.run(getterKeysTest)
+      _.run(getterDefaultTypeTest)
+      _.run(getterNotetypesTest)
+      _.run(getterNamesTest)
+      _.run(instanceOfMeTest)
       _.run(constructorTest)
       _.run(toStringTest)
+      _.run(isOfTypeTest)
+      _.run(createNoteTypesOrThrowTest)      
       _.destruct()
       _ = null
     }
+    function getterHandlerKeyTest() {
+      aut("getterHandlerKeyTest")
+    }
+    function getterLiteralTest() {
+      aut("getterLiteralTest")
+    }
+    function getterKeysTest() {
+      aut("getterKeysTest")
+    }
+    function getterDefaultTypeTest() {
+      aut("getterDefaultTypeTest")
+    }
+    function getterNotetypesTest() {
+      aut("getterNotetypesTest")
+    }
+    function getterNamesTest() {
+      aut("getterNamesTest")
+    }
+    function instanceOfMeTest() {
+      aut("instanceOfMeTest")
+    }
     function constructorTest() {
-      let parent = new BreadCrumbs({}, "its Name")
-      let breadCrumbs = new BreadCrumbs({}, "BreadCrumbs")
-      _.shouldAssert(1,_tryConstruct,undefined,"myName",parent,"msg")
-      //_.shouldAssert(2,_tryConstruct,{},undefined,parent,"msg")
-      _.shouldAssert(3,_tryConstruct,{},"myName",undefined,"msg")
-      _.assert(4,_tryConstruct,{},"my Name",parent)
-      _.assert(5,_tryConstruct,{},"22",parent )
-      _.assert(6,_tryConstruct,{},Symbol("a"),parent)
-      let typeMan = new TypesManager({}, "myName", parent)
-      _.bassert(7,typeMan instanceof BreadCrumbs,"'TypesManager' has to be an instance of 'BreadCrumbs'")
-      _.bassert(8,typeMan.constructor == TypesManager,"the constructor property is not 'TypesManager'")
-      _.shouldAssert(9,_tryConstruct,{},"NOTETYPES",breadCrumbs)
-      typeMan = new TypesManager({}, "myName", parent)
-      _.bassert(10,BreadCrumbs.isOfType(typeMan.notetypes, "object"),"for empty literal TypesManager should construct object,but does not")
-      let typeKeys = Object.keys(typeMan.notetypes)
-      _.bassert(11,typeKeys.length == 0,"For empty literal TypesManager with no types should be created")
-      let defType = TypesManager.defaultType
-      _.bassert(12,BreadCrumbs.isOfType(defType, "object"),"default type should always be present,but here it is not")
-      let defaultTypeKeys = Object.keys(defType)
-      let typesKeys = TypesManager.keys
-      _.bassert(13,(typesKeys.length = defaultTypeKeys.length),"defaultType should have as many keys as 'TypesManager.#KEYS'")
-      _.bassert(14,defaultTypeKeys.every((key) => {return typesKeys.includes(key)}),"any key of 'TypesManager.#KEYS' should be contained in defaultType,but is not")
+      aut("constructorTest")
     }
     function toStringTest() {
-      let parent = new BreadCrumbs({}, "its Name")
-      let str = new TypesManager({}, "myName", parent).toString()
-      _.bassert(1,str.contains("myName"),"result does not contain name string")
+      aut("toStringTest")
+    }
+    function isOfTypeTest() {
+      aut("isOfTypeTest")
+    }
+    function createNoteTypesOrThrowTest() {
+      aut("createNoteTypesOrThrowTest")
     }
     function _tryConstruct(arg1, arg2, arg3) {
-      let specMan = new TypesManager(arg1, arg2, arg3)
+      new TypesManager(arg1, arg2, arg3)
     }
   }
 }
@@ -1533,13 +1531,29 @@ class Setting extends BreadCrumbs {
   ) {
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
     this.throwIfUndefined(literal, "literal")
-    this.#spec = new SpecManager(
-      this.literal[SpecManager.handlerKey],
-      undefined,
-      this,
-      callersSpec
-    )
-    this.#types = new TypesManager(this.literal, undefined, this)
+    if (BreadCrumbs.isDefined(this.literal[SpecManager.handlerKey]))
+      this.#spec = new SpecManager(
+        this.literal[SpecManager.handlerKey],
+        SpecManager.handlerKey,
+        this,
+        callersSpec
+      )
+    else
+      this.#spec = new SpecManager(
+        {},
+        SpecManager.handlerKey,
+        this,
+        callersSpec
+      )
+    if (this.isRoot())
+      if (BreadCrumbs.isDefined(this.literal[TypesManager.handlerKey]))
+        this.#types = new TypesManager(
+          this.literal[TypesManager.handlerKey],
+          TypesManager.handlerKey,
+          this
+        )
+      else this.#types = new TypesManager({}, TypesManager.handlerKey, this)
+
     for (const [key, value] of Object.entries(this.literal)) {
       if (BreadCrumbs.isOfType(value, "Object")) {
         if (!Setting.#isHandlersKey(key)) {
@@ -1687,7 +1701,7 @@ class Setting extends BreadCrumbs {
       _.bassert(5,JSON.stringify(answ6r) == expAnsw6r,`output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}',but should be:'${expAnsw6r}'`)
     }
     function _tryConstruct(arg1, arg2, arg3, arg4) {
-      let settings = new Setting(arg1, arg2, arg3, arg4)
+      new Setting(arg1, arg2, arg3, arg4)
     }
   }
 }
@@ -1736,10 +1750,10 @@ async function main(tp, app) {
   let frontmatterYAML = {}
   let renderYAML = {____: ""}
   try {
-    //@todo let setting = new Setting(Test, undefined, undefined)
-    //@todo await createNote(tp, setting)
-    //@todo frontmatterYAML = setting.frontmatterYAML
-    //@todo Object.assign(renderYAML, setting.renderYAML)
+    let setting = new Setting(Test, undefined, undefined)
+    await createNote(tp, setting)
+    frontmatterYAML = setting.frontmatterYAML
+    Object.assign(renderYAML, setting.renderYAML)
   } catch (e) {
     /* returns errYAML or rethrows */
     if (e instanceof FotyError) {
