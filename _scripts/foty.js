@@ -697,8 +697,13 @@ class BreadCrumbs {
    * static function instanceOfMe has to be provided by caller
    * @param {String} className - name of a defined object, which has member
    *                             function instanceOfMe
+   * @throws {SettingError} - on wrong parameter type and if parameter string
+   *                          contains characters which might be malicious in
+   *                          eval
    */
   set objTypes(className) {
+    this.throwIfNotOfType(className, "string")
+    this.throwIfMightBeMalicious(className)
     try {
       eval(className)
     } catch (e) {
@@ -888,6 +893,118 @@ class BreadCrumbs {
     return answer
   }
 
+  /** Throws if string probably can not be safely evaluated
+   * @param {String} evalString
+   * @throws {SettingError} - on wrong parameter type and if parameter string
+   *                          contains at least one of following characters:
+   *                          .= +-,;?!(){}[]<>
+   *                          this includes space character
+   */
+  throwIfMightBeMalicious(evalString) {
+    this.throwIfNotOfType(evalString, "string")
+    let isMalicious = false
+    isMalicious = -1 != evalString.search(/[ .=\+\-,;?!(){}\[\]<>]/)
+    if (isMalicious)
+      throw new SettingError(
+        this.constructor.name + " " + "throwIfMightBeMalicious",
+        "Breadcrumbs: '" +
+          this.toBreadcrumbs() +
+          "'\n   " +
+          "evalString '" +
+          evalString +
+          "' might be malicious"
+      )
+  }
+
+  /** Returns whether two Objects have equal attributes, this in depth
+   * @param {Object} obj1
+   * @param {Object} obj2
+   * @returns {Boolean}
+   * @throws {SettingError} in case of wrong parameter types
+   */
+  static equalObjs(obj1, obj2, lv = 0) {
+    if (
+      !BreadCrumbs.isOfType(obj1, "Object") ||
+      !BreadCrumbs.isOfType(obj2, "Object")
+    ) {
+      throw new SettingError(
+        "'BreadCrumbs" + "." + "equalObjs",
+        "'\n   " + "Both arguments have to be Objects"
+      )
+    }
+    let keys1 = Object.keys(obj1)
+    let keys2 = Object.keys(obj2)
+    if (keys1.length != keys2.length) {
+      return false
+    }
+    let answ = true
+    keys1.forEach((key) => {
+      if (answ == true) {
+        let val1 = obj1[key]
+        let val2 = obj2[key]
+        let isObj1 = BreadCrumbs.isOfType(val1, "Object")
+        let isObj2 = BreadCrumbs.isOfType(val2, "Object")
+        if (isObj1 && isObj2) {
+          answ = BreadCrumbs.equalObjs(val1, val2, lv + 1)
+        } else if (isObj1 || isObj2) {
+          answ = false
+        } else if (BreadCrumbs.isOfType(val1, "undefined")) {
+          answ = BreadCrumbs.isOfType(val2, "undefined")
+        } else if (BreadCrumbs.isOfType(val1, "null")) {
+          answ = BreadCrumbs.isOfType(val2, "null")
+        } else if (BreadCrumbs.isOfType(val1, "Array")) {
+          answ = BreadCrumbs.isOfType(val2, "Array")
+          if (answ) answ = BreadCrumbs.equalArrays(val1, val2)
+        } else {
+          answ = val1 === val2
+        }
+      }
+    })
+    return answ
+  }
+  /** Returns whether two Array are equal, this in depth
+   * @param {Array} arr1
+   * @param {Array} arr2
+   * @returns {Boolean}
+   * @throws {SettingError} in case of wrong parameter types
+   */
+  static equalArrays(arr1, arr2, lv = 0) {
+    if (
+      !BreadCrumbs.isOfType(arr1, "Array") ||
+      !BreadCrumbs.isOfType(arr2, "Array")
+    ) {
+      throw new SettingError(
+        "'BreadCrumbs" + "." + "equalObjs",
+        "'\n   " + "Both arguments have to be Arrays"
+      )
+    }
+    if (arr1.length != arr2.length) {
+      return false
+    }
+    let answ = true
+    arr1.forEach((val1, idx) => {
+      if (answ == true) {
+        let val2 = arr2[idx]
+        let isObj1 = BreadCrumbs.isOfType(val1, "Object")
+        let isObj2 = BreadCrumbs.isOfType(val2, "Object")
+        if (isObj1 && isObj2) {
+          answ = BreadCrumbs.equalObjs(val1, val2)
+        } else if (isObj1 || isObj2) {
+          answ = false
+        } else if (BreadCrumbs.isOfType(val1, "undefined")) {
+          answ = BreadCrumbs.isOfType(val2, "undefined")
+        } else if (BreadCrumbs.isOfType(val1, "null")) {
+          answ = BreadCrumbs.isOfType(val2, "null")
+        } else if (BreadCrumbs.isOfType(val1, "Array")) {
+          answ = BreadCrumbs.isOfType(val2, "Array")
+          if (answ) answ = BreadCrumbs.equalArrays(val1, val2, lv + 1)
+        } else {
+          answ = val1 === val2
+        }
+      }
+    })
+    return answ
+  }
   // prettier-ignore
   static test(outputObj) { // BreadCrumbs
     let _ = null
@@ -903,6 +1020,9 @@ class BreadCrumbs {
       _.run(throwIfNotOfTypeTest)
       _.run(isDefinedTest)
       _.run(isOfTypeTest)
+      _.run(throwIfMightBeMaliciousTest)
+      _.run(equalObjsTest)
+      _.run(equalArraysTest)
       _.destruct()
       _ = null
     }
@@ -1075,6 +1195,110 @@ class BreadCrumbs {
       _.bassert(108,!BreadCrumbs.isOfType(obj1,"BreadCrumbs"), obj1 + " should not be of type " + "BreadCrumbs")
       _.bassert(109,!BreadCrumbs.isOfType(breadcrumb2,"Setting"), breadcrumb2 + " should not be of type " + "Setting")
     }
+    function throwIfMightBeMaliciousTest() {
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a b", "space character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a.b", "point character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a=b", "equal sign character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a+b", "plus sign character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a-b", "minus sign character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a,b", "comma sign character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a;b", "semicolon sign character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a?b", "question mark sign character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a!b", "exclamation mark sign character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a(b", "'(' character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a)b", "')' character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a{b", "'{' character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a}b", "'}' character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a[b", "'[' character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a]b", "']' character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a>b", "'>' character considered malicious")
+      _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a<b", "'<' character considered malicious")
+      _.assert(1,_tryThrowIfMightBeMalicious, "Ein_GanZ_5LankerSti2nk", "Only alphanumeric characters, number characters and underscore should be ok")
+    }
+    function equalObjsTest() {
+      let obj1 = {}
+      let obj1_0 = {}
+      let obj1_1 = {a}
+      let obj1_2 = {a:true}
+      _.shouldAssert(1,_tryEqualObjs,22,obj1,"1st argument is not an Object")
+      _.shouldAssert(2,_tryEqualObjs,obj1, "a","2nd argument is not an Object")
+      _.bassert(3,BreadCrumbs.equalObjs(obj1, obj1_0),"objs are equal - see code")
+      _.bassert(4,!BreadCrumbs.equalObjs(obj1, obj1_1),"objs are not equal - see code")
+      _.bassert(5,!BreadCrumbs.equalObjs(obj1, obj1_2),"objs are not equal - see code")
+
+      let obj2 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
+      let obj2_0 = {"a":{"b":{"c":true,"d":"alpha","e":22,"f":22n,"g":null,"h":undefined,"i":_tryConstruct}}}
+      let obj2_1 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct,j:22}}}
+      let obj2_2 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined}}}
+      let obj2_3 = {a:{b:{c:false,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
+      let obj2_4 = {a:{b:{c:true,d:"Alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
+      let obj2_5 = {a:{b:{c:true,d:"alpha",e:23,f:22n,g:null,h:undefined,i:_tryConstruct}}}
+      let obj2_6 = {a:{b:{c:true,d:"alpha",e:22,f:22,g:null,h:undefined,i:_tryConstruct}}}
+      let obj2_7 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:undefined,h:undefined,i:_tryConstruct}}}
+      let obj2_8 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:null,i:_tryConstruct}}}
+      let obj2_9 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryEqualObjs}}}
+      let obj2_10 = {A:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
+      _.bassert(10,BreadCrumbs.equalObjs(obj2, obj2_0),"objs are equal - see code")
+      _.bassert(11,!BreadCrumbs.equalObjs(obj2, obj2_1),"objs are not equal - see code")
+      _.bassert(12,!BreadCrumbs.equalObjs(obj2, obj2_2),"objs are not equal - see code")
+      _.bassert(13,!BreadCrumbs.equalObjs(obj2, obj2_3),"objs are not equal - see code")
+      _.bassert(14,!BreadCrumbs.equalObjs(obj2, obj2_4),"objs are not equal - see code")
+      _.bassert(15,!BreadCrumbs.equalObjs(obj2, obj2_5),"objs are not equal - see code")
+      _.bassert(16,!BreadCrumbs.equalObjs(obj2, obj2_6),"objs are not equal - see code")
+      _.bassert(17,!BreadCrumbs.equalObjs(obj2, obj2_7),"objs are not equal - see code")
+      _.bassert(18,!BreadCrumbs.equalObjs(obj2, obj2_8),"objs are not equal - see code")
+      _.bassert(19,!BreadCrumbs.equalObjs(obj2, obj2_9),"objs are not equal - see code")
+      _.bassert(20,!BreadCrumbs.equalObjs(obj2, obj2_10),"objs are not equal - see code")
+
+      let obj3 = {a:[1]}
+      let obj3_0 = {a:[1]}
+      let obj3_1 = {a:1}
+      let obj3_2 = {a:{}}
+      let obj3_3 = {a:[2]}
+      let obj3_4 = {a:[1,2]}
+      _.bassert(30,BreadCrumbs.equalObjs(obj3, obj3_0),"objs are equal - see code")
+      _.bassert(31,!BreadCrumbs.equalObjs(obj3, obj3_1),"objs are not equal - see code")
+      _.bassert(32,!BreadCrumbs.equalObjs(obj3, obj3_2),"objs are not equal - see code")
+      _.bassert(33,!BreadCrumbs.equalObjs(obj3, obj3_3),"objs are not equal - see code")
+      _.bassert(34,!BreadCrumbs.equalObjs(obj3, obj3_4),"objs are not equal - see code")
+    }
+    function equalArraysTest() {
+      let arr1 = []
+      let arr1_0 = []
+      let arr1_1 = [1]
+      _.shouldAssert(1,_tryEqualArrays,22,arr1,"1st argument is not an Array")
+      _.shouldAssert(2,_tryEqualArrays,arr1, "a","2nd argument is not an Array")
+      _.bassert(3,BreadCrumbs.equalArrays(arr1, arr1_0),"arrays are equal - see code")
+      _.bassert(4,!BreadCrumbs.equalArrays(arr1, arr1_1),"arrays are not equal - see code")
+
+      let arr2 = [undefined, null, true, 1, 1n, "string",_tryConstruct,{}]
+      let arr2_0 = [undefined, null, true, 1, 1n, "string",_tryConstruct,{}]
+      let arr2_1 = [null, null, true, 1, 1n, "string",_tryConstruct,{}]
+      let arr2_2 = [undefined, undefined, true, 1, 1n, "string",_tryConstruct,{}]
+      let arr2_3 = [undefined, null, false, 1, 1n, "string",_tryConstruct,{}]
+      let arr2_4 = [undefined, null, true, 2, 1n, "string",_tryConstruct,{}]
+      let arr2_5 = [undefined, null, true, 1, 1, "string",_tryConstruct,{}]
+      let arr2_6 = [undefined, null, true, 1, 1n, "String",_tryConstruct,{}]
+      let arr2_7 = [undefined, null, true, 1, 1n, "string",_tryEqualArrays,{}]
+      let arr2_8 = [undefined, null, true, 1, 1n, "string",_tryEqualArrays,{a:1}]
+      _.bassert(11,BreadCrumbs.equalArrays(arr2, arr2_0),"arrays are equal - see code")
+      _.bassert(12,!BreadCrumbs.equalArrays(arr2, arr2_1),"arrays are not equal - see code")
+      _.bassert(13,!BreadCrumbs.equalArrays(arr2, arr2_2),"arrays are not equal - see code")
+      _.bassert(14,!BreadCrumbs.equalArrays(arr2, arr2_3),"arrays are not equal - see code")
+      _.bassert(15,!BreadCrumbs.equalArrays(arr2, arr2_4),"arrays are not equal - see code")
+      _.bassert(16,!BreadCrumbs.equalArrays(arr2, arr2_5),"arrays are not equal - see code")
+      _.bassert(17,!BreadCrumbs.equalArrays(arr2, arr2_6),"arrays are not equal - see code")
+      _.bassert(18,!BreadCrumbs.equalArrays(arr2, arr2_7),"arrays are not equal - see code")
+      _.bassert(19,!BreadCrumbs.equalArrays(arr2, arr2_8),"arrays are not equal - see code")
+
+      let arr3 = [[[1,2,3]]]
+      let arr3_0 = [[[1,2,3]]]
+      let arr3_1 = [[[1,2]]]
+      let arr3_2 = [[[1,2,3,4]]]
+      _.bassert(31,BreadCrumbs.equalArrays(arr3, arr3_0),"arrays are equal - see code")
+      _.bassert(32,!BreadCrumbs.equalArrays(arr3, arr3_1),"arrays are not equal - see code")
+      _.bassert(33,!BreadCrumbs.equalArrays(arr3, arr3_2),"arrays are not equal - see code")
+    }
     function _trySetterObjTypes(arg1) {
       let un
       let breadCrumbs = new BreadCrumbs(un,"ObjTypesTest",un)
@@ -1090,6 +1314,17 @@ class BreadCrumbs {
     function _tryThrowIfNotOfType(arg1, arg2, arg3, arg4) {
       let breadCrumbs = new BreadCrumbs({},"key")
       breadCrumbs.throwIfNotOfType(arg1, arg2, arg3, arg4)
+    }
+    function _tryThrowIfMightBeMalicious(arg1) {
+      let un
+      let breadcrumbs = new BreadCrumbs(un, "throwIfMightBeMaliciousTest1")
+      breadcrumbs.throwIfMightBeMalicious(arg1)
+    }
+    function _tryEqualObjs(arg1, arg2) {
+      BreadCrumbs.equalObjs(arg1, arg2)
+    }
+    function _tryEqualArrays(arg1, arg2) {
+      BreadCrumbs.equalArrays(arg1, arg2)
     }
   }
 }
@@ -1201,7 +1436,7 @@ class SpecManager extends BreadCrumbs {
     }
     function getterLiteralTest() {
       let un
-      let parent = new BreadCrumbs(un, "getterLiteralTest", un, un)
+      let parent = new BreadCrumbs(un, "getterLiteralTest", un)
       let sym = Symbol("a")
       let specMan1 = new SpecManager({},"getterLiteralTest02",parent,un)
       let specMan2 = new SpecManager({sym: "un"},"getterLiteralTest03",parent,un)
@@ -1220,7 +1455,7 @@ class SpecManager extends BreadCrumbs {
        * exists, #render will only be set on construction and never change later
        * But code can change, so the test is added nevertheless */
       let un
-      let parent = new BreadCrumbs(un, "getterRenderTest", un, un)
+      let parent = new BreadCrumbs(un, "getterRenderTest", un)
       let spec1 = new SpecManager({},"getterRenderTest1",parent,un)
       let specFalse = new SpecManager({render:false},"getterRenderTest2",parent,un)
       let specTrue = new SpecManager({render:true},"getterRenderTest3",parent,un)
@@ -1244,16 +1479,18 @@ class SpecManager extends BreadCrumbs {
     }
     function instanceOfMeTest() {
       let un
-      let parent = new BreadCrumbs(un, "instanceOfMeTest", un, un)
+      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
       let spec1 = new SpecManager({},"instanceOfMeTest1",parent,un)
+      let type1 = new TypesManager({},"instanceOfMeTest2",parent)
       _.bassert(1,!SpecManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of SpecManager")
       _.bassert(2,!SpecManager.instanceOfMe(new Error()),"Error instance should not be an instance of SpecManager")
       _.bassert(3,SpecManager.instanceOfMe(spec1),"SpecManager instance should be an instance of SpecManager")
       _.bassert(4,!SpecManager.instanceOfMe("SpecManager"),"String should not be an instance of SpecManager")
+      _.bassert(5,!SpecManager.instanceOfMe(type1),"TypesManager should not be an instance of SpecManager")
     }
     function constructorTest() {
       let un
-      let p = new BreadCrumbs(un, "constructorTest", un, un)
+      let p = new BreadCrumbs(un, "constructorTest", un)
       let sp = new SpecManager({}, "constructorTest1", p, un)
       _.assert(1,_tryConstruct,{},"cTest1",p,un,"should be created, all parameters ok")
       _.shouldAssert(2,_tryConstruct,un,"cTest2",p,un,"should not be created, literal is undefined")
@@ -1284,24 +1521,25 @@ class SpecManager extends BreadCrumbs {
     }
     function toStringTest() {
       let un
-      let parent = new BreadCrumbs(un, "toStringTest", un, un)
+      let parent = new BreadCrumbs(un, "toStringTest", un)
       let spec1 = new SpecManager({},"toStringTest1",parent,un)
       _.bassert(1,spec1.toString().contains("toStringTest1"),"result does not contain name string"    )
       _.bassert(2,spec1.toString().contains("SpecManager"),"result does not contain class string"    )
     }
     function isOfTypeTest() {
       let un
-      let parent = new BreadCrumbs(un, "isOfTypeTest", un, un)
+      let parent = new BreadCrumbs(un, "isOfTypeTest", un)
       let spec1 = new SpecManager({},"isOfTypeTest1",parent,un)
       _.bassert(1,BreadCrumbs.isOfType(spec1,"object"), "'" + spec1 + "' should be of type " + "object")
       _.bassert(2,BreadCrumbs.isOfType(spec1,"Object"), "'" + spec1 + "' should be of type " + "Object")
       _.bassert(3,BreadCrumbs.isOfType(spec1,"BreadCrumbs"), "'" + spec1 + "' should be of type " + "BreadCrumbs")
       _.bassert(4,BreadCrumbs.isOfType(spec1,"SpecManager"), "'" + spec1 + "' should be of type " + "SpecManager")
       _.bassert(5,!BreadCrumbs.isOfType(spec1,"Error"), "'" + spec1 + "' should not be of type " + "Error")
+      _.bassert(6,!BreadCrumbs.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should be of type " + "TypesManager")
     }
     function setOptionRenderTest() {
       let un
-      let parent = new BreadCrumbs(un, "setOptionRenderTest", un, un)
+      let parent = new BreadCrumbs(un, "setOptionRenderTest", un)
       let spec1 = new SpecManager({},"setOptionRenderTest1",parent,un)
       let specFalse = new SpecManager({render:false},"setOptionRenderTest2",parent,un)
       let specTrue = new SpecManager({render:true},"setOptionRenderTest3",parent,un)
@@ -1329,7 +1567,34 @@ class SpecManager extends BreadCrumbs {
   }
 }
 
-/** notetypes parser */
+/** notetypes parser
+ * @classdesc
+ * notetypes are the core of foty, which is shorthand for foldertypes.
+ * Each notetypes definition describes, what the script gives to template.
+ * But script and template is nothing TypesManager knows about.
+ *
+ * Notetypes have keys, which's values describe how they should behave. An array
+ * of these keys can be retrieved with TypesManager.keys
+ *
+ * Those keys have default values, all together describing a default type. This
+ * type can be retrieved with TypesManager.defaultType
+ *
+ * Valid keys are:
+ * - MARKER:            type: String,  default: ""
+ * - DATE:              type: Boolean, default: false
+ * - TITLE_BEFORE_DATE: type: String,  default: ""
+ * - DATEFORMAT:        type: String,  default: "YYYY-MM-DD"
+ *
+ * Each user defined notetype has a name, an array of those names can be
+ * retrieved with this.names.
+ *
+ * A user defined notetype can set none, some or all of the
+ * keys. Keys not mentioned in the notetype definition are automatically set
+ * to their default values.
+ *
+ * this.notetypes returns all user defined types, each with a full set of
+ * keys. Value is user set value, if set or default value, if not set by user.
+ */
 class TypesManager extends BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
@@ -1349,7 +1614,7 @@ class TypesManager extends BreadCrumbs {
     return TypesManager.#TYPES_KEY
   }
   /** Returns keys a notetype has
-   * @returns { @returns {Array.<String>}g}
+   * @returns @returns {Array.<String>}
    */
   static get keys() {
     return TypesManager.#KEYS
@@ -1360,7 +1625,7 @@ class TypesManager extends BreadCrumbs {
   static get defaultType() {
     return TypesManager.#DEFAULT_TYPE
   }
-  /** Returns Object with all notetypes, bound to their names
+  /** Returns Object with all notetypes, bound to their names, all values set
    * @returns {Object.<String.Object.<String.*>>}
    */
   get notetypes() {
@@ -1375,7 +1640,7 @@ class TypesManager extends BreadCrumbs {
   //#endregion member variables
   /** Constructs a new TypesManager and registers its type
    * @constructor
-   * @param {Object} literal
+   * @param {Object|Object.<String.Object>|Object.<String.Object.<String.*>>} literal
    * @param {String|Symbol} key
    * @param {BreadCrumbs} parent
    * @throws {SettingError} on wrong parameter types
@@ -1412,7 +1677,7 @@ class TypesManager extends BreadCrumbs {
             "Breadcrumbs: '" +
               this.toBreadcrumbs() +
               "'\n   '" +
-              value +
+              key +
               "' is no known note type definition key." +
               "\n    Remove unknown key from your note type definitions." +
               "\n   " +
@@ -1425,7 +1690,7 @@ class TypesManager extends BreadCrumbs {
             this.throwIfNotOfType(value, "boolean")
             break
           case "MARKER":
-          case "TITLE":
+          case "TITLE_BEFORE_DATE":
           case "DATEFORMAT":
             this.throwIfNotOfType(value, "string")
             break
@@ -1458,40 +1723,244 @@ class TypesManager extends BreadCrumbs {
       _ = null
     }
     function getterHandlerKeyTest() {
-      aut("getterHandlerKeyTest")
+      _.bassert(1,TypesManager.handlerKey == "NOTETYPES")
+      _.bassert(2,TypesManager.handlerKey != "_NOTETYPES")
     }
     function getterLiteralTest() {
-      aut("getterLiteralTest")
+      let un
+      let parent = new BreadCrumbs(un, "getterLiteralTest", un)
+      let sym = Symbol("a")
+      let typesMan1 = new TypesManager({},"getterLiteralTest02",parent)
+      let typesMan2 = new TypesManager({sym: {}},"getterLiteralTest03",parent)
+      let typesMan3 = new TypesManager({"NOTETYPES": {}},"getterLiteralTest04",parent)
+      let typesMan4 = new TypesManager({"a": {"MARKER":"2"}},"getterLiteralTest05",parent)
+      let typesMan5 = new TypesManager({"a": {"MARKER":"2","DATE":true,}},"getterLiteralTest06",parent)
+      let typesMan6 = new TypesManager({"a": {MARKER:"2",DATE:false,},"d": {TITLE_BEFORE_DATE:"abc"}},"getterLiteralTest07",parent)
+      let lit1 = typesMan1.literal
+      let lit2 = typesMan2.literal
+      let lit3 = typesMan3.literal
+      let lit4 = typesMan4.literal
+      let lit5 = typesMan5.literal
+      let lit6 = typesMan6.literal
+      _.bassert(1,Object.keys(lit1).length == 0,"literal should be empty as given")
+      _.bassert(2,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(3,Object.keys(lit2.sym).length == 0,"object assigned to symbol key should be empty as given")
+      _.bassert(4,Object.keys(lit3).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(5,Object.keys(lit3.NOTETYPES).length == 0,"object assigned to 'NOTETYPES' key should be empty as given")
+      _.bassert(6,Object.keys(lit4).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(7,Object.keys(lit4.a).length == 1,"object assigned to 'a' should only contain one entry as only one given")
+      _.bassert(8,lit4.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(9,Object.keys(lit5).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(10,Object.keys(lit5.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(11,lit5.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(12,lit5.a.DATE === true,"value of a.DATE should be 'true' as given")
+      _.bassert(13,Object.keys(lit6).length == 2,"2 values should be contained, as two given")
+      _.bassert(14,Object.keys(lit6.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(15,Object.keys(lit6.d).length == 1,"object assigned to 'd' should only contain one entry as only one given")
+      _.bassert(16,lit6.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(17,lit6.a.DATE === false,"value of a.DATE should be 'false' as given")
+      _.bassert(18,lit6.d.TITLE_BEFORE_DATE === "abc","value of d.TITLE_BEFORE_DATE should be 'abc' as given")
     }
     function getterKeysTest() {
-      aut("getterKeysTest")
+      let keys = TypesManager.keys
+      _.bassert(1,BreadCrumbs.isOfType(keys,"Array"),"should return an array")
+      _.bassert(2,keys.includes("MARKER"),"should contain 'MARKER'")
+      _.bassert(3,keys.includes("DATE"),"should contain 'DATE'")
+      _.bassert(4,keys.includes("DATEFORMAT"),"should contain 'DATEFORMAT'")
+      _.bassert(5,keys.every((entry) => {return null == entry.match(/[a-z]/)}),"keys should be completely uppercase")
     }
-    function getterDefaultTypeTest() {
-      aut("getterDefaultTypeTest")
+    function getterDefaultTypeTest() {    
+      let defType = TypesManager.defaultType
+      _.bassert(1, BreadCrumbs.isOfType(defType,"object","should be an object"))
+      let defTypeKeys = Object.keys(defType)
+      let keys = TypesManager.keys
+      _.bassert(2,defTypeKeys.length == keys.length,"Default type should contain as many keys as there are in TypesManager.keys")
+      _.bassert(3,defTypeKeys.every(key => keys.includes(key)),"Each key should be given in TypesManager.keys")
     }
     function getterNotetypesTest() {
-      aut("getterNotetypesTest")
+      let un
+      let p = new BreadCrumbs(un, "setOptionRenderTest", un)
+      let lit1 = {}
+      let lit2 = {diary: {}}
+      let lit3 = {book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
+      let lit4 = {diary: {MARKER: "x"}}
+      let lit5 = {diary: {}, citation: {}, film: {}, book: {}}
+      let lit6 = {diary: {MARKER: "x"}, citation: {DATE: true}, film: {TITLE_BEFORE_DATE: "xyz"}, book: {DATEFORMAT: "YYYY"}}
+      let exp2 = {diary: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
+      let exp3 = {book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
+      let exp4 = {diary: {MARKER: "x", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
+      let exp5 = {diary: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
+                  citation: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
+                  film: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
+                  book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
+                 }
+      let exp6 = {diary: {MARKER: "x", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
+                  citation: {MARKER: "", DATE: true, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
+                  film: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "xyz", DATEFORMAT: "YYYY-MM-DD"},
+                  book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY"},
+                 }
+      let types1 = new TypesManager(lit1,"TT1",p)
+      let types2 = new TypesManager(lit2,"TT2",p)
+      let types3 = new TypesManager(lit3,"TT3",p)
+      let types4 = new TypesManager(lit4,"TT4",p)
+      let types5 = new TypesManager(lit5,"TT5",p)
+      let types6 = new TypesManager(lit6,"TT6",p)
+      let out1 = types1.notetypes
+      let out2 = types2.notetypes
+      let out3 = types3.notetypes
+      let out4 = types4.notetypes
+      let out5 = types5.notetypes
+      let out6 = types6.notetypes
+      _.bassert(1,Object.keys(out1).length == 0, "no notetypes defined")
+      _.bassert(2,_tryEqualObjs,out2,exp2,"output should be: see test code")
+      _.bassert(3,_tryEqualObjs,out3,exp3,"output should be: see test code")
+      _.bassert(4,_tryEqualObjs,out4,exp4,"output should be: see test code")
+      _.bassert(5,_tryEqualObjs,out5,exp5,"output should be: see test code")
+      _.bassert(6,_tryEqualObjs,out6,exp6,"output should be: see test code")
     }
     function getterNamesTest() {
-      aut("getterNamesTest")
+      let un
+      let parent = new BreadCrumbs(un, "getterKeysTest", un)
+      let typesMan1 = new TypesManager({},"getterKeysTest1",parent)
+      let typesMan2 = new TypesManager({"NOTETYPES": {}},"getterKeysTest3",parent)
+      let typesMan3 = new TypesManager({"a": {"MARKER":"2"}},"getterKeysTest4",parent)
+      let typesMan4 = new TypesManager({"a": {"DATE":false,},"d": {"TITLE_BEFORE_DATE":"abc"},"c": {}},"getterKeysTest5",parent)
+      let names1 = typesMan1.names
+      let names2 = typesMan2.names
+      let names3 = typesMan3.names
+      let names4 = typesMan4.names
+      _.bassert(1,names1.length == 0,"no keys given")
+      _.bassert(2,names2.length == 1,"one key given")
+      _.bassert(3,names2[0] == "NOTETYPES","'NOTETYPES' is the key")
+      _.bassert(4,names3.length == 1,"one key given")
+      _.bassert(5,names3[0] == "a","'a' is the key")
+      _.bassert(6,names4.length == 3,"three keys given")
+      _.bassert(7,names4[0] == "a","'a' is the key")
+      _.bassert(8,names4[1] == "d","'d' is the key")
+      _.bassert(9,names4[2] == "c","'c' is the key")
     }
     function instanceOfMeTest() {
-      aut("instanceOfMeTest")
+      let un
+      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let type1 = new TypesManager({},"instanceOfMeTest1",parent)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      _.bassert(1,!TypesManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of TypesManager")
+      _.bassert(2,!TypesManager.instanceOfMe(new Error()),"Error instance should not be an instance of TypesManager")
+      _.bassert(3,TypesManager.instanceOfMe(type1),"TypesManager instance should be an instance of TypesManager")
+      _.bassert(4,!TypesManager.instanceOfMe("TypesManager"),"String should not be an instance of TypesManager")
+      _.bassert(5,!TypesManager.instanceOfMe(spec1),"SpecManager should not be an instance of TypesManager")
     }
     function constructorTest() {
-      aut("constructorTest")
+      let un
+      let p = new BreadCrumbs(un, "constructorTest", un)
+      let ty = new TypesManager({}, "constructorTest1", p)
+      _.assert(1,_tryConstruct,{},"cTest1",p,"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",p,"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",p,"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",p,"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",p,"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,p,"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,p,"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},p,"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},p,p,"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),p,"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"cTest11",un,"should not be be created, parent is undefined")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,"should not be be created, parent is null")
+
+      let typesManager = new TypesManager({},"constructorTest101",p)
+      _.bassert(101,typesManager instanceof Object,"'TypesManager' has to be an instance of 'Object'")
+      _.bassert(102,typesManager instanceof BreadCrumbs,"'TypesManager' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,typesManager instanceof TypesManager,"'TypesManager' has to be an instance of 'TypesManager'")
+      _.bassert(104,typesManager.constructor == TypesManager,"the constructor property is not 'TypesManager'")
     }
     function toStringTest() {
-      aut("toStringTest")
+      let un
+      let parent = new BreadCrumbs(un, "toStringTest", un)
+      let type1 = new TypesManager({},"toStringTest1",parent)
+      _.bassert(1,type1.toString().contains("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,type1.toString().contains("TypesManager"),"result does not contain class string"    )
     }
     function isOfTypeTest() {
-      aut("isOfTypeTest")
+      let un
+      let parent = new BreadCrumbs(un, "isOfTypeTest", un)
+      let type1 = new TypesManager({},"isOfTypeTest1",parent)
+      _.bassert(1,BreadCrumbs.isOfType(type1,"object"), "'" + type1 + "' should be of type " + "object")
+      _.bassert(2,BreadCrumbs.isOfType(type1,"Object"), "'" + type1 + "' should be of type " + "Object")
+      _.bassert(3,BreadCrumbs.isOfType(type1,"BreadCrumbs"), "'" + type1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4,BreadCrumbs.isOfType(type1,"TypesManager"), "'" + type1 + "' should be of type " + "TypesManager")
+      _.bassert(5,!BreadCrumbs.isOfType(type1,"Error"), "'" + type1 + "' should not be of type " + "Error")
+      _.bassert(6,!BreadCrumbs.isOfType(type1,"SpecManager"), "'" + type1 + "' should not be of type " + "SpecManager")
     }
     function createNoteTypesOrThrowTest() {
-      aut("createNoteTypesOrThrowTest")
+      let un
+      let p = new BreadCrumbs(un, "setOptionRenderTest", un)
+      let types1 = new TypesManager({},"TT0",p)
+      let ok1 = {}
+      let ok2 = {diary: {}}
+      let ok3 = {diary: {}, citation: {}, film: {}, book: {}}
+      let ok4 = {diary: {MARKER: ""}, citation: {DATE: true}, film: {TITLE_BEFORE_DATE: "xyz"}, book: {DATEFORMAT: "YYYY"}}
+      let ok5 = {diary: {MARKER: "x", MARKER: "y"}}
+      let ok6 = {diary: {MARKER: "", DATE: true, TITLE_BEFORE_DATE: "", DATEFORMAT: "YY"}}
+      let ok7 = {diary: {"MARKER": "", "DATE": true, "TITLE_BEFORE_DATE": "", "DATEFORMAT": "YY"}}
+      let nok1 = {diary: ""}
+      let nok2 = {diary: 22}
+      let nok3 = {diary: [1,2,3]}
+      let nok4 = {diary: null}
+      let nok5 = {diary: {NOT_KNOWN: ""}}
+      let nok6 = {diary: {MARKER: 22}}
+      let nok7 = {diary: {DATE: 22, }}
+      let nok8 = {diary: {TITLE_BEFORE_DATE: 22}}
+      let nok9 = {diary: {DATEFORMAT: 22}}
+      let nok10 = {diary: {MARKER: true}}
+      let nok11 = {diary: {DATE: "str", }}
+      let nok12 = {diary: {TITLE_BEFORE_DATE: false}}
+      let nok13 = {diary: {DATEFORMAT: true}}
+      let nok14 = {diary: {MARKER: {}}}
+      let nok15 = {diary: {DATE: {}, }}
+      let nok16 = {diary: {TITLE_BEFORE_DATE: {}}}
+      let nok17 = {diary: {DATEFORMAT: {}}}
+      let nok18 = {diary: {MARKER: []}}
+      let nok19 = {diary: {DATE: [], }}
+      let nok20 = {diary: {TITLE_BEFORE_DATE: []}}
+      let nok21 = {diary: {DATEFORMAT: []}}
+      _.assert(1,_tryConstruct,ok1,"TT1",p,"should construct, literal is ok")
+      _.assert(2,_tryConstruct,ok2,"TT2",p,"should construct, literal is ok")
+      _.assert(3,_tryConstruct,ok3,"TT3",p,"should construct, literal is ok")
+      _.assert(4,_tryConstruct,ok4,"TT4",p,"should construct, literal is ok")
+      _.assert(5,_tryConstruct,ok5,"TT5",p,"should construct, literal is ok")
+      _.assert(6,_tryConstruct,ok6,"TT6",p,"should construct, literal is ok")
+      _.assert(7,_tryConstruct,ok7,"TT7",p,"should construct, literal is ok")
+      _.shouldAssert(8,_tryConstruct,nok1,"TT8",p,"should assert, literal is not ok")
+      _.shouldAssert(9,_tryConstruct,nok2,"TT9",p,"should assert, literal is not ok")
+      _.shouldAssert(10,_tryConstruct,nok3,"TT10",p,"should assert, literal is not ok")
+      _.shouldAssert(11,_tryConstruct,nok4,"TT11",p,"should assert, literal is not ok")
+      _.shouldAssert(12,_tryConstruct,nok5,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(13,_tryConstruct,nok6,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(14,_tryConstruct,nok7,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(15,_tryConstruct,nok8,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(16,_tryConstruct,nok9,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(17,_tryConstruct,nok10,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(18,_tryConstruct,nok11,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(19,_tryConstruct,nok12,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(20,_tryConstruct,nok13,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(21,_tryConstruct,nok14,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(22,_tryConstruct,nok15,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(23,_tryConstruct,nok16,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(24,_tryConstruct,nok17,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(25,_tryConstruct,nok18,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(26,_tryConstruct,nok19,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(27,_tryConstruct,nok20,"TT12",p,"should assert, literal is not ok")
+      _.shouldAssert(28,_tryConstruct,nok21,"TT12",p,"should assert, literal is not ok")
     }
     function _tryConstruct(arg1, arg2, arg3) {
       new TypesManager(arg1, arg2, arg3)
+    }
+    function _tryEqualObjs(arg1, arg2) {
+      BreadCrumbs.equalObjs(arg1, arg2)
     }
   }
 }
