@@ -100,10 +100,12 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
 const TYPE_PROMPT = "Typ wählen"
 const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
 const Test = {
+  /*
   FOLDER2TYPE: {
     diary: ["diary"],
     others: ["citation"],
   },
+  */
   NOTETYPES: {
     diary: {
       MARKER: "",
@@ -233,6 +235,9 @@ class TestSuite {
   //#region member variables
   static ok = "\u2713"
   static nok = "\u2718"
+  static #totalSuites = 0
+  static #totalTests = 0
+  static #totalCases = 0
   #name
   #outputObj = undefined
   #succeeded = 0
@@ -244,10 +249,11 @@ class TestSuite {
   f = "failing"
   s = "success"
   d = "details"
+  e = "none"
+  z = "summary"
   get name() {
     return this.#name
   }
-  e = "none"
   //#endregion member variables
 
   /** Sets up the suite
@@ -255,8 +261,10 @@ class TestSuite {
    * @param {Object} outputObj - javascript object for output in Obsidian
    */
   constructor(name, outputObj) {
+    TestSuite.#totalSuites++
     this.#name = name ? name : "Unknown"
     this.o = outputObj
+    if (this.o[this.z] == undefined) this.o[this.z] = this.e
     if (this.o[this.f] == undefined) this.o[this.f] = this.e
     if (this.o[this.s] == undefined) this.o[this.s] = this.e
     if (this.o[this.d] == undefined) this.o[this.d] = this.e
@@ -296,6 +304,7 @@ class TestSuite {
    * @param {Function} fn
    */
   run(fn) {
+    TestSuite.#totalTests++
     this.#fname = fn.name
     this.#asserts = 0
     try {
@@ -359,6 +368,7 @@ class TestSuite {
    * }
    */
   prun(fn) {
+    TestSuite.#totalTests++
     return new Promise((resolve, reject) => {
       this.#fname = fn.name
       this.#asserts = 0
@@ -401,6 +411,7 @@ class TestSuite {
    * @param {String} message
    */
   bassert(errcase, isTrue, message) {
+    TestSuite.#totalCases++
     this.#cases++
     //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
     if (!isTrue) {
@@ -418,6 +429,7 @@ class TestSuite {
    * @param {...} ...params
    */
   assert(errcase, fn, ...params) {
+    TestSuite.#totalCases++
     this.#cases++
     try {
       //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
@@ -437,6 +449,7 @@ class TestSuite {
    * @param {...} ...params
    */
   shouldAssert(errcase, fn, ...params) {
+    TestSuite.#totalCases++
     this.#cases++
     let hasAsserted = false
     let message = params.pop()
@@ -461,6 +474,13 @@ class TestSuite {
    * @param {String} str
    */
   #praut(key, str) {
+    /* o = this.#outputObj
+     * f = "failing"
+     * s = "success"
+     * d = "details"
+     * e = "none"
+     * z = "summary" */
+    let nl_indent = "\n        "
     if (key != this.s && key != this.f && key != this.d) {
       let errstr = "%c" + key
       console.log(errstr, "background: rgba(255, 99, 71, 0.5)")
@@ -468,24 +488,29 @@ class TestSuite {
       this.o[key] = str
     } else if (str[0] == TestSuite.nok) {
       if (key == this.d) {
+        //"details"
         let outParts = this.o[key].split(TestSuite.nok)
         let len = outParts.length
         let okPart = outParts[len - 1]
         if (len == 1) {
-          let newLastPart = str.substring(1) + "\n          " + okPart
+          let newLastPart = str.substring(1) + nl_indent + okPart
           outParts[outParts.length - 1] = newLastPart
           this.o[key] = outParts.join()
         } else {
-          let newLastPart = "\n          " + str.substring(1) + okPart
+          let newLastPart = nl_indent + str.substring(1) + okPart
           outParts[outParts.length - 1] = newLastPart
           this.o[key] = outParts.join(TestSuite.nok)
         }
       } else {
-        this.o[key] = str.substring(1) + "\n          " + this.o[key]
+        //"failing"
+        this.o[key] = str.substring(1) + nl_indent + this.o[key]
       }
     } else {
-      this.o[key] = this.o[key] + "\n          " + str
+      // "details" or "success"
+      this.o[key] = this.o[key] + nl_indent + str
     }
+    // prettier-ignore
+    this.o[this.z] = `Suites: ${TestSuite.#totalSuites} | Tests: ${TestSuite.#totalTests} | Cases: ${TestSuite.#totalCases}`
   }
 }
 
@@ -731,7 +756,7 @@ class BreadCrumbs {
     return this.#literal
   }
   //#endregion member variables
-  /** Constructs a new BreadCrumbs and registers its type
+  /** Constructs a new BreadCrumbs and registers its type once
    * @constructor
    * @param {Undefined|Object} literal
    * @param {String|Symbol} key
@@ -916,95 +941,35 @@ class BreadCrumbs {
       )
   }
 
-  /** Returns whether two Objects have equal attributes, this in depth
-   * @param {Object} obj1
-   * @param {Object} obj2
+  /** Returns whether arg1 and arg2 are equal in depth
+   * @param {*} arg1
+   * @param {*} arg2
+   * @param {(Undefined|Number)} lv
    * @returns {Boolean}
-   * @throws {SettingError} in case of wrong parameter types
    */
-  static equalObjs(obj1, obj2, lv = 0) {
-    if (
-      !BreadCrumbs.isOfType(obj1, "Object") ||
-      !BreadCrumbs.isOfType(obj2, "Object")
-    ) {
-      throw new SettingError(
-        "'BreadCrumbs" + "." + "equalObjs",
-        "'\n   " + "Both arguments have to be Objects"
-      )
+  static areEqual(arg1, arg2, lv = 0) {
+    function isObject(obj) {
+      return obj != null && typeof obj === "object"
     }
-    let keys1 = Object.keys(obj1)
-    let keys2 = Object.keys(obj2)
-    if (keys1.length != keys2.length) {
+    const keys1 = Object.keys(arg1)
+    const keys2 = Object.keys(arg2)
+    if (keys1.length !== keys2.length) {
       return false
     }
-    let answ = true
-    keys1.forEach((key) => {
-      if (answ == true) {
-        let val1 = obj1[key]
-        let val2 = obj2[key]
-        let isObj1 = BreadCrumbs.isOfType(val1, "Object")
-        let isObj2 = BreadCrumbs.isOfType(val2, "Object")
-        if (isObj1 && isObj2) {
-          answ = BreadCrumbs.equalObjs(val1, val2, lv + 1)
-        } else if (isObj1 || isObj2) {
-          answ = false
-        } else if (BreadCrumbs.isOfType(val1, "undefined")) {
-          answ = BreadCrumbs.isOfType(val2, "undefined")
-        } else if (BreadCrumbs.isOfType(val1, "null")) {
-          answ = BreadCrumbs.isOfType(val2, "null")
-        } else if (BreadCrumbs.isOfType(val1, "Array")) {
-          answ = BreadCrumbs.isOfType(val2, "Array")
-          if (answ) answ = BreadCrumbs.equalArrays(val1, val2)
-        } else {
-          answ = val1 === val2
-        }
+    for (const key of keys1) {
+      const val1 = arg1[key]
+      const val2 = arg2[key]
+      const areObjects = isObject(val1) && isObject(val2)
+      if (
+        (areObjects && !BreadCrumbs.areEqual(val1, val2, ++lv)) ||
+        (!areObjects && val1 !== val2)
+      ) {
+        return false
       }
-    })
-    return answ
-  }
-  /** Returns whether two Array are equal, this in depth
-   * @param {Array} arr1
-   * @param {Array} arr2
-   * @returns {Boolean}
-   * @throws {SettingError} in case of wrong parameter types
-   */
-  static equalArrays(arr1, arr2, lv = 0) {
-    if (
-      !BreadCrumbs.isOfType(arr1, "Array") ||
-      !BreadCrumbs.isOfType(arr2, "Array")
-    ) {
-      throw new SettingError(
-        "'BreadCrumbs" + "." + "equalObjs",
-        "'\n   " + "Both arguments have to be Arrays"
-      )
     }
-    if (arr1.length != arr2.length) {
-      return false
-    }
-    let answ = true
-    arr1.forEach((val1, idx) => {
-      if (answ == true) {
-        let val2 = arr2[idx]
-        let isObj1 = BreadCrumbs.isOfType(val1, "Object")
-        let isObj2 = BreadCrumbs.isOfType(val2, "Object")
-        if (isObj1 && isObj2) {
-          answ = BreadCrumbs.equalObjs(val1, val2)
-        } else if (isObj1 || isObj2) {
-          answ = false
-        } else if (BreadCrumbs.isOfType(val1, "undefined")) {
-          answ = BreadCrumbs.isOfType(val2, "undefined")
-        } else if (BreadCrumbs.isOfType(val1, "null")) {
-          answ = BreadCrumbs.isOfType(val2, "null")
-        } else if (BreadCrumbs.isOfType(val1, "Array")) {
-          answ = BreadCrumbs.isOfType(val2, "Array")
-          if (answ) answ = BreadCrumbs.equalArrays(val1, val2, lv + 1)
-        } else {
-          answ = val1 === val2
-        }
-      }
-    })
-    return answ
+    return true
   }
+
   // prettier-ignore
   static test(outputObj) { // BreadCrumbs
     let _ = null
@@ -1021,8 +986,7 @@ class BreadCrumbs {
       _.run(isDefinedTest)
       _.run(isOfTypeTest)
       _.run(throwIfMightBeMaliciousTest)
-      _.run(equalObjsTest)
-      _.run(equalArraysTest)
+      _.run(areEqualTest)
       _.destruct()
       _ = null
     }
@@ -1215,16 +1179,16 @@ class BreadCrumbs {
       _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a<b", "'<' character considered malicious")
       _.assert(1,_tryThrowIfMightBeMalicious, "Ein_GanZ_5LankerSti2nk", "Only alphanumeric characters, number characters and underscore should be ok")
     }
-    function equalObjsTest() {
+    function areEqualTest() {
       let obj1 = {}
       let obj1_0 = {}
       let obj1_1 = {a}
       let obj1_2 = {a:true}
-      _.shouldAssert(1,_tryEqualObjs,22,obj1,"1st argument is not an Object")
-      _.shouldAssert(2,_tryEqualObjs,obj1, "a","2nd argument is not an Object")
-      _.bassert(3,BreadCrumbs.equalObjs(obj1, obj1_0),"objs are equal - see code")
-      _.bassert(4,!BreadCrumbs.equalObjs(obj1, obj1_1),"objs are not equal - see code")
-      _.bassert(5,!BreadCrumbs.equalObjs(obj1, obj1_2),"objs are not equal - see code")
+      _.assert(1,_tryAreEqual,22,obj1,"any arguments allowed")
+      _.assert(2,_tryAreEqual,obj1, "a","any arguments allowed")
+      _.bassert(3,BreadCrumbs.areEqual(obj1, obj1_0),"objs are equal - see code")
+      _.bassert(4,!BreadCrumbs.areEqual(obj1, obj1_1),"objs are not equal - see code")
+      _.bassert(5,!BreadCrumbs.areEqual(obj1, obj1_2),"objs are not equal - see code")
 
       let obj2 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
       let obj2_0 = {"a":{"b":{"c":true,"d":"alpha","e":22,"f":22n,"g":null,"h":undefined,"i":_tryConstruct}}}
@@ -1236,19 +1200,19 @@ class BreadCrumbs {
       let obj2_6 = {a:{b:{c:true,d:"alpha",e:22,f:22,g:null,h:undefined,i:_tryConstruct}}}
       let obj2_7 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:undefined,h:undefined,i:_tryConstruct}}}
       let obj2_8 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:null,i:_tryConstruct}}}
-      let obj2_9 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryEqualObjs}}}
+      let obj2_9 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryAreEqual}}}
       let obj2_10 = {A:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
-      _.bassert(10,BreadCrumbs.equalObjs(obj2, obj2_0),"objs are equal - see code")
-      _.bassert(11,!BreadCrumbs.equalObjs(obj2, obj2_1),"objs are not equal - see code")
-      _.bassert(12,!BreadCrumbs.equalObjs(obj2, obj2_2),"objs are not equal - see code")
-      _.bassert(13,!BreadCrumbs.equalObjs(obj2, obj2_3),"objs are not equal - see code")
-      _.bassert(14,!BreadCrumbs.equalObjs(obj2, obj2_4),"objs are not equal - see code")
-      _.bassert(15,!BreadCrumbs.equalObjs(obj2, obj2_5),"objs are not equal - see code")
-      _.bassert(16,!BreadCrumbs.equalObjs(obj2, obj2_6),"objs are not equal - see code")
-      _.bassert(17,!BreadCrumbs.equalObjs(obj2, obj2_7),"objs are not equal - see code")
-      _.bassert(18,!BreadCrumbs.equalObjs(obj2, obj2_8),"objs are not equal - see code")
-      _.bassert(19,!BreadCrumbs.equalObjs(obj2, obj2_9),"objs are not equal - see code")
-      _.bassert(20,!BreadCrumbs.equalObjs(obj2, obj2_10),"objs are not equal - see code")
+      _.bassert(10,BreadCrumbs.areEqual(obj2, obj2_0),"objs are equal - see code")
+      _.bassert(11,!BreadCrumbs.areEqual(obj2, obj2_1),"objs are not equal - see code")
+      _.bassert(12,!BreadCrumbs.areEqual(obj2, obj2_2),"objs are not equal - see code")
+      _.bassert(13,!BreadCrumbs.areEqual(obj2, obj2_3),"objs are not equal - see code")
+      _.bassert(14,!BreadCrumbs.areEqual(obj2, obj2_4),"objs are not equal - see code")
+      _.bassert(15,!BreadCrumbs.areEqual(obj2, obj2_5),"objs are not equal - see code")
+      _.bassert(16,!BreadCrumbs.areEqual(obj2, obj2_6),"objs are not equal - see code")
+      _.bassert(17,!BreadCrumbs.areEqual(obj2, obj2_7),"objs are not equal - see code")
+      _.bassert(18,!BreadCrumbs.areEqual(obj2, obj2_8),"objs are not equal - see code")
+      _.bassert(19,!BreadCrumbs.areEqual(obj2, obj2_9),"objs are not equal - see code")
+      _.bassert(20,!BreadCrumbs.areEqual(obj2, obj2_10),"objs are not equal - see code")
 
       let obj3 = {a:[1]}
       let obj3_0 = {a:[1]}
@@ -1256,20 +1220,17 @@ class BreadCrumbs {
       let obj3_2 = {a:{}}
       let obj3_3 = {a:[2]}
       let obj3_4 = {a:[1,2]}
-      _.bassert(30,BreadCrumbs.equalObjs(obj3, obj3_0),"objs are equal - see code")
-      _.bassert(31,!BreadCrumbs.equalObjs(obj3, obj3_1),"objs are not equal - see code")
-      _.bassert(32,!BreadCrumbs.equalObjs(obj3, obj3_2),"objs are not equal - see code")
-      _.bassert(33,!BreadCrumbs.equalObjs(obj3, obj3_3),"objs are not equal - see code")
-      _.bassert(34,!BreadCrumbs.equalObjs(obj3, obj3_4),"objs are not equal - see code")
-    }
-    function equalArraysTest() {
+      _.bassert(30,BreadCrumbs.areEqual(obj3, obj3_0),"objs are equal - see code")
+      _.bassert(31,!BreadCrumbs.areEqual(obj3, obj3_1),"objs are not equal - see code")
+      _.bassert(32,!BreadCrumbs.areEqual(obj3, obj3_2),"objs are not equal - see code")
+      _.bassert(33,!BreadCrumbs.areEqual(obj3, obj3_3),"objs are not equal - see code")
+      _.bassert(34,!BreadCrumbs.areEqual(obj3, obj3_4),"objs are not equal - see code")
+
       let arr1 = []
       let arr1_0 = []
       let arr1_1 = [1]
-      _.shouldAssert(1,_tryEqualArrays,22,arr1,"1st argument is not an Array")
-      _.shouldAssert(2,_tryEqualArrays,arr1, "a","2nd argument is not an Array")
-      _.bassert(3,BreadCrumbs.equalArrays(arr1, arr1_0),"arrays are equal - see code")
-      _.bassert(4,!BreadCrumbs.equalArrays(arr1, arr1_1),"arrays are not equal - see code")
+      _.bassert(101,BreadCrumbs.areEqual(arr1, arr1_0),"arrays are equal - see code")
+      _.bassert(102,!BreadCrumbs.areEqual(arr1, arr1_1),"arrays are not equal - see code")
 
       let arr2 = [undefined, null, true, 1, 1n, "string",_tryConstruct,{}]
       let arr2_0 = [undefined, null, true, 1, 1n, "string",_tryConstruct,{}]
@@ -1279,25 +1240,25 @@ class BreadCrumbs {
       let arr2_4 = [undefined, null, true, 2, 1n, "string",_tryConstruct,{}]
       let arr2_5 = [undefined, null, true, 1, 1, "string",_tryConstruct,{}]
       let arr2_6 = [undefined, null, true, 1, 1n, "String",_tryConstruct,{}]
-      let arr2_7 = [undefined, null, true, 1, 1n, "string",_tryEqualArrays,{}]
-      let arr2_8 = [undefined, null, true, 1, 1n, "string",_tryEqualArrays,{a:1}]
-      _.bassert(11,BreadCrumbs.equalArrays(arr2, arr2_0),"arrays are equal - see code")
-      _.bassert(12,!BreadCrumbs.equalArrays(arr2, arr2_1),"arrays are not equal - see code")
-      _.bassert(13,!BreadCrumbs.equalArrays(arr2, arr2_2),"arrays are not equal - see code")
-      _.bassert(14,!BreadCrumbs.equalArrays(arr2, arr2_3),"arrays are not equal - see code")
-      _.bassert(15,!BreadCrumbs.equalArrays(arr2, arr2_4),"arrays are not equal - see code")
-      _.bassert(16,!BreadCrumbs.equalArrays(arr2, arr2_5),"arrays are not equal - see code")
-      _.bassert(17,!BreadCrumbs.equalArrays(arr2, arr2_6),"arrays are not equal - see code")
-      _.bassert(18,!BreadCrumbs.equalArrays(arr2, arr2_7),"arrays are not equal - see code")
-      _.bassert(19,!BreadCrumbs.equalArrays(arr2, arr2_8),"arrays are not equal - see code")
+      let arr2_7 = [undefined, null, true, 1, 1n, "string",_tryAreEqual,{}]
+      let arr2_8 = [undefined, null, true, 1, 1n, "string",_tryAreEqual,{a:1}]
+      _.bassert(111,BreadCrumbs.areEqual(arr2, arr2_0),"arrays are equal - see code")
+      _.bassert(112,!BreadCrumbs.areEqual(arr2, arr2_1),"arrays are not equal - see code")
+      _.bassert(113,!BreadCrumbs.areEqual(arr2, arr2_2),"arrays are not equal - see code")
+      _.bassert(114,!BreadCrumbs.areEqual(arr2, arr2_3),"arrays are not equal - see code")
+      _.bassert(115,!BreadCrumbs.areEqual(arr2, arr2_4),"arrays are not equal - see code")
+      _.bassert(116,!BreadCrumbs.areEqual(arr2, arr2_5),"arrays are not equal - see code")
+      _.bassert(117,!BreadCrumbs.areEqual(arr2, arr2_6),"arrays are not equal - see code")
+      _.bassert(118,!BreadCrumbs.areEqual(arr2, arr2_7),"arrays are not equal - see code")
+      _.bassert(119,!BreadCrumbs.areEqual(arr2, arr2_8),"arrays are not equal - see code")
 
       let arr3 = [[[1,2,3]]]
       let arr3_0 = [[[1,2,3]]]
       let arr3_1 = [[[1,2]]]
       let arr3_2 = [[[1,2,3,4]]]
-      _.bassert(31,BreadCrumbs.equalArrays(arr3, arr3_0),"arrays are equal - see code")
-      _.bassert(32,!BreadCrumbs.equalArrays(arr3, arr3_1),"arrays are not equal - see code")
-      _.bassert(33,!BreadCrumbs.equalArrays(arr3, arr3_2),"arrays are not equal - see code")
+      _.bassert(131,BreadCrumbs.areEqual(arr3, arr3_0),"arrays are equal - see code")
+      _.bassert(132,!BreadCrumbs.areEqual(arr3, arr3_1),"arrays are not equal - see code")
+      _.bassert(133,!BreadCrumbs.areEqual(arr3, arr3_2),"arrays are not equal - see code")      
     }
     function _trySetterObjTypes(arg1) {
       let un
@@ -1320,11 +1281,8 @@ class BreadCrumbs {
       let breadcrumbs = new BreadCrumbs(un, "throwIfMightBeMaliciousTest1")
       breadcrumbs.throwIfMightBeMalicious(arg1)
     }
-    function _tryEqualObjs(arg1, arg2) {
-      BreadCrumbs.equalObjs(arg1, arg2)
-    }
-    function _tryEqualArrays(arg1, arg2) {
-      BreadCrumbs.equalArrays(arg1, arg2)
+    function _tryAreEqual(arg1, arg2) {
+      BreadCrumbs.areEqual(arg1, arg2)
     }
   }
 }
@@ -1364,7 +1322,7 @@ class SpecManager extends BreadCrumbs {
     return this.#render
   }
   //#endregion member variables
-  /** Constructs a new SpecManager and registers its type
+  /** Constructs a new SpecManager and registers its type once
    * @constructor
    * @param {Object} literal
    * @param {String|Symbol} key
@@ -1535,7 +1493,7 @@ class SpecManager extends BreadCrumbs {
       _.bassert(3,BreadCrumbs.isOfType(spec1,"BreadCrumbs"), "'" + spec1 + "' should be of type " + "BreadCrumbs")
       _.bassert(4,BreadCrumbs.isOfType(spec1,"SpecManager"), "'" + spec1 + "' should be of type " + "SpecManager")
       _.bassert(5,!BreadCrumbs.isOfType(spec1,"Error"), "'" + spec1 + "' should not be of type " + "Error")
-      _.bassert(6,!BreadCrumbs.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should be of type " + "TypesManager")
+      _.bassert(6,!BreadCrumbs.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should not be of type " + "TypesManager")
     }
     function setOptionRenderTest() {
       let un
@@ -1638,7 +1596,7 @@ class TypesManager extends BreadCrumbs {
     return Object.keys(this.#notetypes)
   }
   //#endregion member variables
-  /** Constructs a new TypesManager and registers its type
+  /** Constructs a new TypesManager and registers its type once
    * @constructor
    * @param {Object|Object.<String.Object>|Object.<String.Object.<String.*>>} literal
    * @param {String|Symbol} key
@@ -1812,11 +1770,11 @@ class TypesManager extends BreadCrumbs {
       let out5 = types5.notetypes
       let out6 = types6.notetypes
       _.bassert(1,Object.keys(out1).length == 0, "no notetypes defined")
-      _.bassert(2,_tryEqualObjs,out2,exp2,"output should be: see test code")
-      _.bassert(3,_tryEqualObjs,out3,exp3,"output should be: see test code")
-      _.bassert(4,_tryEqualObjs,out4,exp4,"output should be: see test code")
-      _.bassert(5,_tryEqualObjs,out5,exp5,"output should be: see test code")
-      _.bassert(6,_tryEqualObjs,out6,exp6,"output should be: see test code")
+      _.bassert(2,_tryAreEqual,out2,exp2,"output should be: see test code")
+      _.bassert(3,_tryAreEqual,out3,exp3,"output should be: see test code")
+      _.bassert(4,_tryAreEqual,out4,exp4,"output should be: see test code")
+      _.bassert(5,_tryAreEqual,out5,exp5,"output should be: see test code")
+      _.bassert(6,_tryAreEqual,out6,exp6,"output should be: see test code")
     }
     function getterNamesTest() {
       let un
@@ -1959,82 +1917,114 @@ class TypesManager extends BreadCrumbs {
     function _tryConstruct(arg1, arg2, arg3) {
       new TypesManager(arg1, arg2, arg3)
     }
-    function _tryEqualObjs(arg1, arg2) {
-      BreadCrumbs.equalObjs(arg1, arg2)
+    function _tryAreEqual(arg1, arg2) {
+      BreadCrumbs.areEqual(arg1, arg2)
     }
   }
 }
 
-/** most elaborated subclass
+/** setting parser; traverses deep literal to flat output
+ * @classdesc
+ * Setting is the only subclass which should be constructed from outside, with
+ * only literal given as argument.
+ *
+ * It calls the managers and traverses given literal to flat output; thereby
+ * respecting manager configuration rules and removing manager literals from
+ * output.
+ *
+ * only notetypes of root are recognized as notetypes
  *
  */
 class Setting extends BreadCrumbs {
   //#region member variables
+  static #instanceCounter = 0
   static #ROOT_KEY = "/"
   #children = {}
   #spec = {}
   #types = {}
   #frontmatterYAML = {}
   #renderYAML = {}
-  get spec() {
-    return this.#spec
-  }
+  /** Returns names of notetypes
+   * @returns @returns {Array.<String>}
+   */
   get typeNames() {
     return this.#types.names
   }
-  get defaultType() {
-    return TypesManager.defaultType
-  }
+  /** Returns all frontmatter entries of this instance (not filtered by type)
+   * @returns {Object.<String.*>}
+   */
   get frontmatterYAML() {
-    return this.getFrontmatterYAML()
+    return this.#frontmatterYAML
   }
+  /** Returns all render entries of this instance (not filtered by type)
+   * @returns {Object.<String.*>}
+   */
   get renderYAML() {
-    return this.getRenderYAML()
+    return this.#renderYAML
   }
   //#endregion member variables
+  /** Constructs a new Setting and registers its type once
+   * @constructor
+   * @param {Object} literal
+   * @param {(Undefined|String|Symbol)} key
+   * @param {(Undefined|Setting)} parent
+   * @param {(Undefined|SpecManager)} parentsSpec
+   * @throws {SettingError} on wrong parameter types
+   */
   constructor(
     literal,
     key = undefined,
-    caller = undefined,
-    callersSpec = undefined
+    parent = undefined,
+    parentsSpec = undefined
   ) {
-    super(literal, key === undefined ? Setting.#ROOT_KEY : key, caller)
+    super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
+    if (!Setting.#instanceCounter++) this.objTypes = "Setting"
     this.throwIfUndefined(literal, "literal")
+    // literal {undefined|Object} checked by superclass
+    // key {String|Symbol} checked by superclass
+    // parent {Undefined|BreadCrumbs} checked by superclass
+    this.throwIfNotOfType(parent, ["undefined", "Setting"])
+    this.throwIfNotOfType(parentsSpec, ["undefined", "SpecManager"])
+
+    let spec = {}
     if (BreadCrumbs.isDefined(this.literal[SpecManager.handlerKey]))
-      this.#spec = new SpecManager(
-        this.literal[SpecManager.handlerKey],
-        SpecManager.handlerKey,
-        this,
-        callersSpec
-      )
-    else
-      this.#spec = new SpecManager(
-        {},
-        SpecManager.handlerKey,
-        this,
-        callersSpec
-      )
-    if (this.isRoot())
+      spec = this.literal[SpecManager.handlerKey]
+    this.#spec = new SpecManager(
+      spec,
+      SpecManager.handlerKey,
+      this,
+      parentsSpec
+    )
+    if (this.isRoot()) {
+      let types = {}
       if (BreadCrumbs.isDefined(this.literal[TypesManager.handlerKey]))
-        this.#types = new TypesManager(
-          this.literal[TypesManager.handlerKey],
-          TypesManager.handlerKey,
-          this
-        )
-      else this.#types = new TypesManager({}, TypesManager.handlerKey, this)
+        types = this.literal[TypesManager.handlerKey]
+      this.#types = new TypesManager(types, TypesManager.handlerKey, this)
+    }
 
     for (const [key, value] of Object.entries(this.literal)) {
       if (BreadCrumbs.isOfType(value, "Object")) {
         if (!Setting.#isHandlersKey(key)) {
           this.#children[key] = new Setting(value, key, this, this.#spec)
-        } else {
         }
       } else {
-        if (this.spec.render) this.#renderYAML[key] = value
+        if (this.#spec.render) this.#renderYAML[key] = value
         else this.#frontmatterYAML[key] = value
       }
     }
   }
+
+  /** Returns whether arg is instance of Setting
+   * @param {Object} arg
+   * @returns {Boolean}
+   */
+  static instanceOfMe(arg) {
+    return arg instanceof Setting
+  }
+
+  /** Returns all frontmatter entries of this instance and descendants
+   * @returns  {Object.<String.*>}
+   */
   getFrontmatterYAML() {
     let frontmatterYAML = {}
     Object.assign(frontmatterYAML, this.#frontmatterYAML)
@@ -2043,6 +2033,10 @@ class Setting extends BreadCrumbs {
     }
     return frontmatterYAML
   }
+
+  /** Returns all render entries of this instance and descendants
+   * @returns  {Object.<String.*>}
+   */
   getRenderYAML() {
     let renderYAML = {}
     Object.assign(renderYAML, this.#renderYAML)
@@ -2051,75 +2045,205 @@ class Setting extends BreadCrumbs {
     }
     return renderYAML
   }
-  getType(key) {
-    return this.#types.notetypes[key]
+
+  /** Returns full notetype for name; all type keys set, if not given to default
+   *
+   * If no type for name is given, full default type is returned
+   * @param {*} name
+   * @returns  {Object.<String.*>}
+   */
+  getType(name) {
+    if (BreadCrumbs.isDefined(this.#types.notetypes[name])) {
+      return this.#types.notetypes[name]
+    } else {
+      return TypesManager.defaultType
+    }
   }
+
+  /** Returns whether key is main key of known handlers
+   * @param {*} key
+   * @returns {Boolean}
+   */
   static #isHandlersKey(key) {
     return SpecManager.handlerKey == key || TypesManager.handlerKey == key
   }
 
   // prettier-ignore
   static test(outputObj) { // Setting
-    let _ = null
     BreadCrumbs.test(outputObj)
     SpecManager.test(outputObj)
     TypesManager.test(outputObj)
-
+    let _ = null
     if(_ = new TestSuite("Setting", outputObj)) {
-      //@todo
-      /*
-    _.run(getterTest)
-    _.run(constructorTest)
-    _.run(toStringTest)
-    _.run(isHandlersKeyTest)
-    _.run(getFrontmatterYAMLTest)
-    _.run(getRenderYAMLTest)
-    */
-    _.destruct()
+      _.run(getterTypeNamesTest)
+      _.run(getterFrontmatterYAMLTest)
+      _.run(getterRenderYAMLTest)
+      _.run(instanceOfMeTest)
+      _.run(constructorTest)
+      _.run(toStringTest)
+      _.run(isOfTypeTest)
+      _.run(getFrontmatterYAMLTest)
+      _.run(getRenderYAMLTest)
+      _.run(getTypeTest)
+      _.run(isHandlersKeyTest)
+      _.destruct()
     _ = null
     }
-    function getterTest() {
-      // check whether getter assigned to correct function
-      const desc1 = Object.getOwnPropertyDescriptor(Setting.prototype,"frontmatterYAML")
-      const desc2 = Object.getOwnPropertyDescriptor(Setting.prototype,"renderYAML")
-      _.bassert(1,typeof desc1.get == "function",`getter for 'frontmatterYAML' is not 'function'`)
-      _.bassert(2,typeof desc2.get == "function",`getter for 'renderYAML' is not 'function'`)
-      _.bassert(3,desc1.get.toString().contains("getFrontmatterYAML"),`getter for 'frontmatterYAML' is not 'getFrontmatterYAML'`)
-      _.bassert(4,desc2.get.toString().contains("getRenderYAML"),`getter for 'renderYAML' is not 'getRenderYAML'`)
+    function getterTypeNamesTest() {
+      let lit1 = {}
+      let lit2 = {SPEC: {render: true},a:1}
+      let lit3 = {NOTETYPES: {}}
+      let lit4 = {NOTETYPES: {diary:{}}}
+      let lit5 = {NOTETYPES: {diary:{MARKER: "d"}}}
+      let lit6 = {NOTETYPES: {diary:{DATE: true,},cit:{},book:{MARKER: "b"}}}
+      let lit7 = {a: {SPEC: {render: true},NOTETYPES: {diary:{}},x:"y"}}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let setting5 = new Setting(lit5)
+      let setting6 = new Setting(lit6)
+      let setting7 = new Setting(lit7)
+      let answ1 = setting1.typeNames
+      let answ2 = setting2.typeNames
+      let answ3 = setting3.typeNames
+      let answ4 = setting4.typeNames
+      let answ5 = setting5.typeNames
+      let answ6 = setting6.typeNames
+      let answ7 = setting7.typeNames
+      let expAnsw1 = '[]'
+      let expAnsw2 = '[]'
+      let expAnsw3 = '[]'
+      let expAnsw4 = '["diary"]'
+      let expAnsw5 = '["diary"]'
+      let expAnsw6 = '["diary","cit","book"]'
+      let expAnsw7 = '[]'
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+      _.bassert(5,JSON.stringify(answ5) == expAnsw5,`output of JSON.stringify(result) is:'${JSON.stringify(answ5)}',but should be:'${expAnsw5}'`)
+      _.bassert(6,JSON.stringify(answ6) == expAnsw6,`output of JSON.stringify(result) is:'${JSON.stringify(answ6)}',but should be:'${expAnsw6}'`)
+      _.bassert(7,JSON.stringify(answ7) == expAnsw7,`output of JSON.stringify(result) is:'${JSON.stringify(answ7)}',but should be:'${expAnsw7}'`)
+    }
+    function getterFrontmatterYAMLTest() {
+      const lit1 = {a: 23}
+      const lit2 = {a: 23, b: "ja"}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit5 = {_SPEC: {render: true}, a: 23, pict: "ja"}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let setting5 = new Setting(lit5)
+      let answ1f = setting1.frontmatterYAML
+      let answ2f = setting2.frontmatterYAML
+      let answ3f = setting3.frontmatterYAML
+      let answ4f = setting4.frontmatterYAML
+      let answ5f = setting5.frontmatterYAML
+      let expAnsw1f = '{"a":23}'
+      let expAnsw2f = '{"a":23,"b":"ja"}'
+      let expAnsw3f = '{"a":23,"d":"ja"}'
+      let expAnsw4f = '{"a":23,"d":"ja"}'
+      let expAnsw5f = '{}'
+      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
+      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
+      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
+      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
+      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
+
+    }
+    function getterRenderYAMLTest() {
+      const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {_SPEC: {render: true}, pict: "ja", d: {_SPEC: {render: false}, private: true},}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let answ1 = setting1.renderYAML
+      let answ2 = setting2.renderYAML
+      let answ3 = setting3.renderYAML
+      let answ4 = setting4.renderYAML
+      let expAnsw1 = "{}"
+      let expAnsw2 = '{}'
+      let expAnsw3 = "{}"
+      let expAnsw4 = '{"pict":"ja"}'
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+    }
+    function instanceOfMeTest() {
+      let un
+      let breadcrumbs = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let setting1 = new Setting({},"instanceOfMeTest1",un,un)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",breadcrumbs,un)
+      let type1 = new TypesManager({},"instanceOfMeTest3",breadcrumbs)
+      _.bassert(1,!Setting.instanceOfMe(breadcrumbs),"BreadCrumbs instance should not be an instance of Setting")
+      _.bassert(2,!Setting.instanceOfMe(new Error()),"Error instance should not be an instance of Setting")
+      _.bassert(3,Setting.instanceOfMe(setting1),"Setting instance should be an instance of Setting")
+      _.bassert(4,!Setting.instanceOfMe("Setting"),"String should not be an instance of Setting")
+      _.bassert(5,!Setting.instanceOfMe(spec1),"SpecManager should not be an instance of Setting")
+      _.bassert(6,!Setting.instanceOfMe(type1),"TypesManager should not be an instance of Setting")
     }
     function constructorTest() {
       let un
-      _.shouldAssert(1, _tryConstruct, un, un, un, un, "msg")
-      _.assert(2, _tryConstruct, {}, "myName")
-      _.assert(3, _tryConstruct, {}, "my Name")
-      _.assert(4, _tryConstruct, {}, "22")
-      _.assert(5, _tryConstruct, {}, Symbol("a"))
-      let setting = new Setting({}, "myName")
-      _.bassert(6,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
-      _.bassert(7,setting.constructor == Setting,"the constructor property is not 'Setting'")
+      let b = new BreadCrumbs(un, "constructorTest", un)
+      let sp = new SpecManager({}, "constructorTest1", b, un)
+      let st = new Setting({}, "constructorTest1", un, un)
+      _.assert(1,_tryConstruct,{},"cTest1",un,un,"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",un,un,"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",un,un,"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",un,un,"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",un,un,"should not be created, literal is null")
+      _.assert(6,_tryConstruct,{},un,un,un,"should be created, undefined key is ok")
+      _.shouldAssert(7,_tryConstruct,{},22,un,un,"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},un,un,"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},b,un,un,"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),un,un,"should be created, key is Symbol")
+      _.assert(11,_tryConstruct,{},"cTest11",un,un,"should  be created, undefined parent is ok")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),un,"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},un,"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring",un,"should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,un,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,un,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",b,un,"should not be be created, parent is BreadCrumbs")
+      _.assert(18,_tryConstruct,{},"cTest18",un,sp,"should be created, parentsSpec is SpecManager")
+      _.shouldAssert(19,_tryConstruct,{},"cTest19",un,b,"should not be created, parentsSpec is BreadCrumbs")
+      _.shouldAssert(20,_tryConstruct,{},"cTest20",un,{},"should not be created, parentsSpec is object")
+      _.shouldAssert(21,_tryConstruct,{},"cTest21",un,"SpecManager","should not be created, parentsSpec is string")
+      let setting = new Setting({},"constructorTest101")
+      _.bassert(101,setting instanceof Object,"'Setting' has to be an instance of 'Object'")
+      _.bassert(102,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,setting instanceof Setting,"'Setting' has to be an instance of 'Setting'")
+      _.bassert(104,setting.constructor == Setting,"the constructor property is not 'Setting'")
     }
     function toStringTest() {
-      let str = new Setting({}).toString()
-        _.bassert(1,str.contains(Setting.#ROOT_KEY),"result does not contain root string")
-        str = new Setting({}, "my Name").toString()
-        _.bassert(2,str.contains("my Name"),"result does not contain Setting key")
-        let setting = new Setting({}, "my Name")
+      let un
+      let setting1 = new Setting({},"toStringTest1",un,un)
+      _.bassert(1,setting1.toString().contains("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,setting1.toString().contains("Setting"),"result does not contain class string"    )
     }
-    function isHandlersKeyTest() {
-      //_.bassert(1,Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't")
-      _.bassert(2,Setting.#isHandlersKey(TypesManager.TYPES_KEY),TypesManager.TYPES_KEY +  " should be recognized as handler key,but isn't")
-      _.bassert(3,!Setting.#isHandlersKey(TypesManager.keys[0]),TypesManager.keys[0] +  " should not be recognized as handlers key,but is")
-      _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
-      _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
-      _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
-      _.bassert(7,!Setting.#isHandlersKey(),"no argument should not be recognized as handlers key,but is")
+    function isOfTypeTest() {
+      let un
+      let setting1 = new Setting({},"isOfTypeTest1",un,un)
+      _.bassert(1,BreadCrumbs.isOfType(setting1,"object"), "'" + setting1 + "' should be of type " + "object")
+      _.bassert(2,BreadCrumbs.isOfType(setting1,"Object"), "'" + setting1 + "' should be of type " + "Object")
+      _.bassert(3,BreadCrumbs.isOfType(setting1,"BreadCrumbs"), "'" + setting1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4,BreadCrumbs.isOfType(setting1,"Setting"), "'" + setting1 + "' should be of type " + "Setting")
+      _.bassert(5,!BreadCrumbs.isOfType(setting1,"Error"), "'" + setting1 + "' should not be of type " + "Error")
+      _.bassert(6,!BreadCrumbs.isOfType(setting1,"SpecManager"), "'" + setting1 + "' should not be of type " + "SpecManager")
+      _.bassert(7,!BreadCrumbs.isOfType(setting1,"TypesManager"), "'" + setting1 + "' should not be of type " + "TypesManager")
     }
     function getFrontmatterYAMLTest() {
       const lit1 = {a: 23}
       const lit2 = {a: 23, b: "ja"}
       const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
       const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja", d: {_SPEC: {render: false}, x: "y"}}}
       let setting1 = new Setting(lit1)
       let setting2 = new Setting(lit2)
       let setting3 = new Setting(lit3)
@@ -2134,7 +2258,7 @@ class Setting extends BreadCrumbs {
       let expAnsw2f = '{"a":23,"b":"ja"}'
       let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
       let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
-      let expAnsw5f = '{"a":23}'
+      let expAnsw5f = '{"a":23,"x":"y"}'
       _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
       _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
       _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
@@ -2145,29 +2269,83 @@ class Setting extends BreadCrumbs {
       const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
       const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
       const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
-      let setting1 = new Setting(lit1)
-      let setting2 = new Setting(lit2)
-      let setting3 = new Setting(lit3)
-      let answ1 = setting1.getRenderYAML()
-      let answ2 = setting2.getRenderYAML()
-      let answ3 = setting3.getRenderYAML()
-      let expAnsw1 = "{}"
-      let expAnsw2 = '{"pict":"ja"}'
-      let expAnsw3 = "{}"
-      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
-      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
-      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
-      const lit6 = {
+      const lit4 = {
         c: {
           _SPEC: {render: true},
           pict: "ja",
-          d: {_SPEC: {render: false}, private: true},
+          d: {_SPEC: {render: false}, 
+             private: true,
+             x: {
+              _SPEC: {render: true}, 
+              y:"z"
+             }
+          },
         },
       }
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let answ1 = setting1.getRenderYAML()
+      let answ2 = setting2.getRenderYAML()
+      let answ3 = setting3.getRenderYAML()
+      let answ4 = setting4.getRenderYAML()
+      let expAnsw1 = "{}"
+      let expAnsw2 = '{"pict":"ja"}'
+      let expAnsw3 = "{}"
+      let expAnsw4 = '{"pict":"ja","y":"z"}'
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+    }
+    function getTypeTest() {
+      let lit1 = {}
+      let lit2 = {SPEC: {render: true},a:1}
+      let lit3 = {NOTETYPES: {}}
+      let lit4 = {NOTETYPES: {diary:{}}}
+      let lit5 = {NOTETYPES: {diary:{MARKER: "d"}}}
+      let lit6 = {NOTETYPES: {diary:{DATE: true,},cit:{},book:{MARKER: "b"}}}
+      let lit7 = {a: {SPEC: {render: true},NOTETYPES: {diary:{}},x:"y"}}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let setting5 = new Setting(lit5)
       let setting6 = new Setting(lit6)
-      let answ6r = setting6.getRenderYAML()
-      let expAnsw6r = '{"pict":"ja"}'
-      _.bassert(5,JSON.stringify(answ6r) == expAnsw6r,`output of JSON.stringify(result) is:'${JSON.stringify(answ6r)}',but should be:'${expAnsw6r}'`)
+      let setting7 = new Setting(lit7)
+      let answ1 = setting1.getType(1)
+      let answ2 = setting2.getType("a")
+      let answ3 = setting3.getType(new Error)
+      let answ4 = setting4.getType("diary")
+      let answ5 = setting5.getType("diary")
+      let answ6 = setting6.getType("book")
+      let answ7 = setting7.getType("diary")
+      let expAnsw1 = JSON.stringify(TypesManager.defaultType)
+      let expAnsw2 = JSON.stringify(TypesManager.defaultType)
+      let expAnsw3 = JSON.stringify(TypesManager.defaultType)
+      let expAnsw4 = JSON.stringify(TypesManager.defaultType)
+      let expAnsw5 = '{"MARKER":"d","DATE":false,"TITLE_BEFORE_DATE":"","DATEFORMAT":"YYYY-MM-DD"}'
+      let expAnsw6 = '{"MARKER":"b","DATE":false,"TITLE_BEFORE_DATE":"","DATEFORMAT":"YYYY-MM-DD"}'
+      let expAnsw7 = JSON.stringify(TypesManager.defaultType)
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+      _.bassert(5,JSON.stringify(answ5) == expAnsw5,`output of JSON.stringify(result) is:'${JSON.stringify(answ5)}',but should be:'${expAnsw5}'`)
+      _.bassert(6,JSON.stringify(answ6) == expAnsw6,`output of JSON.stringify(result) is:'${JSON.stringify(answ6)}',but should be:'${expAnsw6}'`)
+      _.bassert(7,JSON.stringify(answ7) == expAnsw7,`output of JSON.stringify(result) is:'${JSON.stringify(answ7)}',but should be:'${expAnsw7}'`)
+    }
+    function isHandlersKeyTest() {
+      _.bassert(1,Setting.#isHandlersKey(SpecManager.handlerKey),SpecManager.handlerKey + " should be recognized as handler key,but isn't")
+      _.bassert(2,Setting.#isHandlersKey(TypesManager.handlerKey),TypesManager.handlerKey +  " should be recognized as handler key,but isn't")
+      _.bassert(3,!Setting.#isHandlersKey(TypesManager.keys[0]),TypesManager.keys[0] +  " should not be recognized as handlers key,but is")
+      _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
+      _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
+      _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
+      _.bassert(7,!Setting.#isHandlersKey(),"no argument should not be recognized as handlers key,but is")
+      _.bassert(8,!Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't")
+      _.bassert(9,!Setting.#isHandlersKey(TypesManager.TYPES_KEY),TypesManager.TYPES_KEY +  " should be recognized as handler key,but isn't")
     }
     function _tryConstruct(arg1, arg2, arg3, arg4) {
       new Setting(arg1, arg2, arg3, arg4)
@@ -2175,7 +2353,7 @@ class Setting extends BreadCrumbs {
   }
 }
 //#endregion code
-/** Runs all tests,if TESTING is set output to current note (indirect)
+/** Runs all tests,if TESTING is set; output to current note (indirect)
  * @param {*} outputObj
  */
 function test(outputObj) {
@@ -2208,6 +2386,7 @@ async function createNote(tp, setting) {
   }
   return Dialog.Ok
 }
+
 /** exported function
  * @param {Object} tp - templater object
  * @param {Object} app - obsidian api object
@@ -2219,7 +2398,7 @@ async function main(tp, app) {
   let frontmatterYAML = {}
   let renderYAML = {____: ""}
   try {
-    let setting = new Setting(Test, undefined, undefined)
+    let setting = new Setting(Test)
     await createNote(tp, setting)
     frontmatterYAML = setting.frontmatterYAML
     Object.assign(renderYAML, setting.renderYAML)
@@ -2260,7 +2439,6 @@ async function main(tp, app) {
 
   let developCheck = false
   if (developCheck) {
-    let setting = new Setting()
     let developYAML = {}
     let e = new Event()
     e["key"] = "val"
