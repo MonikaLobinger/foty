@@ -440,7 +440,6 @@ class TestSuite {
   bassert(errcase, isTrue, message) {
     TestSuite.#totalCases++
     this.#cases++
-    //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
     if (!isTrue) {
       this.#asserts++
       console.log(
@@ -459,7 +458,6 @@ class TestSuite {
     TestSuite.#totalCases++
     this.#cases++
     try {
-      //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
       fn(...params)
     } catch (err) {
       this.#asserts++
@@ -481,7 +479,6 @@ class TestSuite {
     let hasAsserted = false
     let message = params.pop()
     try {
-      //aut(`${this.#name}/${this.#fname}/${errcase}`) // @remove
       fn(...params)
     } catch (err) {
       hasAsserted = true
@@ -1314,7 +1311,11 @@ class BreadCrumbs {
   }
 }
 
-/** dialog settings parser */
+/** dialog settings parser
+ * @classdesc
+ * Mainly for translation of strings used in dialogs
+ * Some other values can be set there two, e.g. max length of drop down lists
+ */
 class DialogManager extends BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
@@ -1384,11 +1385,25 @@ class DialogManager extends BreadCrumbs {
         )
       switch (key) {
         case "TYPE_MAX_ENTRIES":
-          this.throwIfNotOfType(value, "number")
+          this.throwIfNotOfType(
+            value,
+            "number",
+            "constructor",
+            `'${key}: ${value}' - value has wrong type.
+  Value of ${key} has to be of type 'number'.
+  Change value of ${key} to a`
+          )
           this.#TYPE_MAX_ENTRIES = value
           break
         case "TYPE_PROMPT":
-          this.throwIfNotOfType(value, "string")
+          this.throwIfNotOfType(
+            value,
+            "string",
+            "constructor",
+            `'${key}: ${value}' - value has wrong type.
+  Value of ${key} has to be of type 'string'.
+  Change value of ${key} to a`
+          )
           this.#TYPE_PROMPT = value
           break
       }
@@ -1582,7 +1597,7 @@ class SpecManager extends BreadCrumbs {
     this.throwIfUndefined(parent, "parent")
     // parent {(Undefined|BreadCrumbs)} checked by superclass
     this.throwIfNotOfType(grandParentsSpec, ["undefined", "SpecManager"])
-    this.#setOptionRENDER(grandParentsSpec)
+    this.#setOptionRENDERorThrow(grandParentsSpec)
   }
 
   /** Returns whether arg is instance of SpecManager
@@ -1600,7 +1615,22 @@ class SpecManager extends BreadCrumbs {
    * as fallback it uses default value, which is false
    * @param {(Undefined|Object)} grandParentsSpec
    */
-  #setOptionRENDER(grandParentsSpec) {
+  #setOptionRENDERorThrow(grandParentsSpec) {
+    aut(this.literal)
+    if (
+      BreadCrumbs.isDefined(this.literal) &&
+      BreadCrumbs.isDefined(this.literal.RENDER)
+    ) {
+      this.throwIfNotOfType(
+        this.literal["RENDER"],
+        "boolean",
+        "#setOptionRENDERorThrow",
+        `'RENDER: ${this.literal["RENDER"]}' - value has wrong type.
+Value of RENDER has to be of type 'boolean'.
+Change value of RENDER to a`
+      )
+    }
+
     let defaultRender = false
     let literalRender = BreadCrumbs.isDefined(this.literal)
       ? this.literal["RENDER"]
@@ -1629,7 +1659,7 @@ class SpecManager extends BreadCrumbs {
       _.run(constructorTest)
       _.run(toStringTest)
       _.run(isOfTypeTest)
-      _.run(setOptionRENDERTest)      
+      _.run(setOptionRENDERorThrowTest)      
       _.destruct()
       _ = null
     }
@@ -1667,7 +1697,7 @@ class SpecManager extends BreadCrumbs {
     }
     function getterRENDERTest() {
       /* At moment of creation of this test, it is a copy of
-       * setOptionRENDERTest, because #RENDER is a private member, no setter
+       * setOptionRENDERorThrowTest, because #RENDER is a private member, no setter
        * exists, #RENDER will only be set on construction and never change later
        * But code can change, so the test is added nevertheless */
       let un
@@ -1753,17 +1783,17 @@ class SpecManager extends BreadCrumbs {
       _.bassert(5,!BreadCrumbs.isOfType(spec1,"Error"), "'" + spec1 + "' should not be of type " + "Error")
       _.bassert(6,!BreadCrumbs.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should not be of type " + "TypesManager")
     }
-    function setOptionRENDERTest() {
+    function setOptionRENDERorThrowTest() {
       let un
-      let parent = new BreadCrumbs(un, "setOptionRENDERTest", un)
+      let parent = new BreadCrumbs(un, "setOptionRENDERorThrowTest", un)
       let spec1 = new SpecManager({},"setOptionRRENDERTest1",parent,un)
-      let specFalse = new SpecManager({RENDER:false},"setOptionRENDERTest2",parent,un)
-      let specTrue = new SpecManager({RENDER:true},"setOptionRENDERTest3",parent,un)
-      let spec2 = new SpecManager({},"setOptionRENDERTest4",parent,specFalse)
-      let spec3 = new SpecManager({},"setOptionRENDERTest5",parent,specTrue)
-      let spec4 = new SpecManager({RENDER:false},"setOptionRENDERTest6",parent,specFalse)
-      let spec5 = new SpecManager({RENDER:true},"setOptionRENDERTest7",parent,specFalse)
-      let spec6 = new SpecManager({RENDER:false},"setOptionRENDERTest8",parent,specTrue)
+      let specFalse = new SpecManager({RENDER:false},"setOptionRENDERorThrowTest2",parent,un)
+      let specTrue = new SpecManager({RENDER:true},"setOptionRENDERorThrowTest3",parent,un)
+      let spec2 = new SpecManager({},"setOptionRENDERorThrowTest4",parent,specFalse)
+      let spec3 = new SpecManager({},"setOptionRENDERorThrowTest5",parent,specTrue)
+      let spec4 = new SpecManager({RENDER:false},"setOptionRENDERorThrowTest6",parent,specFalse)
+      let spec5 = new SpecManager({RENDER:true},"setOptionRENDERorThrowTest7",parent,specFalse)
+      let spec6 = new SpecManager({RENDER:false},"setOptionRENDERorThrowTest8",parent,specTrue)
       let spec7 = new SpecManager({RENDER:true},"setOptionRenderTest9",parent,specTrue)
 
       _.bassert(1,BreadCrumbs.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
@@ -1881,7 +1911,14 @@ class TypesManager extends BreadCrumbs {
    */
   #createNoteTypesOrThrow() {
     for (const [name, entry] of Object.entries(this.literal)) {
-      this.throwIfNotOfType(entry, "object")
+      this.throwIfNotOfType(
+        entry,
+        "Object",
+        "#createNoteTypesOrThrow",
+        `'${name}: ${entry}' - value has wrong type.
+Value of ${name} has to be of type 'Object'.
+Change value of ${name} to a`
+      )
       for (const [key, value] of Object.entries(entry)) {
         let allowedKeys = TypesManager.tnames
         if (!allowedKeys.includes(key))
@@ -1900,12 +1937,26 @@ class TypesManager extends BreadCrumbs {
           )
         switch (key) {
           case "DATE":
-            this.throwIfNotOfType(value, "boolean")
+            this.throwIfNotOfType(
+              value,
+              "boolean",
+              "#createNoteTypesOrThrow",
+              `'${key}: ${value}' - value has wrong type.
+  Value of ${key} has to be of type 'boolean'.
+  Change value of ${key} to a`
+            )
             break
           case "MARKER":
           case "TITLE_BEFORE_DATE":
           case "DATEFORMAT":
-            this.throwIfNotOfType(value, "string")
+            this.throwIfNotOfType(
+              value,
+              "string",
+              "#createNoteTypesOrThrow",
+              `'${key}: ${value}' - value has wrong type.
+  Value of ${key} has to be of type 'string'.
+  Change value of ${key} to a`
+            )
             break
         }
       }
@@ -1992,7 +2043,7 @@ class TypesManager extends BreadCrumbs {
     }
     function getterNotetypesTest() {
       let un
-      let p = new BreadCrumbs(un, "setOptionRENDERTest", un)
+      let p = new BreadCrumbs(un, "getterNotetypesTest", un)
       let lit1 = {}
       let lit2 = {diary: {}}
       let lit3 = {book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
@@ -2110,7 +2161,7 @@ class TypesManager extends BreadCrumbs {
     }
     function createNoteTypesOrThrowTest() {
       let un
-      let p = new BreadCrumbs(un, "setOptionRENDERTest", un)
+      let p = new BreadCrumbs(un, "createNoteTypesOrThrowTest", un)
       let types1 = new TypesManager({},"TT0",p)
       let ok1 = {}
       let ok2 = {diary: {}}
@@ -2178,6 +2229,11 @@ class TypesManager extends BreadCrumbs {
   }
 }
 
+/** folder to types parser
+ * @classdesc
+ * maps notetypes to folder names
+ */
+class FoTyManager extends BreadCrumbs {}
 /** setting parser; traverses deep literal to flat output
  * @classdesc
  * Setting is the only subclass which should be constructed from outside, with
@@ -2216,6 +2272,7 @@ class Setting extends BreadCrumbs {
   get renderYAML() {
     return this.#renderYAML
   }
+  /** Returns Dialog settings */
   get dlg() {
     return this.#dlg
   }
@@ -2702,6 +2759,7 @@ async function createNote(tp, setting) {
       return Dialog.Cancel
     } else {
       type = setting.getType(typekey)
+      aut(type)
     }
   }
   return Dialog.Ok
