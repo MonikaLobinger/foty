@@ -92,21 +92,34 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
 //  #region USER CONFIGURATION
 //  #endregion USER CONFIGURATION
 //  #region test configurations
-//   Specification options:
-//   - render
-//     default: false, as long as not set
-//              if set, the value will be inherited by contained collections
-//              as long as set again
-const TYPE_PROMPT = "Typ wählen"
-const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
+/**
+ * Defaults:
+ *   type: no general default
+ *   default: no general default
+ *   onlyRoot: false
+ *   overWriteable: true (descendants can set another value)
+ *                       (makes no sense with onlyRoot)
+ *   inherited: true (makes no sense with onlyRoot)
+ *
+ * __DIALOGSETTINGS: onlyRoot: true,
+ * __NOTETYPES: onlyRoot: true,
+ * __FOLDER2TYPE: onlyRoot: true
+ * __SPEC:
+ * RENDER:
+ *
+ */
 const Test = {
+  __DIALOGSETTINGS: {
+    TYPE_PROMPT: "Typ wählen",
+    TYPE_MAX_ENTRIES: 10, // Max entries in "type" drop down list
+  },
   /*
-  FOLDER2TYPE: {
+  __FOLDER2TYPE: {
     diary: ["diary"],
     others: ["citation"],
   },
   */
-  NOTETYPES: {
+  __NOTETYPES: {
     diary: {
       MARKER: "",
       DATE: true,
@@ -119,10 +132,10 @@ const Test = {
   // => in frontmatter section
   // a:23
   c: {
-    _SPEC: {render: true},
+    __SPEC: {RENDER: true},
     pict: "ja",
     d: {
-      _SPEC: {render: false},
+      __SPEC: {RENDER: false},
       d: {
         gloria: "halleluja",
       },
@@ -139,7 +152,7 @@ const Test2 = {
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
-const TESTING = true
+const TESTING = false
 if (TESTING) DEBUG = false
 // nach @todo und @remove suchen
 
@@ -184,7 +197,21 @@ function dbg(...strs) {
  * @param {String} c - foreground color
  */
 function aut(str, b = "yellow", c = "red") {
-  console.log("%c" + str, `background:${b};color:${c};font-weight:normal`)
+  if (typeof str == "object") {
+    let entries = Object.entries(str)
+    if (entries.length == 0) {
+      console.log("%c" + str, `background:${b};color:${c};font-weight:normal`)
+    } else {
+      entries.forEach(([key, value]) => {
+        console.log(
+          `%c${key}: ${value}`,
+          `background:${b};color:${c};font-weight:normal`
+        )
+      })
+    }
+  } else {
+    console.log("%c" + str, `background:${b};color:${c};font-weight:normal`)
+  }
 }
 
 /** logs 'vn' and 'v' colored to console
@@ -574,7 +601,7 @@ class Event {
   }
   static toStringTest() {
     let str = new Event("eventname").toString()
-    Event._.bassert(1, str.contains("eventname"), "does not contain Event name")
+    Event._.bassert(1, str.includes("eventname"), "does not contain Event name")
   }
   static registerCallbackTest() {
     let e = new Error()
@@ -646,7 +673,7 @@ class Dispatcher {
     let str = new Dispatcher().toString()
     Dispatcher._.bassert(
       1,
-      str.contains("°°"),
+      str.includes("°°"),
       "does not contain module mark °°"
     )
   }
@@ -758,9 +785,9 @@ class BreadCrumbs {
   //#endregion member variables
   /** Constructs a new BreadCrumbs and registers its type once
    * @constructor
-   * @param {Undefined|Object} literal
-   * @param {String|Symbol} key
-   * @param {Undefined|BreadCrumbs} parent
+   * @param {(Undefined|Object)} literal
+   * @param {(String|Symbol)} key
+   * @param {(Undefined|BreadCrumbs)} parent
    * @throws {SettingError} on wrong parameter types
    */
   constructor(literal, key, parent) {
@@ -1043,11 +1070,11 @@ class BreadCrumbs {
     }
     function toStringTest() {
       let str = new BreadCrumbs(undefined, "my name11").toString()
-      _.bassert(1,str.contains("my name11"),"result does not contain name given on construction")
-      _.bassert(2,str.contains("BreadCrumbs"),"result does not contain class name")
+      _.bassert(1,str.includes("my name11"),"result does not contain name given on construction")
+      _.bassert(2,str.includes("BreadCrumbs"),"result does not contain class name")
       str = new BreadCrumbs({},"myName20").toString()
-      _.bassert(3,str.contains("myName20"),"result does not contain name given on construction")
-      _.bassert(4,str.contains("BreadCrumbs"),"result does not contain class name")
+      _.bassert(3,str.includes("myName20"),"result does not contain name given on construction")
+      _.bassert(4,str.includes("BreadCrumbs"),"result does not contain class name")
     }
     function toBreadCrumbsTest() {
       let parent = new BreadCrumbs(undefined, "parent1")
@@ -1287,19 +1314,219 @@ class BreadCrumbs {
   }
 }
 
+/** dialog settings parser */
+class DialogManager extends BreadCrumbs {
+  //#region member variables
+  static #instanceCounter = 0
+  static #DIALOG_KEY = "__DIALOGSETTINGS"
+  static #NAMES = ["TYPE_PROMPT", "TYPE_MAX_ENTRIES"]
+  static #DEFAULTS = {
+    TYPE_PROMPT: "Choose Type",
+    TYPE_MAX_ENTRIES: 10,
+  }
+  #TYPE_PROMPT = DialogManager.#DEFAULTS.TYPE_PROMPT
+  #TYPE_MAX_ENTRIES = DialogManager.#DEFAULTS.TYPE_MAX_ENTRIES
+  /** Returns key for entry handled by DialogManager
+   * @returns {String}
+   */
+  static get handlerKey() {
+    return DialogManager.#DIALOG_KEY
+  }
+  /** Returns keys DialogManager manages
+   * @returns @returns {Array.<String>}
+   */
+  static get names() {
+    return DialogManager.#NAMES
+  }
+  /** Returns default values of keys
+   * @returns {Object.<String.*>}
+   */
+  static get defaults() {
+    return DialogManager.#DEFAULTS
+  }
+  get TYPE_PROMPT() {
+    return this.#TYPE_PROMPT
+  }
+  get TYPE_MAX_ENTRIES() {
+    return this.#TYPE_MAX_ENTRIES
+  }
+  //#endregion member variables
+  /** Constructs a new DialogManager and registers its type once
+   * @constructor
+   * @param {(Object|Object.<String.*>)} literal - key have to be from #NAMES
+   * @param {(String|Symbol)} key
+   * @param {BreadCrumbs} parent
+   * @throws {SettingError} on wrong parameter types
+   */
+  constructor(literal, key, parent) {
+    super(literal, key, parent)
+    if (!DialogManager.#instanceCounter++) this.objTypes = "DialogManager"
+    this.throwIfUndefined(literal, "literal")
+    // literal {(Undefined|Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    // parent {(Undefined|BreadCrumbs)} checked by superclass
+
+    for (const [key, value] of Object.entries(this.literal)) {
+      if (!DialogManager.#NAMES.includes(key))
+        throw new SettingError(
+          this.constructor.name + " " + constructor,
+          "Breadcrumbs: '" +
+            this.toBreadcrumbs() +
+            "'\n   '" +
+            key +
+            "' is no known dialog settings name." +
+            "\n    Remove unknown name from your dialog settings." +
+            "\n   " +
+            "Known names are: '" +
+            DialogManager.#NAMES +
+            "'"
+        )
+      switch (key) {
+        case "TYPE_MAX_ENTRIES":
+          this.throwIfNotOfType(value, "number")
+          this.#TYPE_MAX_ENTRIES = value
+          break
+        case "TYPE_PROMPT":
+          this.throwIfNotOfType(value, "string")
+          this.#TYPE_PROMPT = value
+          break
+      }
+    }
+  }
+
+  /** Returns whether arg is instance of DialogManager
+   * @param {Object} arg
+   * @returns {Boolean}
+   */
+  static instanceOfMe(arg) {
+    return arg instanceof DialogManager
+  }
+
+  // prettier-ignore
+  static test(outputObj) { // DialogManager
+    let _ = null
+    if(_ = new TestSuite("DialogManager", outputObj)) {
+      _.run(getterHandlerKeyTest)
+      _.run(getterLiteralTest)
+      _.run(getterNamesTest)
+      _.run(getterDefaultsTest)
+      _.run(instanceOfMeTest)
+      _.run(constructorTest)
+      _.run(toStringTest)
+      _.run(isOfTypeTest)
+      _.destruct()
+      _ = null
+    }
+    function getterHandlerKeyTest() {
+      _.bassert(1,DialogManager.handlerKey == "__DIALOGSETTINGS")
+      _.bassert(2,DialogManager.handlerKey != "DIALOG_SETTINGS")
+    }
+    function getterLiteralTest() {
+      let un
+      let parent = new BreadCrumbs(un, "getterLiteralTest", un)
+      let sym = Symbol("a")
+      let dlgMan1 = new DialogManager({},"getterLiteralTest02",parent)
+      let dlgMan2 = new DialogManager({TYPE_PROMPT: "ēlige!"},"getterLiteralTest03",parent)
+      let dlgMan3 = new DialogManager({"TYPE_MAX_ENTRIES": 12},"getterLiteralTest04",parent)
+      let dlgMan4 = new DialogManager({"TYPE_PROMPT": "choose!"},"getterLiteralTest05",parent)
+      let dlgMan5 = new DialogManager({"TYPE_MAX_ENTRIES": 13},"getterLiteralTest06",parent)
+      let dlgMan6 = new DialogManager({"TYPE_PROMPT": "wähle!", "TYPE_MAX_ENTRIES": 14},"getterLiteralTest07",parent)
+      let lit1 = dlgMan1.literal
+      let lit2 = dlgMan2.literal
+      let lit3 = dlgMan3.literal
+      let lit4 = dlgMan4.literal
+      let lit5 = dlgMan5.literal
+      let lit6 = dlgMan6.literal
+      _.bassert(1,Object.keys(lit1).length == 0,"literal should be empty as given")
+      _.bassert(2,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
+    }
+    function getterNamesTest() {
+      let names = DialogManager.names
+      _.bassert(1,BreadCrumbs.isOfType(names,"Array"),"should return an array")
+      _.bassert(2,names.includes("TYPE_PROMPT"),"should contain 'TYPE_PROMPT'")
+      _.bassert(3,names.includes("TYPE_MAX_ENTRIES"),"should contain 'TYPE_MAX_ENTRIES'")
+      _.bassert(5,names.every((entry) => {return null == entry.match(/[a-z]/)}),"keys should be completely uppercase")
+    }
+    function getterDefaultsTest() {    
+      let defs = DialogManager.defaults
+      _.bassert(1, BreadCrumbs.isOfType(defs,"object","should be an object"))
+      let defTypeKeys = Object.keys(defs)
+      let names = DialogManager.names
+      _.bassert(2,defTypeKeys.length == names.length,"Default type should contain as many names as there are in TypesManager.keys")
+      _.bassert(3,defTypeKeys.every(key => names.includes(key)),"Each name should be given in DialogManager.names")
+    }
+    function instanceOfMeTest() {
+      let un
+      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let dlg1 = new DialogManager({},"instanceOfMeTest1",parent)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      _.bassert(1,!DialogManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of DialogManager")
+      _.bassert(2,!DialogManager.instanceOfMe(new Error()),"Error instance should not be an instance of DialogManager")
+      _.bassert(3,DialogManager.instanceOfMe(dlg1),"DialogManager instance should be an instance of DialogManager")
+      _.bassert(4,!DialogManager.instanceOfMe("DialogManager"),"String should not be an instance of DialogManager")
+      _.bassert(5,!DialogManager.instanceOfMe(spec1),"SpecManager should not be an instance of DialogManager")
+    }
+    function constructorTest() {
+      let un
+      let p = new BreadCrumbs(un, "constructorTest", un)
+      let dlg = new DialogManager({}, "constructorTest1", p)
+      _.assert(1,_tryConstruct,{},"cTest1",p,"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",p,"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",p,"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",p,"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",p,"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,p,"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,p,"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},p,"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},p,p,"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),p,"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"cTest11",un,"should not be be created, parent is undefined")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,"should not be be created, parent is null")
+
+      let dialogManager = new DialogManager({},"constructorTest101",p)
+      _.bassert(101,dialogManager instanceof Object,"'DialogManager' has to be an instance of 'Object'")
+      _.bassert(102,dialogManager instanceof BreadCrumbs,"'DialogManager' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,dialogManager instanceof DialogManager,"'DialogManager' has to be an instance of 'DialogManager'")
+      _.bassert(104,dialogManager.constructor == DialogManager,"the constructor property is not 'DialogManager'")
+    }
+    function toStringTest() {
+      let un
+      let parent = new BreadCrumbs(un, "toStringTest", un)
+      let dlg1 = new DialogManager({},"toStringTest1",parent)
+      _.bassert(1,dlg1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,dlg1.toString().includes("DialogManager"),"result does not contain class string"    )
+    }
+    function isOfTypeTest() {
+      let un
+      let parent = new BreadCrumbs(un, "isOfTypeTest", un)
+      let dlg1 = new DialogManager({},"isOfTypeTest1",parent)
+      _.bassert(1, BreadCrumbs.isOfType(dlg1,"object"), "'" + dlg1 + "' should be of type " + "object")
+      _.bassert(2, BreadCrumbs.isOfType(dlg1,"Object"), "'" + dlg1 + "' should be of type " + "Object")
+      _.bassert(3, BreadCrumbs.isOfType(dlg1,"BreadCrumbs"), "'" + dlg1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4, BreadCrumbs.isOfType(dlg1,"DialogManager"), "'" + dlg1 + "' should be of type " + "DialogManager")
+      _.bassert(5,!BreadCrumbs.isOfType(dlg1,"Error"), "'" + dlg1 + "' should not be of type " + "Error")
+      _.bassert(6,!BreadCrumbs.isOfType(dlg1,"SpecManager"), "'" + dlg1 + "' should not be of type " + "SpecManager")
+    }
+    function _tryConstruct(arg1, arg2, arg3) {
+      new DialogManager(arg1, arg2, arg3)
+    }
+  }
+}
+
 /** specification parser
  * @classdesc
- * Specification entries are literals of key SPEC_KEY '_SPEC'. SpecManager
+ * Specification entries are literals of key SPEC_KEY '__SPEC'. SpecManager
  * parses those literals syntactically - it knows, what entries keys have valid
  * specification keys, it knows the defaults for spec entries, it knows, whether
  * and which way they are inherited.
  *
- * Those keys are valid specification options:
- * - render:
- *           type: Boolean
- *           default: false
- *           inherited: true
- *           overWriteable: true (descendants can set another value)
+ * For valid  specification options call SpecManager.names
+ * For default values of the options call SpecManager.defaults
  *
  * SpecManager provides a getter for each specification option.
  * It provides a getter for its handler key,
@@ -1307,25 +1534,41 @@ class BreadCrumbs {
 class SpecManager extends BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
-  static #SPEC_KEY = "_SPEC"
-  #render = false
+  static #SPEC_KEY = "__SPEC"
+  static #NAMES = ["RENDER"]
+  static #DEFAULTS = {
+    RENDER: false,
+  }
+  #RENDER = false
   /** Returns key for entry handled by SpecManager
    * @returns {String}
    */
   static get handlerKey() {
     return SpecManager.#SPEC_KEY
   }
-  /** Returns render option value calculated from literal, parent and default
+  /** Returns options SpecManager manages
+   * @returns @returns {Array.<String>}
+   */
+  static get names() {
+    return SpecManager.#NAMES
+  }
+  /** Returns default values of options
+   * @returns {Object.<String.*>}
+   */
+  static get defaults() {
+    return SpecManager.#DEFAULTS
+  }
+  /** Returns RENDER option value calculated from literal, parent and default
    * @returns {Boolean}
    */
-  get render() {
-    return this.#render
+  get RENDER() {
+    return this.#RENDER
   }
   //#endregion member variables
   /** Constructs a new SpecManager and registers its type once
    * @constructor
    * @param {Object} literal
-   * @param {String|Symbol} key
+   * @param {(String|Symbol)} key
    * @param {BreadCrumbs} parent
    * @param {(Undefined|SpecManager)} grandParentsSpec
    * @throws {SettingError} on wrong parameter types
@@ -1334,12 +1577,12 @@ class SpecManager extends BreadCrumbs {
     super(literal, key, parent)
     if (!SpecManager.#instanceCounter++) this.objTypes = "SpecManager"
     this.throwIfUndefined(literal, "literal")
-    // literal {undefined|Object} checked by superclass
-    // key {String|Symbol} checked by superclass
+    // literal {(Undefined|Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
     this.throwIfUndefined(parent, "parent")
-    // parent {Undefined|BreadCrumbs} checked by superclass
+    // parent {(Undefined|BreadCrumbs)} checked by superclass
     this.throwIfNotOfType(grandParentsSpec, ["undefined", "SpecManager"])
-    this.#setOptionRender(grandParentsSpec)
+    this.#setOptionRENDER(grandParentsSpec)
   }
 
   /** Returns whether arg is instance of SpecManager
@@ -1350,22 +1593,22 @@ class SpecManager extends BreadCrumbs {
     return arg instanceof SpecManager
   }
 
-  /** Sets render option value for this instance
+  /** Sets RENDER option value for this instance
    *
    * Uses value of literal if value given,
    * if not it uses value of grandParentsSpec if grandParentsSpec given
    * as fallback it uses default value, which is false
    * @param {(Undefined|Object)} grandParentsSpec
    */
-  #setOptionRender(grandParentsSpec) {
+  #setOptionRENDER(grandParentsSpec) {
     let defaultRender = false
     let literalRender = BreadCrumbs.isDefined(this.literal)
-      ? this.literal["render"]
+      ? this.literal["RENDER"]
       : undefined
     let parentRender = BreadCrumbs.isDefined(grandParentsSpec)
-      ? grandParentsSpec["render"]
+      ? grandParentsSpec["RENDER"]
       : undefined
-    this.#render =
+    this.#RENDER =
       literalRender != undefined
         ? literalRender
         : parentRender != undefined
@@ -1379,17 +1622,19 @@ class SpecManager extends BreadCrumbs {
     if(_ = new TestSuite("SpecManager", outputObj)) {
       _.run(getterHandlerKeyTest)
       _.run(getterLiteralTest)
-      _.run(getterRenderTest)
+      _.run(getterNamesTest)
+      _.run(getterDefaultsTest)
+      _.run(getterRENDERTest)
       _.run(instanceOfMeTest)
       _.run(constructorTest)
       _.run(toStringTest)
       _.run(isOfTypeTest)
-      _.run(setOptionRenderTest)      
+      _.run(setOptionRENDERTest)      
       _.destruct()
       _ = null
     }
     function getterHandlerKeyTest() {
-      _.bassert(1,SpecManager.handlerKey == "_SPEC")
+      _.bassert(1,SpecManager.handlerKey == "__SPEC")
       _.bassert(2,SpecManager.handlerKey != "SPEC")
     }
     function getterLiteralTest() {
@@ -1398,42 +1643,55 @@ class SpecManager extends BreadCrumbs {
       let sym = Symbol("a")
       let specMan1 = new SpecManager({},"getterLiteralTest02",parent,un)
       let specMan2 = new SpecManager({sym: "un"},"getterLiteralTest03",parent,un)
-      let specMan3 = new SpecManager({"_SPEC": un},"getterLiteralTest04",parent,un)
+      let specMan3 = new SpecManager({"__SPEC": un},"getterLiteralTest04",parent,un)
       let lit1 = specMan1.literal
       let lit2 = specMan2.literal
       let lit3 = specMan3.literal
       _.bassert(1,lit1,"literal should be empty as given")
       _.bassert(2,lit2.sym == "un","value of Symbol('a') should be 'un' as given")
       _.bassert(3,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(4,BreadCrumbs.isOfType(lit3["_SPEC"],"undefined"),"value of '_SPEC' should be undefined")
+      _.bassert(4,BreadCrumbs.isOfType(lit3["__SPEC"],"undefined"),"value of '__SPEC' should be undefined")
     }
-    function getterRenderTest() {
+    function getterNamesTest() {
+      let names = SpecManager.names
+      _.bassert(1,BreadCrumbs.isDefined(names), "should be defined")
+      _.bassert(2,BreadCrumbs.isOfType(names, "Array"),"should return an array")
+      _.bassert(3,names.includes("RENDER"),"should contain 'RENDER' option")
+    }
+    function getterDefaultsTest() {
+      let defaults = SpecManager.defaults
+      _.bassert(1,BreadCrumbs.isDefined(defaults), "should be defined")
+      _.bassert(2,BreadCrumbs.isOfType(defaults, "Object"),"should return an Object")
+      _.bassert(3,BreadCrumbs.isDefined(defaults.RENDER),"'RENDER' option should be defined")
+      _.bassert(4,BreadCrumbs.isOfType(defaults.RENDER,"boolean"),"'RENDER' option should have a boolean value")
+    }
+    function getterRENDERTest() {
       /* At moment of creation of this test, it is a copy of
-       * setOptionRenderTest, because #render is a private member, no setter
-       * exists, #render will only be set on construction and never change later
+       * setOptionRENDERTest, because #RENDER is a private member, no setter
+       * exists, #RENDER will only be set on construction and never change later
        * But code can change, so the test is added nevertheless */
       let un
-      let parent = new BreadCrumbs(un, "getterRenderTest", un)
-      let spec1 = new SpecManager({},"getterRenderTest1",parent,un)
-      let specFalse = new SpecManager({render:false},"getterRenderTest2",parent,un)
-      let specTrue = new SpecManager({render:true},"getterRenderTest3",parent,un)
-      let spec2 = new SpecManager({},"getterRenderTest1",parent,specFalse)
-      let spec3 = new SpecManager({},"getterRenderTest1",parent,specTrue)
-      let spec4 = new SpecManager({render:false},"getterRenderTest1",parent,specFalse)
-      let spec5 = new SpecManager({render:true},"getterRenderTest1",parent,specFalse)
-      let spec6 = new SpecManager({render:false},"getterRenderTest1",parent,specTrue)
-      let spec7 = new SpecManager({render:true},"getterRenderTest1",parent,specTrue)
+      let parent = new BreadCrumbs(un, "getterRENDERTest", un)
+      let spec1 = new SpecManager({},"getterRENDERTest1",parent,un)
+      let specFalse = new SpecManager({RENDER:false},"getterRENDERTest2",parent,un)
+      let specTrue = new SpecManager({RENDER:true},"getterRENDERTest3",parent,un)
+      let spec2 = new SpecManager({},"getterRENDERrTest1",parent,specFalse)
+      let spec3 = new SpecManager({},"getterRENDERTest1",parent,specTrue)
+      let spec4 = new SpecManager({RENDER:false},"getterRENDERTest1",parent,specFalse)
+      let spec5 = new SpecManager({RENDER:true},"getterRENDERTest1",parent,specFalse)
+      let spec6 = new SpecManager({RENDER:false},"getterRENDERTest1",parent,specTrue)
+      let spec7 = new SpecManager({RENDER:true},"getterRENDERTest1",parent,specTrue)
 
-      _.bassert(1,BreadCrumbs.isDefined(spec1.render),"render should be set, if no specification for it is given")
-      _.bassert(2,spec1.render === false,"render should be false, if no specification for it is given")
-      _.bassert(3,specFalse.render === false,"render should be false, as set in specification")
-      _.bassert(4,specTrue.render === true,"render should be true, as set in specification")
-      _.bassert(5,spec2.render === false,"render should be false, as set in ancestor spec")
-      _.bassert(6,spec3.render === true,"render should be true, as set in ancestor spec")
-      _.bassert(7,spec4.render === false,"render should be false, as set in specification")
-      _.bassert(8,spec5.render === true,"render should be true, as set in specification")
-      _.bassert(9,spec6.render === false,"render should be false, as set in specification")
-      _.bassert(10,spec7.render === true,"render should be true, as set in specification")
+      _.bassert(1,BreadCrumbs.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
+      _.bassert(2,spec1.RENDER === false,"RENDER should be false, if no specification for it is given")
+      _.bassert(3,specFalse.RENDER === false,"RENDER should be false, as set in specification")
+      _.bassert(4,specTrue.RENDER === true,"RENDER should be true, as set in specification")
+      _.bassert(5,spec2.RENDER === false,"RENDER should be false, as set in ancestor spec")
+      _.bassert(6,spec3.RENDER === true,"RENDER should be true, as set in ancestor spec")
+      _.bassert(7,spec4.RENDER === false,"RENDER should be false, as set in specification")
+      _.bassert(8,spec5.RENDER === true,"RENDER should be true, as set in specification")
+      _.bassert(9,spec6.RENDER === false,"RENDER should be false, as set in specification")
+      _.bassert(10,spec7.RENDER === true,"RENDER should be true, as set in specification")
     }
     function instanceOfMeTest() {
       let un
@@ -1481,8 +1739,8 @@ class SpecManager extends BreadCrumbs {
       let un
       let parent = new BreadCrumbs(un, "toStringTest", un)
       let spec1 = new SpecManager({},"toStringTest1",parent,un)
-      _.bassert(1,spec1.toString().contains("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,spec1.toString().contains("SpecManager"),"result does not contain class string"    )
+      _.bassert(1,spec1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,spec1.toString().includes("SpecManager"),"result does not contain class string"    )
     }
     function isOfTypeTest() {
       let un
@@ -1495,29 +1753,29 @@ class SpecManager extends BreadCrumbs {
       _.bassert(5,!BreadCrumbs.isOfType(spec1,"Error"), "'" + spec1 + "' should not be of type " + "Error")
       _.bassert(6,!BreadCrumbs.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should not be of type " + "TypesManager")
     }
-    function setOptionRenderTest() {
+    function setOptionRENDERTest() {
       let un
-      let parent = new BreadCrumbs(un, "setOptionRenderTest", un)
-      let spec1 = new SpecManager({},"setOptionRenderTest1",parent,un)
-      let specFalse = new SpecManager({render:false},"setOptionRenderTest2",parent,un)
-      let specTrue = new SpecManager({render:true},"setOptionRenderTest3",parent,un)
-      let spec2 = new SpecManager({},"setOptionRenderTest4",parent,specFalse)
-      let spec3 = new SpecManager({},"setOptionRenderTest5",parent,specTrue)
-      let spec4 = new SpecManager({render:false},"setOptionRenderTest6",parent,specFalse)
-      let spec5 = new SpecManager({render:true},"setOptionRenderTest7",parent,specFalse)
-      let spec6 = new SpecManager({render:false},"setOptionRenderTest8",parent,specTrue)
-      let spec7 = new SpecManager({render:true},"setOptionRenderTest9",parent,specTrue)
+      let parent = new BreadCrumbs(un, "setOptionRENDERTest", un)
+      let spec1 = new SpecManager({},"setOptionRRENDERTest1",parent,un)
+      let specFalse = new SpecManager({RENDER:false},"setOptionRENDERTest2",parent,un)
+      let specTrue = new SpecManager({RENDER:true},"setOptionRENDERTest3",parent,un)
+      let spec2 = new SpecManager({},"setOptionRENDERTest4",parent,specFalse)
+      let spec3 = new SpecManager({},"setOptionRENDERTest5",parent,specTrue)
+      let spec4 = new SpecManager({RENDER:false},"setOptionRENDERTest6",parent,specFalse)
+      let spec5 = new SpecManager({RENDER:true},"setOptionRENDERTest7",parent,specFalse)
+      let spec6 = new SpecManager({RENDER:false},"setOptionRENDERTest8",parent,specTrue)
+      let spec7 = new SpecManager({RENDER:true},"setOptionRenderTest9",parent,specTrue)
 
-      _.bassert(1,BreadCrumbs.isDefined(spec1.render),"render should be set, if no specification for it is given")
-      _.bassert(2,spec1.render === false,"render should be false, if no specification for it is given")
-      _.bassert(3,specFalse.render === false,"render should be false, as set in specification")
-      _.bassert(4,specTrue.render === true,"render should be true, as set in specification")
-      _.bassert(5,spec2.render === false,"render should be false, as set in ancestor spec")
-      _.bassert(6,spec3.render === true,"render should be true, as set in ancestor spec")
-      _.bassert(7,spec4.render === false,"render should be false, as set in specification")
-      _.bassert(8,spec5.render === true,"render should be true, as set in specification")
-      _.bassert(9,spec6.render === false,"render should be false, as set in specification")
-      _.bassert(10,spec7.render === true,"render should be true, as set in specification")
+      _.bassert(1,BreadCrumbs.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
+      _.bassert(2,spec1.RENDER === false,"RENDER should be false, if no specification for it is given")
+      _.bassert(3,specFalse.RENDER === false,"RENDER should be false, as set in specification")
+      _.bassert(4,specTrue.RENDER === true,"RENDER should be true, as set in specification")
+      _.bassert(5,spec2.RENDER === false,"RENDER should be false, as set in ancestor spec")
+      _.bassert(6,spec3.RENDER === true,"RENDER should be true, as set in ancestor spec")
+      _.bassert(7,spec4.RENDER === false,"RENDER should be false, as set in specification")
+      _.bassert(8,spec5.RENDER === true,"RENDER should be true, as set in specification")
+      _.bassert(9,spec6.RENDER === false,"RENDER should be false, as set in specification")
+      _.bassert(10,spec7.RENDER === true,"RENDER should be true, as set in specification")
     }
     function _tryConstruct(arg1, arg2, arg3, arg4) {
       new SpecManager(arg1, arg2, arg3, arg4)
@@ -1531,17 +1789,11 @@ class SpecManager extends BreadCrumbs {
  * Each notetypes definition describes, what the script gives to template.
  * But script and template is nothing TypesManager knows about.
  *
- * Notetypes have keys, which's values describe how they should behave. An array
- * of these keys can be retrieved with TypesManager.keys
+ * Notetypes have tnames, which's values describe how they should behave. An 
+ * array of valid tnames can be retrieved with TypesManager.tnames
  *
  * Those keys have default values, all together describing a default type. This
  * type can be retrieved with TypesManager.defaultType
- *
- * Valid keys are:
- * - MARKER:            type: String,  default: ""
- * - DATE:              type: Boolean, default: false
- * - TITLE_BEFORE_DATE: type: String,  default: ""
- * - DATEFORMAT:        type: String,  default: "YYYY-MM-DD"
  *
  * Each user defined notetype has a name, an array of those names can be
  * retrieved with this.names.
@@ -1552,12 +1804,15 @@ class SpecManager extends BreadCrumbs {
  *
  * this.notetypes returns all user defined types, each with a full set of
  * keys. Value is user set value, if set or default value, if not set by user.
+ * 
+ * TypesManager provides a getter for its handler key,
+
  */
 class TypesManager extends BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
-  static #TYPES_KEY = "NOTETYPES"
-  static #KEYS = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
+  static #TYPES_KEY = "__NOTETYPES"
+  static #TNAMES = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
   static #DEFAULT_TYPE = {
     MARKER: "",
     DATE: false,
@@ -1574,8 +1829,8 @@ class TypesManager extends BreadCrumbs {
   /** Returns keys a notetype has
    * @returns @returns {Array.<String>}
    */
-  static get keys() {
-    return TypesManager.#KEYS
+  static get tnames() {
+    return TypesManager.#TNAMES
   }
   /** Returns default notetype with all its keys set to default values
    * @returns {Object.<String.*>}
@@ -1598,8 +1853,8 @@ class TypesManager extends BreadCrumbs {
   //#endregion member variables
   /** Constructs a new TypesManager and registers its type once
    * @constructor
-   * @param {Object|Object.<String.Object>|Object.<String.Object.<String.*>>} literal
-   * @param {String|Symbol} key
+   * @param {(Object|Object.<String.Object>|Object.<String.Object.<String.*>>)} literal
+   * @param {(String|Symbol)} key
    * @param {BreadCrumbs} parent
    * @throws {SettingError} on wrong parameter types
    */
@@ -1607,10 +1862,10 @@ class TypesManager extends BreadCrumbs {
     super(literal, key, parent)
     if (!TypesManager.#instanceCounter++) this.objTypes = "TypesManager"
     this.throwIfUndefined(literal, "literal")
-    // literal {undefined|Object} checked by superclass
-    // key {String|Symbol} checked by superclass
+    // literal {(Undefined|Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
     this.throwIfUndefined(parent, "parent")
-    // parent {Undefined|BreadCrumbs} checked by superclass
+    // parent {(Undefined|BreadCrumbs)} checked by superclass
     this.#createNoteTypesOrThrow()
   }
 
@@ -1628,8 +1883,8 @@ class TypesManager extends BreadCrumbs {
     for (const [name, entry] of Object.entries(this.literal)) {
       this.throwIfNotOfType(entry, "object")
       for (const [key, value] of Object.entries(entry)) {
-        let allowedKeys = TypesManager.keys
-        if (!allowedKeys.contains(key))
+        let allowedKeys = TypesManager.tnames
+        if (!allowedKeys.includes(key))
           throw new SettingError(
             this.constructor.name + " " + constructor,
             "Breadcrumbs: '" +
@@ -1668,7 +1923,7 @@ class TypesManager extends BreadCrumbs {
     if(_ = new TestSuite("TypesManager", outputObj)) {
       _.run(getterHandlerKeyTest)
       _.run(getterLiteralTest)
-      _.run(getterKeysTest)
+      _.run(getterTnamesTest)
       _.run(getterDefaultTypeTest)
       _.run(getterNotetypesTest)
       _.run(getterNamesTest)
@@ -1681,8 +1936,8 @@ class TypesManager extends BreadCrumbs {
       _ = null
     }
     function getterHandlerKeyTest() {
-      _.bassert(1,TypesManager.handlerKey == "NOTETYPES")
-      _.bassert(2,TypesManager.handlerKey != "_NOTETYPES")
+      _.bassert(1,TypesManager.handlerKey == "__NOTETYPES")
+      _.bassert(2,TypesManager.handlerKey != "NOTETYPES")
     }
     function getterLiteralTest() {
       let un
@@ -1690,7 +1945,7 @@ class TypesManager extends BreadCrumbs {
       let sym = Symbol("a")
       let typesMan1 = new TypesManager({},"getterLiteralTest02",parent)
       let typesMan2 = new TypesManager({sym: {}},"getterLiteralTest03",parent)
-      let typesMan3 = new TypesManager({"NOTETYPES": {}},"getterLiteralTest04",parent)
+      let typesMan3 = new TypesManager({"__NOTETYPES": {}},"getterLiteralTest04",parent)
       let typesMan4 = new TypesManager({"a": {"MARKER":"2"}},"getterLiteralTest05",parent)
       let typesMan5 = new TypesManager({"a": {"MARKER":"2","DATE":true,}},"getterLiteralTest06",parent)
       let typesMan6 = new TypesManager({"a": {MARKER:"2",DATE:false,},"d": {TITLE_BEFORE_DATE:"abc"}},"getterLiteralTest07",parent)
@@ -1704,7 +1959,7 @@ class TypesManager extends BreadCrumbs {
       _.bassert(2,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
       _.bassert(3,Object.keys(lit2.sym).length == 0,"object assigned to symbol key should be empty as given")
       _.bassert(4,Object.keys(lit3).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(5,Object.keys(lit3.NOTETYPES).length == 0,"object assigned to 'NOTETYPES' key should be empty as given")
+      _.bassert(5,Object.keys(lit3.__NOTETYPES).length == 0,"object assigned to '__NOTETYPES' key should be empty as given")
       _.bassert(6,Object.keys(lit4).length == 1,"only 1 value should be contained, as only one given")
       _.bassert(7,Object.keys(lit4.a).length == 1,"object assigned to 'a' should only contain one entry as only one given")
       _.bassert(8,lit4.a.MARKER === "2","value of a.MARKER should be '2' as given")
@@ -1719,25 +1974,25 @@ class TypesManager extends BreadCrumbs {
       _.bassert(17,lit6.a.DATE === false,"value of a.DATE should be 'false' as given")
       _.bassert(18,lit6.d.TITLE_BEFORE_DATE === "abc","value of d.TITLE_BEFORE_DATE should be 'abc' as given")
     }
-    function getterKeysTest() {
-      let keys = TypesManager.keys
-      _.bassert(1,BreadCrumbs.isOfType(keys,"Array"),"should return an array")
-      _.bassert(2,keys.includes("MARKER"),"should contain 'MARKER'")
-      _.bassert(3,keys.includes("DATE"),"should contain 'DATE'")
-      _.bassert(4,keys.includes("DATEFORMAT"),"should contain 'DATEFORMAT'")
-      _.bassert(5,keys.every((entry) => {return null == entry.match(/[a-z]/)}),"keys should be completely uppercase")
+    function getterTnamesTest() {
+      let tnames = TypesManager.tnames
+      _.bassert(1,BreadCrumbs.isOfType(tnames,"Array"),"should return an array")
+      _.bassert(2,tnames.includes("MARKER"),"should contain 'MARKER'")
+      _.bassert(3,tnames.includes("DATE"),"should contain 'DATE'")
+      _.bassert(4,tnames.includes("DATEFORMAT"),"should contain 'DATEFORMAT'")
+      _.bassert(5,tnames.every((entry) => {return null == entry.match(/[a-z]/)}),"tnames should be completely uppercase")
     }
     function getterDefaultTypeTest() {    
       let defType = TypesManager.defaultType
       _.bassert(1, BreadCrumbs.isOfType(defType,"object","should be an object"))
       let defTypeKeys = Object.keys(defType)
-      let keys = TypesManager.keys
-      _.bassert(2,defTypeKeys.length == keys.length,"Default type should contain as many keys as there are in TypesManager.keys")
-      _.bassert(3,defTypeKeys.every(key => keys.includes(key)),"Each key should be given in TypesManager.keys")
+      let tnames = TypesManager.tnames
+      _.bassert(2,defTypeKeys.length == tnames.length,"Default type should contain as many tnames as there are in TypesManager.tnames")
+      _.bassert(3,defTypeKeys.every(key => tnames.includes(key)),"Each key should be given in TypesManager.tnames")
     }
     function getterNotetypesTest() {
       let un
-      let p = new BreadCrumbs(un, "setOptionRenderTest", un)
+      let p = new BreadCrumbs(un, "setOptionRENDERTest", un)
       let lit1 = {}
       let lit2 = {diary: {}}
       let lit3 = {book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
@@ -1778,24 +2033,24 @@ class TypesManager extends BreadCrumbs {
     }
     function getterNamesTest() {
       let un
-      let parent = new BreadCrumbs(un, "getterKeysTest", un)
-      let typesMan1 = new TypesManager({},"getterKeysTest1",parent)
-      let typesMan2 = new TypesManager({"NOTETYPES": {}},"getterKeysTest3",parent)
-      let typesMan3 = new TypesManager({"a": {"MARKER":"2"}},"getterKeysTest4",parent)
-      let typesMan4 = new TypesManager({"a": {"DATE":false,},"d": {"TITLE_BEFORE_DATE":"abc"},"c": {}},"getterKeysTest5",parent)
+      let parent = new BreadCrumbs(un, "getterNamesTest", un)
+      let typesMan1 = new TypesManager({},"getterNamesTest1",parent)
+      let typesMan2 = new TypesManager({"__NOTETYPES": {}},"getterNamesTest3",parent)
+      let typesMan3 = new TypesManager({"a": {"MARKER":"2"}},"getterNamesTest4",parent)
+      let typesMan4 = new TypesManager({"a": {"DATE":false,},"d": {"TITLE_BEFORE_DATE":"abc"},"c": {}},"getterNamesTest5",parent)
       let names1 = typesMan1.names
       let names2 = typesMan2.names
       let names3 = typesMan3.names
       let names4 = typesMan4.names
-      _.bassert(1,names1.length == 0,"no keys given")
-      _.bassert(2,names2.length == 1,"one key given")
-      _.bassert(3,names2[0] == "NOTETYPES","'NOTETYPES' is the key")
-      _.bassert(4,names3.length == 1,"one key given")
-      _.bassert(5,names3[0] == "a","'a' is the key")
-      _.bassert(6,names4.length == 3,"three keys given")
-      _.bassert(7,names4[0] == "a","'a' is the key")
-      _.bassert(8,names4[1] == "d","'d' is the key")
-      _.bassert(9,names4[2] == "c","'c' is the key")
+      _.bassert(1,names1.length == 0,"no names given")
+      _.bassert(2,names2.length == 1,"one names given")
+      _.bassert(3,names2[0] == "__NOTETYPES","'__NOTETYPES' is the names")
+      _.bassert(4,names3.length == 1,"one name given")
+      _.bassert(5,names3[0] == "a","'a' is the name")
+      _.bassert(6,names4.length == 3,"three names given")
+      _.bassert(7,names4[0] == "a","'a' is the name")
+      _.bassert(8,names4[1] == "d","'d' is the name")
+      _.bassert(9,names4[2] == "c","'c' is the name")
     }
     function instanceOfMeTest() {
       let un
@@ -1839,8 +2094,8 @@ class TypesManager extends BreadCrumbs {
       let un
       let parent = new BreadCrumbs(un, "toStringTest", un)
       let type1 = new TypesManager({},"toStringTest1",parent)
-      _.bassert(1,type1.toString().contains("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,type1.toString().contains("TypesManager"),"result does not contain class string"    )
+      _.bassert(1,type1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,type1.toString().includes("TypesManager"),"result does not contain class string"    )
     }
     function isOfTypeTest() {
       let un
@@ -1855,7 +2110,7 @@ class TypesManager extends BreadCrumbs {
     }
     function createNoteTypesOrThrowTest() {
       let un
-      let p = new BreadCrumbs(un, "setOptionRenderTest", un)
+      let p = new BreadCrumbs(un, "setOptionRENDERTest", un)
       let types1 = new TypesManager({},"TT0",p)
       let ok1 = {}
       let ok2 = {diary: {}}
@@ -1932,8 +2187,6 @@ class TypesManager extends BreadCrumbs {
  * respecting manager configuration rules and removing manager literals from
  * output.
  *
- * only notetypes of root are recognized as notetypes
- *
  */
 class Setting extends BreadCrumbs {
   //#region member variables
@@ -1942,6 +2195,7 @@ class Setting extends BreadCrumbs {
   #children = {}
   #spec = {}
   #types = {}
+  #dlg = {}
   #frontmatterYAML = {}
   #renderYAML = {}
   /** Returns names of notetypes
@@ -1962,6 +2216,9 @@ class Setting extends BreadCrumbs {
   get renderYAML() {
     return this.#renderYAML
   }
+  get dlg() {
+    return this.#dlg
+  }
   //#endregion member variables
   /** Constructs a new Setting and registers its type once
    * @constructor
@@ -1980,9 +2237,9 @@ class Setting extends BreadCrumbs {
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
     if (!Setting.#instanceCounter++) this.objTypes = "Setting"
     this.throwIfUndefined(literal, "literal")
-    // literal {undefined|Object} checked by superclass
-    // key {String|Symbol} checked by superclass
-    // parent {Undefined|BreadCrumbs} checked by superclass
+    // literal {(Undefined|Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    // parent {(Undefined|BreadCrumbs)} checked by superclass
     this.throwIfNotOfType(parent, ["undefined", "Setting"])
     this.throwIfNotOfType(parentsSpec, ["undefined", "SpecManager"])
 
@@ -2000,6 +2257,11 @@ class Setting extends BreadCrumbs {
       if (BreadCrumbs.isDefined(this.literal[TypesManager.handlerKey]))
         types = this.literal[TypesManager.handlerKey]
       this.#types = new TypesManager(types, TypesManager.handlerKey, this)
+
+      let dlg = {}
+      if (BreadCrumbs.isDefined(this.literal[DialogManager.handlerKey]))
+        dlg = this.literal[DialogManager.handlerKey]
+      this.#dlg = new DialogManager(dlg, DialogManager.handlerKey, this)
     }
 
     for (const [key, value] of Object.entries(this.literal)) {
@@ -2008,7 +2270,7 @@ class Setting extends BreadCrumbs {
           this.#children[key] = new Setting(value, key, this, this.#spec)
         }
       } else {
-        if (this.#spec.render) this.#renderYAML[key] = value
+        if (this.#spec.RENDER) this.#renderYAML[key] = value
         else this.#frontmatterYAML[key] = value
       }
     }
@@ -2065,19 +2327,26 @@ class Setting extends BreadCrumbs {
    * @returns {Boolean}
    */
   static #isHandlersKey(key) {
-    return SpecManager.handlerKey == key || TypesManager.handlerKey == key
+    return (
+      SpecManager.handlerKey == key ||
+      TypesManager.handlerKey == key ||
+      DialogManager.handlerKey == key
+    )
   }
 
   // prettier-ignore
   static test(outputObj) { // Setting
     BreadCrumbs.test(outputObj)
+    DialogManager.test(outputObj)
     SpecManager.test(outputObj)
     TypesManager.test(outputObj)
     let _ = null
     if(_ = new TestSuite("Setting", outputObj)) {
+      _.run(getterLiteralTest)
       _.run(getterTypeNamesTest)
       _.run(getterFrontmatterYAMLTest)
       _.run(getterRenderYAMLTest)
+      _.run(getterDlgTest)
       _.run(instanceOfMeTest)
       _.run(constructorTest)
       _.run(toStringTest)
@@ -2089,14 +2358,48 @@ class Setting extends BreadCrumbs {
       _.destruct()
     _ = null
     }
+    function getterLiteralTest() {
+      let un
+      let sym = Symbol("a")
+      let setting1 = new Setting({},"getterLiteralTest02",un)
+      let setting2 = new Setting({sym: {}},"getterLiteralTest03",un)
+      let setting3 = new Setting({"__NOTETYPES": {}},"getterLiteralTest04",un)
+      let setting4 = new Setting({"a": {"MARKER":"2"}},"getterLiteralTest05",un)
+      let setting5 = new Setting({"a": {"MARKER":"2","DATE":true,}},"getterLiteralTest06",un)
+      let setting6 = new Setting({"a": {MARKER:"2",DATE:false,},"d": {TITLE_BEFORE_DATE:"abc"}},"getterLiteralTest07",un)
+      let lit1 = setting1.literal
+      let lit2 = setting2.literal
+      let lit3 = setting3.literal
+      let lit4 = setting4.literal
+      let lit5 = setting5.literal
+      let lit6 = setting6.literal
+      _.bassert(1,Object.keys(lit1).length == 0,"literal should be empty as given")
+      _.bassert(2,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(3,Object.keys(lit2.sym).length == 0,"object assigned to symbol key should be empty as given")
+      _.bassert(4,Object.keys(lit3).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(5,Object.keys(lit3.__NOTETYPES).length == 0,"object assigned to '__NOTETYPES' key should be empty as given")
+      _.bassert(6,Object.keys(lit4).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(7,Object.keys(lit4.a).length == 1,"object assigned to 'a' should only contain one entry as only one given")
+      _.bassert(8,lit4.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(9,Object.keys(lit5).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(10,Object.keys(lit5.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(11,lit5.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(12,lit5.a.DATE === true,"value of a.DATE should be 'true' as given")
+      _.bassert(13,Object.keys(lit6).length == 2,"2 values should be contained, as two given")
+      _.bassert(14,Object.keys(lit6.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(15,Object.keys(lit6.d).length == 1,"object assigned to 'd' should only contain one entry as only one given")
+      _.bassert(16,lit6.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(17,lit6.a.DATE === false,"value of a.DATE should be 'false' as given")
+      _.bassert(18,lit6.d.TITLE_BEFORE_DATE === "abc","value of d.TITLE_BEFORE_DATE should be 'abc' as given")
+    }    
     function getterTypeNamesTest() {
       let lit1 = {}
-      let lit2 = {SPEC: {render: true},a:1}
-      let lit3 = {NOTETYPES: {}}
-      let lit4 = {NOTETYPES: {diary:{}}}
-      let lit5 = {NOTETYPES: {diary:{MARKER: "d"}}}
-      let lit6 = {NOTETYPES: {diary:{DATE: true,},cit:{},book:{MARKER: "b"}}}
-      let lit7 = {a: {SPEC: {render: true},NOTETYPES: {diary:{}},x:"y"}}
+      let lit2 = {SPEC: {RENDER: true},a:1}
+      let lit3 = {__NOTETYPES: {}}
+      let lit4 = {__NOTETYPES: {diary:{}}}
+      let lit5 = {__NOTETYPES: {diary:{MARKER: "d"}}}
+      let lit6 = {__NOTETYPES: {diary:{DATE: true,},cit:{},book:{MARKER: "b"}}}
+      let lit7 = {a: {SPEC: {RENDER: true},__NOTETYPES: {diary:{}},x:"y"}}
       let setting1 = new Setting(lit1)
       let setting2 = new Setting(lit2)
       let setting3 = new Setting(lit3)
@@ -2131,7 +2434,7 @@ class Setting extends BreadCrumbs {
       const lit2 = {a: 23, b: "ja"}
       const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
       const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit5 = {_SPEC: {render: true}, a: 23, pict: "ja"}
+      const lit5 = {__SPEC: {RENDER: true}, a: 23, pict: "ja"}
       let setting1 = new Setting(lit1)
       let setting2 = new Setting(lit2)
       let setting3 = new Setting(lit3)
@@ -2156,9 +2459,9 @@ class Setting extends BreadCrumbs {
     }
     function getterRenderYAMLTest() {
       const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      const lit2 = {a: 23, c: {__SPEC: {RENDER: true}, pict: "ja"}}
       const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
-      const lit4 = {_SPEC: {render: true}, pict: "ja", d: {_SPEC: {render: false}, private: true},}
+      const lit4 = {__SPEC: {RENDER: true}, pict: "ja", d: {__SPEC: {RENDER: false}, private: true},}
       let setting1 = new Setting(lit1)
       let setting2 = new Setting(lit2)
       let setting3 = new Setting(lit3)
@@ -2175,6 +2478,23 @@ class Setting extends BreadCrumbs {
       _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
       _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
       _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+    }
+    function getterDlgTest() {
+      let lit1 = {}
+      let lit2 = {__DIALOGSETTINGS: {TYPE_PROMPT: "abcdef", TYPE_MAX_ENTRIES: 137}}
+      let lit3 = {a:{__DIALOGSETTINGS: {TYPE_PROMPT: "abcdef", TYPE_MAX_ENTRIES: 137}}}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let dlg1 = setting1.dlg
+      let dlg2 = setting2.dlg
+      let dlg3 = setting3.dlg
+      _.bassert(1,dlg1.TYPE_PROMPT==DialogManager.defaults.TYPE_PROMPT,"should be default value")
+      _.bassert(2,dlg1.TYPE_MAX_ENTRIES==DialogManager.defaults.TYPE_MAX_ENTRIES,"should be default value")
+      _.bassert(3,dlg2.TYPE_PROMPT=="abcdef","should be 'abcdef' as given")
+      _.bassert(4,dlg2.TYPE_MAX_ENTRIES==137,"should be '137' as given")
+      _.bassert(5,dlg3.TYPE_PROMPT==DialogManager.defaults.TYPE_PROMPT,"should be default value")
+      _.bassert(6,dlg3.TYPE_MAX_ENTRIES==DialogManager.defaults.TYPE_MAX_ENTRIES,"should be default value")
     }
     function instanceOfMeTest() {
       let un
@@ -2224,8 +2544,8 @@ class Setting extends BreadCrumbs {
     function toStringTest() {
       let un
       let setting1 = new Setting({},"toStringTest1",un,un)
-      _.bassert(1,setting1.toString().contains("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,setting1.toString().contains("Setting"),"result does not contain class string"    )
+      _.bassert(1,setting1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,setting1.toString().includes("Setting"),"result does not contain class string"    )
     }
     function isOfTypeTest() {
       let un
@@ -2243,7 +2563,7 @@ class Setting extends BreadCrumbs {
       const lit2 = {a: 23, b: "ja"}
       const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
       const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit5 = {a: 23, c: {_SPEC: {render: true}, pict: "ja", d: {_SPEC: {render: false}, x: "y"}}}
+      const lit5 = {a: 23, c: {__SPEC: {RENDER: true}, pict: "ja", d: {__SPEC: {RENDER: false}, x: "y"}}}
       let setting1 = new Setting(lit1)
       let setting2 = new Setting(lit2)
       let setting3 = new Setting(lit3)
@@ -2267,16 +2587,16 @@ class Setting extends BreadCrumbs {
     }
     function getRenderYAMLTest() {
       const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit2 = {a: 23, c: {_SPEC: {render: true}, pict: "ja"}}
+      const lit2 = {a: 23, c: {__SPEC: {RENDER: true}, pict: "ja"}}
       const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
       const lit4 = {
         c: {
-          _SPEC: {render: true},
+          __SPEC: {RENDER: true},
           pict: "ja",
-          d: {_SPEC: {render: false}, 
+          d: {__SPEC: {RENDER: false}, 
              private: true,
              x: {
-              _SPEC: {render: true}, 
+              __SPEC: {RENDER: true}, 
               y:"z"
              }
           },
@@ -2301,12 +2621,12 @@ class Setting extends BreadCrumbs {
     }
     function getTypeTest() {
       let lit1 = {}
-      let lit2 = {SPEC: {render: true},a:1}
-      let lit3 = {NOTETYPES: {}}
-      let lit4 = {NOTETYPES: {diary:{}}}
-      let lit5 = {NOTETYPES: {diary:{MARKER: "d"}}}
-      let lit6 = {NOTETYPES: {diary:{DATE: true,},cit:{},book:{MARKER: "b"}}}
-      let lit7 = {a: {SPEC: {render: true},NOTETYPES: {diary:{}},x:"y"}}
+      let lit2 = {SPEC: {RENDER: true},a:1}
+      let lit3 = {__NOTETYPES: {}}
+      let lit4 = {__NOTETYPES: {diary:{}}}
+      let lit5 = {__NOTETYPES: {diary:{MARKER: "d"}}}
+      let lit6 = {__NOTETYPES: {diary:{DATE: true,},cit:{},book:{MARKER: "b"}}}
+      let lit7 = {a: {SPEC: {RENDER: true},__NOTETYPES: {diary:{}},x:"y"}}
       let setting1 = new Setting(lit1)
       let setting2 = new Setting(lit2)
       let setting3 = new Setting(lit3)
@@ -2339,7 +2659,7 @@ class Setting extends BreadCrumbs {
     function isHandlersKeyTest() {
       _.bassert(1,Setting.#isHandlersKey(SpecManager.handlerKey),SpecManager.handlerKey + " should be recognized as handler key,but isn't")
       _.bassert(2,Setting.#isHandlersKey(TypesManager.handlerKey),TypesManager.handlerKey +  " should be recognized as handler key,but isn't")
-      _.bassert(3,!Setting.#isHandlersKey(TypesManager.keys[0]),TypesManager.keys[0] +  " should not be recognized as handlers key,but is")
+      _.bassert(3,!Setting.#isHandlersKey(TypesManager.tnames[0]),TypesManager.tnames[0] +  " should not be recognized as handlers key,but is")
       _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
       _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
       _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
@@ -2353,7 +2673,7 @@ class Setting extends BreadCrumbs {
   }
 }
 //#endregion code
-/** Runs all tests,if TESTING is set; output to current note (indirect)
+/** Runs all tests, if TESTING is set; output to current note (indirect)
  * @param {*} outputObj
  */
 function test(outputObj) {
@@ -2375,8 +2695,8 @@ async function createNote(tp, setting) {
       typeKeys,
       typeKeys,
       false,
-      TYPE_PROMPT,
-      TYPE_MAX_ENTRIES
+      setting.dlg.TYPE_PROMPT,
+      setting.dlg.TYPE_MAX_ENTRIES
     )
     if (!typekey) {
       return Dialog.Cancel
@@ -2400,8 +2720,8 @@ async function main(tp, app) {
   try {
     let setting = new Setting(Test)
     await createNote(tp, setting)
-    frontmatterYAML = setting.frontmatterYAML
-    Object.assign(renderYAML, setting.renderYAML)
+    frontmatterYAML = setting.getFrontmatterYAML()
+    Object.assign(renderYAML, setting.getRenderYAML())
   } catch (e) {
     /* returns errYAML or rethrows */
     if (e instanceof FotyError) {
