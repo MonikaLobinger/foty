@@ -112,6 +112,7 @@ const Test = {
   __DIALOGSETTINGS: {
     TYPE_PROMPT: "Typ wählen",
     TYPE_MAX_ENTRIES: 10, // Max entries in "type" drop down list
+    TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
   },
   __FOLDER2TYPE: {
     test: "diary",
@@ -126,8 +127,6 @@ const Test = {
     },
     citation: {MARKER: "°"},
   },
-  // => in frontmatter section
-  // a:23
   c: {
     __SPEC: {RENDER: true},
     pict: "ja",
@@ -138,8 +137,6 @@ const Test = {
       },
     },
   },
-  // => in render section
-  // b:ja
 }
 const Test2 = {
   audio: {marker: "{a}", pict: "a.jpg", frontmatter: {private: true}},
@@ -195,6 +192,7 @@ function letAllThrow(YAML) {
   let br = new BreadCrumbs({},"bcRoot",un)
   let root = new Setting({},"/",un)
   let rootT = new Setting({__NOTETYPES: {diary: {}}},"/",un)
+  // @todo check why objTypes with Wrong does not work as I think it should
   let wrong = new Wrong(un,"wrongInstance",un)
   let cnt = 0
   /*01*/try{cnt++;new BreadCrumbs(1,"name1",un)}catch(e){out(e,YAML)}
@@ -322,6 +320,9 @@ function vaut(vn, v, b = "yellow", c = "red") {
 
 /** superclass for all Foty Errors (but not unit test Errors) */
 class FotyError extends Error {
+  //#region member variables
+  lastMsg = ""
+  //#endregion member variables
   constructor(...params) {
     super(...params)
     this.name = "Foty Error"
@@ -332,7 +333,6 @@ class FotyError extends Error {
 class SettingError extends FotyError {
   //#region member variables
   caller
-  lastMsg = ""
   //#endregion member variables
   constructor(caller, ...params) {
     let lastMsg = ""
@@ -348,7 +348,6 @@ class SettingError extends FotyError {
 class CodingError extends FotyError {
   //#region member variables
   caller
-  lastMsg = ""
   //#endregion member variables
   constructor(caller, ...params) {
     let lastMsg = ""
@@ -1414,8 +1413,7 @@ class BreadCrumbs {
   }
 }
 var BC = BreadCrumbs // shorthand
-/** for testing */
-class Wrong extends BreadCrumbs {}
+class Wrong extends BreadCrumbs {} // for testing
 
 /** dialog settings parser
  * @classdesc
@@ -1426,13 +1424,15 @@ class DialogManager extends BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
   static #DIALOG_KEY = "__DIALOGSETTINGS"
-  static #NAMES = ["TYPE_PROMPT", "TYPE_MAX_ENTRIES"]
+  static #NAMES = ["TYPE_PROMPT", "TYPE_MAX_ENTRIES", "TITLE_NEW_FILE"]
   static #DEFAULTS = {
     TYPE_PROMPT: "Choose Type",
     TYPE_MAX_ENTRIES: 10,
+    TITLE_NEW_FILE: ["Untitled"],
   }
   #TYPE_PROMPT = DialogManager.#DEFAULTS.TYPE_PROMPT
   #TYPE_MAX_ENTRIES = DialogManager.#DEFAULTS.TYPE_MAX_ENTRIES
+  #TITLE_NEW_FILE = DialogManager.#DEFAULTS.TITLE_NEW_FILE
   /** Returns key for entry handled by DialogManager
    * @returns {String}
    */
@@ -1451,11 +1451,23 @@ class DialogManager extends BreadCrumbs {
   static get defaults() {
     return DialogManager.#DEFAULTS
   }
+  /** Returns Prompt for tp.system.suggester
+   * @returns {String}
+   */
   get TYPE_PROMPT() {
     return this.#TYPE_PROMPT
   }
+  /** Returns max entries for tp.system.suggester
+   * @returns {Number}
+   */
   get TYPE_MAX_ENTRIES() {
     return this.#TYPE_MAX_ENTRIES
+  }
+  /** Returns new note title (without counter) or array of new note titles
+   * @returns {(String|Array.String)}
+   */
+  get TITLE_NEW_FILE() {
+    return this.#TITLE_NEW_FILE
   }
   //#endregion member variables
   /** Constructs a new DialogManager and registers its type once
@@ -1505,6 +1517,12 @@ class DialogManager extends BreadCrumbs {
           _throwIfWrongType(value, "string", key, this)
           this.#TYPE_PROMPT = value
           break
+        case "TITLE_NEW_FILE":
+          _throwIfWrongType(value, ["string", "Array"], key, this)
+          this.#TITLE_NEW_FILE = BreadCrumbs.isOfType(value, "Array")
+            ? value
+            : new Array(value)
+          break
       }
     }
   }
@@ -1527,6 +1545,7 @@ class DialogManager extends BreadCrumbs {
       _.run(getterDefaultsTest)
       _.run(getterTYPE_PROMPTTest)
       _.run(getterTYPE_MAX_ENTRIESTest)
+      _.run(getterTITLE_NEW_FILETest)
       _.run(instanceOfMeTest)
       _.run(constructorTest)
       _.run(toStringTest)
@@ -1609,6 +1628,21 @@ class DialogManager extends BreadCrumbs {
       _.bassert(2,dlgMan2.TYPE_MAX_ENTRIES == def,"Default max entries should be returned")
       _.bassert(3,dlgMan3.TYPE_MAX_ENTRIES == 2,"TYPE_MAX_ENTRIES should be 2 as given ")
     }
+    function getterTITLE_NEW_FILETest() {
+      let un
+      let parent = new BreadCrumbs(un, "getterTITLE_NEW_FILETest", un)
+      let lit1 = {}
+      let lit2 = {TITLE_NEW_FILE:"keinName"}
+      let lit3 = {TITLE_NEW_FILE: ["notset","unknown"]}
+      let def = DialogManager.defaults.TITLE_NEW_FILE
+      let dlgMan1 = new DialogManager(lit1,"getterTITLE_NEW_FILETest01",parent)
+      let dlgMan2 = new DialogManager(lit2,"getterTITLE_NEW_FILETest02",parent)
+      let dlgMan3 = new DialogManager(lit3,"getterTITLE_NEW_FILETest03",parent)
+      _.bassert(1,BC.areEqual(dlgMan1.TITLE_NEW_FILE,def),"Default new title should be returned")
+      _.bassert(2,BC.areEqual(dlgMan2.TITLE_NEW_FILE,["keinName"]),"given title should be returned in an array")
+      _.bassert(3,BC.areEqual(dlgMan3.TITLE_NEW_FILE,["notset", "unknown"]),"output should be the same as input")
+    }
+
     function instanceOfMeTest() {
       let un
       let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
@@ -3197,7 +3231,7 @@ async function createNote(tp, setting) {
       type = setting.getType(typekey)
     }
   }
-  //aut(type)
+  aut(type)
   return Dialog.Ok
 }
 
@@ -3217,7 +3251,6 @@ async function main(tp, app) {
     letAllThrow(checkErrorOutputYAML)
     return checkErrorOutputYAML
   }
-
   test(testYAML)
   try {
     let setting = new Setting(Test)
@@ -3228,10 +3261,13 @@ async function main(tp, app) {
     /* returns errYAML or rethrows */
     if (e instanceof FotyError) {
       let errYAML = {}
-      if (e instanceof SettingError) errYAML = {ERR: e.name + " in " + e.caller}
-      else if (e instanceof CodingError)
+      if (e instanceof SettingError) {
+        errYAML = {ERR: e.name + " in " + e.caller}
+      } else if (e instanceof CodingError) {
         errYAML = {"!!!": e.name + " in " + e.caller}
-      else errYAML = {"???": e.name}
+      } else {
+        errYAML = {"???": e.name}
+      }
       let msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
       msg += e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
       errYAML["\u00A8\u00A8\u00A8"] = msg
@@ -3245,11 +3281,14 @@ async function main(tp, app) {
     __notePath: tp.file.path(true /*relative*/),
     __noteTitle: tp.file.title,
     __activeFile: tp.config.active_file.path,
+    /* 1-create with alt-e
+     * 2-create from link or create with ctrl-n
+     */
     __runMode: tp.config.run_mode,
     __targetFile: tp.config.target_file.path,
     __templateFile: tp.config.template_file.path,
   }
-
   if (!DEBUG) dbgYAML = undefined
+
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
