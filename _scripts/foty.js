@@ -113,12 +113,10 @@ const Test = {
     TYPE_PROMPT: "Typ wählen",
     TYPE_MAX_ENTRIES: 10, // Max entries in "type" drop down list
   },
-  /*
   __FOLDER2TYPE: {
-    diary: ["diary"],
-    others: ["citation"],
+    diary: "diary",
+    others: ["citation", "diary"],
   },
-  */
   __NOTETYPES: {
     diary: {
       MARKER: "",
@@ -152,11 +150,12 @@ const Test2 = {
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
-const TESTING = false
+const TESTING = true
 if (TESTING) DEBUG = false
 // nach @todo und @remove suchen
 
 /** Colors, to be used without quotation marks during development */
+const black = "black"
 const cyan = "cyan"
 const red = "orange"
 const blue = "deepskyblue"
@@ -221,7 +220,21 @@ function aut(str, b = "yellow", c = "red") {
  * @param {String} c - foreground color
  */
 function vaut(vn, v, b = "yellow", c = "red") {
-  let str = vn + ": " + v
+  let str
+  if (typeof v == "object") {
+    let entries = Object.entries(v)
+    if (entries.length == 0) {
+      str = vn + ": " + v
+    } else {
+      str = vn + ": "
+      entries.forEach(([key, value], idx) => {
+        let indent = idx == 0 ? "" : "      "
+        str += `${indent}${key}: ${value}`
+      })
+    }
+  } else {
+    str = vn + ": " + v
+  }
   console.log("%c" + str, `background:${b};color:${c};font-weight:normal`)
 }
 
@@ -867,7 +880,7 @@ class BreadCrumbs {
    *
    * Does not throw on other parameters type errors
    * @param {*} val
-   * @param {({Array.<String}|String)} type
+   * @param {(Array.<String>|String)} type
    * @param {String} [funame="constructor"] - becomes part of Error message
    * @param {String} [msg] - becomes part of Error message
    * @throws {SettingError}
@@ -1426,6 +1439,8 @@ class DialogManager extends BreadCrumbs {
       _.run(getterLiteralTest)
       _.run(getterNamesTest)
       _.run(getterDefaultsTest)
+      _.run(getterTYPE_PROMPTTest)
+      _.run(getterTYPE_MAX_ENTRIESTest)
       _.run(instanceOfMeTest)
       _.run(constructorTest)
       _.run(toStringTest)
@@ -1440,21 +1455,30 @@ class DialogManager extends BreadCrumbs {
     function getterLiteralTest() {
       let un
       let parent = new BreadCrumbs(un, "getterLiteralTest", un)
-      let sym = Symbol("a")
-      let dlgMan1 = new DialogManager({},"getterLiteralTest02",parent)
-      let dlgMan2 = new DialogManager({TYPE_PROMPT: "ēlige!"},"getterLiteralTest03",parent)
-      let dlgMan3 = new DialogManager({"TYPE_MAX_ENTRIES": 12},"getterLiteralTest04",parent)
-      let dlgMan4 = new DialogManager({"TYPE_PROMPT": "choose!"},"getterLiteralTest05",parent)
-      let dlgMan5 = new DialogManager({"TYPE_MAX_ENTRIES": 13},"getterLiteralTest06",parent)
-      let dlgMan6 = new DialogManager({"TYPE_PROMPT": "wähle!", "TYPE_MAX_ENTRIES": 14},"getterLiteralTest07",parent)
-      let lit1 = dlgMan1.literal
-      let lit2 = dlgMan2.literal
-      let lit3 = dlgMan3.literal
-      let lit4 = dlgMan4.literal
-      let lit5 = dlgMan5.literal
-      let lit6 = dlgMan6.literal
-      _.bassert(1,Object.keys(lit1).length == 0,"literal should be empty as given")
-      _.bassert(2,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
+      let lit1 = {}
+      let lit2 = {TYPE_PROMPT: "ēlige!"}
+      let lit3 = {"TYPE_MAX_ENTRIES": 12}
+      let lit4 = {"TYPE_PROMPT": "choose!"}
+      let lit5 = {"TYPE_MAX_ENTRIES": 13}
+      let lit6 = {"TYPE_PROMPT": "wähle!", "TYPE_MAX_ENTRIES": 14}
+      let dlgMan1 = new DialogManager(lit1,"getterLiteralTest02",parent)
+      let dlgMan2 = new DialogManager(lit2,"getterLiteralTest03",parent)
+      let dlgMan3 = new DialogManager(lit3,"getterLiteralTest04",parent)
+      let dlgMan4 = new DialogManager(lit4,"getterLiteralTest05",parent)
+      let dlgMan5 = new DialogManager(lit5,"getterLiteralTest06",parent)
+      let dlgMan6 = new DialogManager(lit6,"getterLiteralTest07",parent)
+      let res1 = dlgMan1.literal
+      let res2 = dlgMan2.literal
+      let res3 = dlgMan3.literal
+      let res4 = dlgMan4.literal
+      let res5 = dlgMan5.literal
+      let res6 = dlgMan6.literal
+      _.bassert(1,Object.keys(res1).length == 0,"literal should be empty as given")
+      _.bassert(2,BreadCrumbs.areEqual(lit2,res2),"literal should not be changed")
+      _.bassert(3,BreadCrumbs.areEqual(lit3,res3),"literal should not be changed")
+      _.bassert(4,BreadCrumbs.areEqual(lit4,res4),"literal should not be changed")
+      _.bassert(5,BreadCrumbs.areEqual(lit5,res5),"literal should not be changed")
+      _.bassert(6,BreadCrumbs.areEqual(lit6,res6),"literal should not be changed")
     }
     function getterNamesTest() {
       let names = DialogManager.names
@@ -1470,6 +1494,34 @@ class DialogManager extends BreadCrumbs {
       let names = DialogManager.names
       _.bassert(2,defTypeKeys.length == names.length,"Default type should contain as many names as there are in TypesManager.keys")
       _.bassert(3,defTypeKeys.every(key => names.includes(key)),"Each name should be given in DialogManager.names")
+    }
+    function getterTYPE_PROMPTTest() {
+      let un
+      let parent = new BreadCrumbs(un, "getterTYPE_PROMPTTest", un)
+      let lit1 = {}
+      let lit2 = {TYPE_MAX_ENTRIES:2}
+      let lit3 = {TYPE_PROMPT:"opq"}
+      let def = DialogManager.defaults.TYPE_PROMPT
+      let dlgMan1 = new DialogManager(lit1,"getterTYPE_PROMPTTest01",parent)
+      let dlgMan2 = new DialogManager(lit2,"getterTYPE_PROMPTTest02",parent)
+      let dlgMan3 = new DialogManager(lit3,"getterTYPE_PROMPTTest03",parent)
+      _.bassert(1,dlgMan1.TYPE_PROMPT == def,"Default prompt should be returned")
+      _.bassert(2,dlgMan2.TYPE_PROMPT == def,"Default prompt should be returned")
+      _.bassert(3,dlgMan3.TYPE_PROMPT == "opq","TYPE_PROMPT should be 'opq' as given ")
+    }
+    function getterTYPE_MAX_ENTRIESTest() {
+      let un
+      let parent = new BreadCrumbs(un, "getterTYPE_MAX_ENTRIESTest", un)
+      let lit1 = {}
+      let lit2 = {TYPE_PROMPT:"opq"}
+      let lit3 = {TYPE_MAX_ENTRIES:2}
+      let def = DialogManager.defaults.TYPE_MAX_ENTRIES
+      let dlgMan1 = new DialogManager(lit1,"getterTYPE_MAX_ENTRIESTest01",parent)
+      let dlgMan2 = new DialogManager(lit2,"getterTYPE_MAX_ENTRIESTest02",parent)
+      let dlgMan3 = new DialogManager(lit3,"getterTYPE_MAX_ENTRIESTest03",parent)
+      _.bassert(1,dlgMan1.TYPE_MAX_ENTRIES == def,"Default max entries should be returned")
+      _.bassert(2,dlgMan2.TYPE_MAX_ENTRIES == def,"Default max entries should be returned")
+      _.bassert(3,dlgMan3.TYPE_MAX_ENTRIES == 2,"TYPE_MAX_ENTRIES should be 2 as given ")
     }
     function instanceOfMeTest() {
       let un
@@ -1616,7 +1668,6 @@ class SpecManager extends BreadCrumbs {
    * @param {(Undefined|Object)} grandParentsSpec
    */
   #setOptionRENDERorThrow(grandParentsSpec) {
-    aut(this.literal)
     if (
       BreadCrumbs.isDefined(this.literal) &&
       BreadCrumbs.isDefined(this.literal.RENDER)
@@ -2233,7 +2284,286 @@ Change value of ${name} to a`
  * @classdesc
  * maps notetypes to folder names
  */
-class FoTyManager extends BreadCrumbs {}
+class FoTyManager extends BreadCrumbs {
+  //#region member variables
+  static #instanceCounter = 0
+  static #FOTY_KEY = "__FOLDER2TYPE"
+  #FOLDER2TYPE = {}
+  /** Returns key for entry handled by FoTyManager
+   * @returns {String}
+   */
+  static get handlerKey() {
+    return FoTyManager.#FOTY_KEY
+  }
+  get FOLDER2TYPE() {
+    return this.#FOLDER2TYPE
+  }
+  //#endregion member variables
+  /** Constructs a new FoTyManager and registers its type once
+   * @constructor
+   * @param {(Object|Object.<String.*>)} literal
+   * @param {(String|Symbol)} key
+   * @param {Setting} parent
+   * @throws {SettingError} on wrong parameter types
+   */
+  constructor(literal, key, parent) {
+    super(literal, key, parent)
+    if (!FoTyManager.#instanceCounter++) this.objTypes = "FoTyManager"
+    this.throwIfUndefined(literal, "literal")
+    // literal {(Undefined|Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    this.throwIfNotOfType(parent, "Setting")
+    this.#FOLDER2TYPE = this.#validateValuesOrThrow(parent.typeNames)
+  }
+
+  /** Returns notetypes for a foldername, if set, or empty array else
+   * @param {String} folder
+   * @returns {Array.<String>}
+   * @throws {SettingError} on wrong parameter type
+   */
+  getTypesForFolder(folder) {
+    this.throwIfNotOfType(folder, "string")
+    let types = this.#FOLDER2TYPE[folder]
+    if (!BreadCrumbs.isDefined(types)) types = []
+    return types
+  }
+  /**
+   * @param {} typeNames
+   * @returns {Array.<String>}
+   */
+  #validateValuesOrThrow(typeNames) {
+    function throwIfWrong(key, value, type, me) {
+      me.throwIfNotOfType(
+        value,
+        type,
+        "constructor",
+        `'${key}: ${value}' - value has wrong type.
+  Value of ${key} has to be of type 'string' or 'array of strings'.
+  Change value of ${key} to `
+      )
+    }
+    function throwNothingSet(value, me) {
+      throw new SettingError(
+        me.constructor.name + " " + constructor,
+        "Breadcrumbs: '" +
+          me.toBreadcrumbs() +
+          `\n   You have no __NOTETYPES defined, you can not use __FOLDER2TYPE
+  \n. Define a notetype for '${value}'.`
+      )
+    }
+    function throwNoType(type, typeNames, me) {
+      throw new SettingError(
+        me.constructor.name + " " + constructor,
+        "Breadcrumbs: '" +
+          me.toBreadcrumbs() +
+          "'\n   '" +
+          type +
+          "' is no given notetype." +
+          "\n    Remove unknown notetypes from your FOLDER2TYPE settings or" +
+          "\n    add a notetype definition for '" +
+          type +
+          "' to NOTETYPES" +
+          "\n   " +
+          "Given notetypes are: '" +
+          typeNames +
+          "'"
+      )
+    }
+
+    let folder2types = {}
+    for (const [key, value] of Object.entries(this.literal)) {
+      throwIfWrong(key, value, ["string", "Array"], this)
+
+      let valueNames = []
+      if (BreadCrumbs.isOfType(value, "string")) valueNames.push(value)
+      else valueNames = value
+      if (typeNames.length == 0) throwNothingSet(valueNames[0], this)
+      valueNames.forEach((type) => {
+        if (!typeNames.includes(type)) throwNoType(type, typeNames, this)
+      })
+      folder2types[key] = valueNames
+    }
+    return folder2types
+  }
+
+  /** Returns whether arg is instance of FoTyManager
+   * @param {Object} arg
+   * @returns {Boolean}
+   */
+  static instanceOfMe(arg) {
+    return arg instanceof FoTyManager
+  }
+
+  // prettier-ignore
+  static test(outputObj) { // FoTyManager
+    let _ = null
+    if(_ = new TestSuite("FoTyManager", outputObj)) {
+      _.run(getterHandlerKeyTest)
+      _.run(getterLiteralTest)
+      _.run(getterFOLDER2TYPETest)
+      _.run(instanceOfMeTest)
+      _.run(constructorTest)
+      _.run(toStringTest)
+      _.run(isOfTypeTest)
+      _.run(getTypesForFolderTest)
+      _.run(validateValuesOrThrowTest)
+      _.destruct()
+      _ = null
+    }
+    function getterHandlerKeyTest() {
+      _.bassert(1,FoTyManager.handlerKey == "__FOLDER2TYPE")
+      _.bassert(2,FoTyManager.handlerKey != "FOLDER2TYPE")
+    }
+    function getterLiteralTest() {
+      let un
+      let parent = new Setting({}, "getterLiteralTest", un)
+      let lit1 = {}
+      let lit2 = {}
+      let lit3 = {}
+      let lit4 = {}
+      let lit5 = {}
+      let lit6 = {}
+      let ftMan1 = new FoTyManager(lit1,"getterLiteralTest01",parent)
+      let ftMan2 = new FoTyManager(lit2,"getterLiteralTest02",parent)
+      let ftMan3 = new FoTyManager(lit3,"getterLiteralTest03",parent)
+      let ftMan4 = new FoTyManager(lit4,"getterLiteralTest04",parent)
+      let ftMan5 = new FoTyManager(lit5,"getterLiteralTest05",parent)
+      let ftMan6 = new FoTyManager(lit6,"getterLiteralTest06",parent)
+      let res1 = ftMan1.literal
+      let res2 = ftMan2.literal
+      let res3 = ftMan3.literal
+      let res4 = ftMan4.literal
+      let res5 = ftMan5.literal
+      let res6 = ftMan6.literal
+      _.bassert(1,Object.keys(res1).length == 0,"literal should be empty as given")
+      _.bassert(2,BreadCrumbs.areEqual(lit2,res2),"literal should not be changed")
+      _.bassert(3,BreadCrumbs.areEqual(lit3,res3),"literal should not be changed")
+      _.bassert(4,BreadCrumbs.areEqual(lit4,res4),"literal should not be changed")
+      _.bassert(5,BreadCrumbs.areEqual(lit5,res5),"literal should not be changed")
+      _.bassert(6,BreadCrumbs.areEqual(lit6,res6),"literal should not be changed")
+    }
+    function instanceOfMeTest() {
+      let un
+      let parent = new Setting({}, "instanceOfMeTest", un)
+      let ft1 = new FoTyManager({},"instanceOfMeTest1",parent)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      _.bassert(1,!FoTyManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of FoTyManager")
+      _.bassert(2,!FoTyManager.instanceOfMe(new Error()),"Error instance should not be an instance of FoTyManager")
+      _.bassert(3,FoTyManager.instanceOfMe(ft1),"FoTyManager instance should be an instance of FoTyManager")
+      _.bassert(4,!FoTyManager.instanceOfMe("FoTyManager"),"String should not be an instance of FoTyManager")
+      _.bassert(5,!FoTyManager.instanceOfMe(spec1),"SpecManager should not be an instance of FoTyManager")
+    }
+    function getterFOLDER2TYPETest() {
+      let un
+      let types1 = {__NOTETYPES: { diary: {}}}
+      let lit1 = {home: "diary"}
+      let exp1 = {home: ["diary"]}
+      let parent1 = new Setting(types1, "getterFOLDER2TYPETest_p1", un)
+      let foty1 = new FoTyManager(lit1,"getterFOLDER2TYPETest_f1",parent1)
+      let res1 = foty1.FOLDER2TYPE
+      _.bassert(1,BreadCrumbs.areEqual(exp1,res1),"foldertypes string should be converted to array of this string")
+    }
+    function constructorTest() {
+      let un
+      let p = new Setting({}, "constructorTest", un)
+      let ft = new FoTyManager({}, "constructorTest1", p)
+      _.assert(1,_tryConstruct,{},"cTest1",p,"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",p,"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",p,"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",p,"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",p,"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,p,"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,p,"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},p,"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},p,p,"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),p,"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"cTest11",un,"should not be be created, parent is undefined")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,"should not be be created, parent is null")
+
+      let dialogManager = new FoTyManager({},"constructorTest101",p)
+      _.bassert(101,dialogManager instanceof Object,"'FoTyManager' has to be an instance of 'Object'")
+      _.bassert(102,dialogManager instanceof BreadCrumbs,"'FoTyManager' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,dialogManager instanceof FoTyManager,"'FoTyManager' has to be an instance of 'FoTyManager'")
+      _.bassert(104,dialogManager.constructor == FoTyManager,"the constructor property is not 'FoTyManager'")
+    }
+    function toStringTest() {
+      let un
+      let parent = new Setting({}, "toStringTest", un)
+      let ft1 = new FoTyManager({},"toStringTest1",parent)
+      _.bassert(1,ft1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,ft1.toString().includes("FoTyManager"),"result does not contain class string"    )
+    }
+    function isOfTypeTest() {
+      let un
+      let parent = new Setting({}, "isOfTypeTest", un)
+      let ft1 = new FoTyManager({},"isOfTypeTest1",parent)
+      _.bassert(1, BreadCrumbs.isOfType(ft1,"object"), "'" + ft1 + "' should be of type " + "object")
+      _.bassert(2, BreadCrumbs.isOfType(ft1,"Object"), "'" + ft1 + "' should be of type " + "Object")
+      _.bassert(3, BreadCrumbs.isOfType(ft1,"BreadCrumbs"), "'" + ft1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4, BreadCrumbs.isOfType(ft1,"FoTyManager"), "'" + ft1 + "' should be of type " + "FoTyManager")
+      _.bassert(5,!BreadCrumbs.isOfType(ft1,"Error"), "'" + ft1 + "' should not be of type " + "Error")
+      _.bassert(6,!BreadCrumbs.isOfType(ft1,"SpecManager"), "'" + ft1 + "' should not be of type " + "SpecManager")
+    }
+    function getTypesForFolderTest() {
+      let un
+      let types0 = {}
+      let types1 = {__NOTETYPES: { diary: {}}}
+      let types2 = {__NOTETYPES: { diary: {}, citation: {}}}
+      let lit0 = {}
+      let lit1 = {home: "diary"}
+      let lit2 = {home: ["diary", "citation"]}
+      let parent0 = new Setting(types0, "getTypesForFolderTest_p0", un)
+      let parent1 = new Setting(types1, "getTypesForFolderTest_p1", un)
+      let parent2 = new Setting(types2, "getTypesForFolderTest_p2", un)
+      let foty0_0 = new FoTyManager(lit0,"ff0",parent0)
+      let foty0_1 = new FoTyManager(lit0,"ff01",parent1)
+      let foty0_2 = new FoTyManager(lit0,"ff02",parent2)
+      let foty1_1 = new FoTyManager(lit1,"ff1_1",parent1)
+      let foty1_2 = new FoTyManager(lit1,"ff1_2",parent2)
+      let foty2_2 = new FoTyManager(lit2,"ff2_2",parent2)
+      _.bassert(1,BreadCrumbs.areEqual(foty0_0.getTypesForFolder("home"),[]), "no foldertypes set")
+      _.bassert(2,BreadCrumbs.areEqual(foty0_1.getTypesForFolder("home"),[]), "no foldertypes set")
+      _.bassert(3,BreadCrumbs.areEqual(foty0_2.getTypesForFolder("home"),[]), "no foldertypes set")
+      vaut("1_1", foty1_1.FOLDER2TYPE)
+      vaut("1_2", foty1_2.FOLDER2TYPE)
+      vaut("2_2", foty2_2.FOLDER2TYPE)
+      let res4 = foty1_1.getTypesForFolder("home")     
+      vaut("res1_1", res4)
+      aut(typeof res4)//@todo
+      _.bassert(4,BreadCrumbs.areEqual(res4,["diary"]),"diary folder type set")
+
+    }
+    function validateValuesOrThrowTest() {
+      let un
+      let types0 = {}
+      let types1 = {__NOTETYPES: { diary: {}}}
+      let types2 = {__NOTETYPES: { diary: {}, citation: {}}}
+      let lit1 = {home: "diary"}
+      let lit1_1 = {home: ["diary"]}
+      let lit1_2 = {home: "citation"}
+      let lit2 = {home: ["diary", "citation"]}
+      let lit2_1 = {home: ["diary", "books"]}
+      let parent0 = new Setting(types0, "validateValuesOrThrowTest_p0", un)
+      let parent1 = new Setting(types1, "validateValuesOrThrowTest_p1", un)
+      let parent2 = new Setting(types2, "validateValuesOrThrowTest_p2", un)
+      _.assert(1,_tryConstruct,lit1,"f1",parent1, "should construct")
+      _.assert(2,_tryConstruct,lit1_1,"f2",parent1, "should construct")
+      _.shouldAssert(3,_tryConstruct,lit1,"f3",parent0, "should assert")
+      _.shouldAssert(4,_tryConstruct,lit1_2,"f4",parent1, "should assert")
+      _.assert(5,_tryConstruct,lit2,"f5",parent2, "should construct")
+      _.shouldAssert(6,_tryConstruct,lit2_1,"f6",parent2, "should assert")
+    }
+    function _tryConstruct(arg1, arg2, arg3) {
+      new FoTyManager(arg1, arg2, arg3)
+    }
+  }
+}
+
 /** setting parser; traverses deep literal to flat output
  * @classdesc
  * Setting is the only subclass which should be constructed from outside, with
@@ -2252,6 +2582,7 @@ class Setting extends BreadCrumbs {
   #spec = {}
   #types = {}
   #dlg = {}
+  #foty = {}
   #frontmatterYAML = {}
   #renderYAML = {}
   /** Returns names of notetypes
@@ -2319,6 +2650,11 @@ class Setting extends BreadCrumbs {
       if (BreadCrumbs.isDefined(this.literal[DialogManager.handlerKey]))
         dlg = this.literal[DialogManager.handlerKey]
       this.#dlg = new DialogManager(dlg, DialogManager.handlerKey, this)
+
+      let foty = {}
+      if (BreadCrumbs.isDefined(this.literal[FoTyManager.handlerKey]))
+        foty = this.literal[FoTyManager.handlerKey]
+      this.#foty = new FoTyManager(foty, FoTyManager.handlerKey, this)
     }
 
     for (const [key, value] of Object.entries(this.literal)) {
@@ -2387,7 +2723,8 @@ class Setting extends BreadCrumbs {
     return (
       SpecManager.handlerKey == key ||
       TypesManager.handlerKey == key ||
-      DialogManager.handlerKey == key
+      DialogManager.handlerKey == key ||
+      FoTyManager.handlerKey == key
     )
   }
 
@@ -2397,6 +2734,7 @@ class Setting extends BreadCrumbs {
     DialogManager.test(outputObj)
     SpecManager.test(outputObj)
     TypesManager.test(outputObj)
+    FoTyManager.test(outputObj)
     let _ = null
     if(_ = new TestSuite("Setting", outputObj)) {
       _.run(getterLiteralTest)
