@@ -150,7 +150,7 @@ const Test2 = {
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
-const TESTING = true
+const TESTING = false
 if (TESTING) DEBUG = false
 // nach @todo und @remove suchen
 
@@ -201,9 +201,10 @@ function aut(str, b = "yellow", c = "red") {
     if (entries.length == 0) {
       console.log("%c" + str, `background:${b};color:${c};font-weight:normal`)
     } else {
-      entries.forEach(([key, value]) => {
+      entries.forEach(([key, value], idx) => {
+        let indent = idx == 0 ? "OBJ " : "    "
         console.log(
-          `%c${key}: ${value}`,
+          `%c${indent}${key}: ${value}`,
           `background:${b};color:${c};font-weight:normal`
         )
       })
@@ -1367,12 +1368,37 @@ class DialogManager extends BreadCrumbs {
   //#endregion member variables
   /** Constructs a new DialogManager and registers its type once
    * @constructor
-   * @param {(Object|Object.<String.*>)} literal - key have to be from #NAMES
+   * @param {(Object|Object.<String.*>)} literal - key has to be from #NAMES
    * @param {(String|Symbol)} key
    * @param {BreadCrumbs} parent
    * @throws {SettingError} on wrong parameter types
    */
   constructor(literal, key, parent) {
+    function _throwWrongKey(key, names, me) {
+      throw new SettingError(
+        me.constructor.name + " " + constructor,
+        "Breadcrumbs: '" +
+          me.toBreadcrumbs() +
+          "'\n   '" +
+          key +
+          "' is no known dialog settings name." +
+          "\n    Remove unknown name from your dialog settings." +
+          "\n   " +
+          "Known names are: '" +
+          names +
+          "'"
+      )
+    }
+    function _throwIfWrongType(value, type, key, me) {
+      me.throwIfNotOfType(
+        value,
+        type,
+        "constructor",
+        `'${key}: ${value}' - value has wrong type.
+Value of ${key} has to be of type 'number'.
+Change value of ${key} to a`
+      )
+    }
     super(literal, key, parent)
     if (!DialogManager.#instanceCounter++) this.objTypes = "DialogManager"
     this.throwIfUndefined(literal, "literal")
@@ -1383,40 +1409,14 @@ class DialogManager extends BreadCrumbs {
 
     for (const [key, value] of Object.entries(this.literal)) {
       if (!DialogManager.#NAMES.includes(key))
-        throw new SettingError(
-          this.constructor.name + " " + constructor,
-          "Breadcrumbs: '" +
-            this.toBreadcrumbs() +
-            "'\n   '" +
-            key +
-            "' is no known dialog settings name." +
-            "\n    Remove unknown name from your dialog settings." +
-            "\n   " +
-            "Known names are: '" +
-            DialogManager.#NAMES +
-            "'"
-        )
+        _throwWrongKey(key, !DialogManager.#NAMES, this)
       switch (key) {
         case "TYPE_MAX_ENTRIES":
-          this.throwIfNotOfType(
-            value,
-            "number",
-            "constructor",
-            `'${key}: ${value}' - value has wrong type.
-  Value of ${key} has to be of type 'number'.
-  Change value of ${key} to a`
-          )
+          _throwIfWrongType(value, "number", key, this)
           this.#TYPE_MAX_ENTRIES = value
           break
         case "TYPE_PROMPT":
-          this.throwIfNotOfType(
-            value,
-            "string",
-            "constructor",
-            `'${key}: ${value}' - value has wrong type.
-  Value of ${key} has to be of type 'string'.
-  Change value of ${key} to a`
-          )
+          _throwIfWrongType(value, "string", key, this)
           this.#TYPE_PROMPT = value
           break
       }
@@ -1634,7 +1634,7 @@ class SpecManager extends BreadCrumbs {
   //#endregion member variables
   /** Constructs a new SpecManager and registers its type once
    * @constructor
-   * @param {Object} literal
+   * @param {(Object|Object.<String.*>)} literal - key has to be from #NAMES
    * @param {(String|Symbol)} key
    * @param {BreadCrumbs} parent
    * @param {(Undefined|SpecManager)} grandParentsSpec
@@ -1668,18 +1668,21 @@ class SpecManager extends BreadCrumbs {
    * @param {(Undefined|Object)} grandParentsSpec
    */
   #setOptionRENDERorThrow(grandParentsSpec) {
+    function _throwIfWrongType(value, type, name, me) {
+      me.throwIfNotOfType(
+        value,
+        type,
+        "#setOptionRENDERorThrow",
+        `'${name}: ${value}' - value has wrong type.
+Value of ${name} has to be of type 'boolean'.
+Change value of ${name} to a`
+      )
+    }
     if (
       BreadCrumbs.isDefined(this.literal) &&
       BreadCrumbs.isDefined(this.literal.RENDER)
     ) {
-      this.throwIfNotOfType(
-        this.literal["RENDER"],
-        "boolean",
-        "#setOptionRENDERorThrow",
-        `'RENDER: ${this.literal["RENDER"]}' - value has wrong type.
-Value of RENDER has to be of type 'boolean'.
-Change value of RENDER to a`
-      )
+      _throwIfWrongType(this.literal["RENDER"], "boolean", "RENDER", this)
     }
 
     let defaultRender = false
@@ -1961,53 +1964,55 @@ class TypesManager extends BreadCrumbs {
   /** Creates the notetypes from literal, throws for wrong entries
    */
   #createNoteTypesOrThrow() {
-    for (const [name, entry] of Object.entries(this.literal)) {
-      this.throwIfNotOfType(
-        entry,
-        "Object",
+    function _throwIfWrongType1(value, type, name, me) {
+      me.throwIfNotOfType(
+        value,
+        type,
         "#createNoteTypesOrThrow",
-        `'${name}: ${entry}' - value has wrong type.
-Value of ${name} has to be of type 'Object'.
+        `'${name}: ${value}' - value has wrong type.
+Value of ${name} has to be of type '${type}'.
 Change value of ${name} to a`
       )
+    }
+    function _throwDoesNotInclude(key, allowedKeys, me) {
+      throw new SettingError(
+        me.constructor.name + " " + constructor,
+        "Breadcrumbs: '" +
+          me.toBreadcrumbs() +
+          "'\n   '" +
+          key +
+          "' is no known note type definition key." +
+          "\n    Remove unknown key from your note type definitions." +
+          "\n   " +
+          "Known keys are: '" +
+          allowedKeys +
+          "'"
+      )
+    }
+    function _throwIfWrongType2(value, type, key, me) {
+      me.throwIfNotOfType(
+        value,
+        type,
+        "#createNoteTypesOrThrow",
+        `'${key}: ${value}' - value has wrong type.
+Value of ${key} has to be of type '${type}'.
+Change value of ${key} to a`
+      )
+    }
+    for (const [name, entry] of Object.entries(this.literal)) {
+      _throwIfWrongType1(entry, "Object", name, this)
       for (const [key, value] of Object.entries(entry)) {
         let allowedKeys = TypesManager.tnames
         if (!allowedKeys.includes(key))
-          throw new SettingError(
-            this.constructor.name + " " + constructor,
-            "Breadcrumbs: '" +
-              this.toBreadcrumbs() +
-              "'\n   '" +
-              key +
-              "' is no known note type definition key." +
-              "\n    Remove unknown key from your note type definitions." +
-              "\n   " +
-              "Known keys are: '" +
-              allowedKeys +
-              "'"
-          )
+          _throwDoesNotInclude(key, allowedKeys, this)
         switch (key) {
           case "DATE":
-            this.throwIfNotOfType(
-              value,
-              "boolean",
-              "#createNoteTypesOrThrow",
-              `'${key}: ${value}' - value has wrong type.
-  Value of ${key} has to be of type 'boolean'.
-  Change value of ${key} to a`
-            )
+            _throwIfWrongType2(value, "boolean", key, this)
             break
           case "MARKER":
           case "TITLE_BEFORE_DATE":
           case "DATEFORMAT":
-            this.throwIfNotOfType(
-              value,
-              "string",
-              "#createNoteTypesOrThrow",
-              `'${key}: ${value}' - value has wrong type.
-  Value of ${key} has to be of type 'string'.
-  Change value of ${key} to a`
-            )
+            _throwIfWrongType2(value, "string", key, this)
             break
         }
       }
@@ -2295,13 +2300,16 @@ class FoTyManager extends BreadCrumbs {
   static get handlerKey() {
     return FoTyManager.#FOTY_KEY
   }
+  /** Returns given FOLDER2TYPE setting, single string values converted to array
+   * @returns {Object.<Array.<String>>}
+   */
   get FOLDER2TYPE() {
     return this.#FOLDER2TYPE
   }
   //#endregion member variables
   /** Constructs a new FoTyManager and registers its type once
    * @constructor
-   * @param {(Object|Object.<String.*>)} literal
+   * @param {(Object|Object.<String.(String|Array.String)>)} literal
    * @param {(String|Symbol)} key
    * @param {Setting} parent
    * @throws {SettingError} on wrong parameter types
@@ -2314,7 +2322,7 @@ class FoTyManager extends BreadCrumbs {
     // key {(String|Symbol)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfNotOfType(parent, "Setting")
-    this.#FOLDER2TYPE = this.#validateValuesOrThrow(parent.typeNames)
+    this.#FOLDER2TYPE = this.#validateLiteralOrThrow(parent.typeNames)
   }
 
   /** Returns notetypes for a foldername, if set, or empty array else
@@ -2328,11 +2336,13 @@ class FoTyManager extends BreadCrumbs {
     if (!BreadCrumbs.isDefined(types)) types = []
     return types
   }
-  /**
-   * @param {} typeNames
+
+  /** Returns input, only single string values changed to array of string
+   * @param {Array.<String>} typeNames
    * @returns {Array.<String>}
+   * @throws {SettingError}
    */
-  #validateValuesOrThrow(typeNames) {
+  #validateLiteralOrThrow(typeNames) {
     function throwIfWrong(key, value, type, me) {
       me.throwIfNotOfType(
         value,
@@ -2407,7 +2417,7 @@ class FoTyManager extends BreadCrumbs {
       _.run(toStringTest)
       _.run(isOfTypeTest)
       _.run(getTypesForFolderTest)
-      _.run(validateValuesOrThrowTest)
+      _.run(validateLiteralOrThrowTest)
       _.destruct()
       _ = null
     }
@@ -2456,13 +2466,23 @@ class FoTyManager extends BreadCrumbs {
     }
     function getterFOLDER2TYPETest() {
       let un
-      let types1 = {__NOTETYPES: { diary: {}}}
+      let types = {__NOTETYPES: { diary: {}, citation: {}, books: {}}}
       let lit1 = {home: "diary"}
       let exp1 = {home: ["diary"]}
-      let parent1 = new Setting(types1, "getterFOLDER2TYPETest_p1", un)
-      let foty1 = new FoTyManager(lit1,"getterFOLDER2TYPETest_f1",parent1)
+      let lit2 = {home: ["diary","books","citation"]}
+      let exp2 = {home: ["diary","books","citation"]}
+      let lit3 = {home: ["books","citation"], diary: "diary"}
+      let exp3 = {home: ["books","citation"],diary: ["diary"]}
+      let parent = new Setting(types, "getterFOLDER2TYPETest", un)
+      let foty1 = new FoTyManager(lit1,"getterFOLDER2TYPETest1",parent)
+      let foty2 = new FoTyManager(lit2,"getterFOLDER2TYPETest2",parent)
+      let foty3 = new FoTyManager(lit3,"getterFOLDER2TYPETest3",parent)
       let res1 = foty1.FOLDER2TYPE
+      let res2 = foty2.FOLDER2TYPE
+      let res3 = foty3.FOLDER2TYPE
       _.bassert(1,BreadCrumbs.areEqual(exp1,res1),"foldertypes string should be converted to array of this string")
+      _.bassert(2,BreadCrumbs.areEqual(exp2,res2),"foldertypes string should be converted to array of this string")
+      _.bassert(3,BreadCrumbs.areEqual(exp3,res3),"foldertypes string should be converted to array of this string")
     }
     function constructorTest() {
       let un
@@ -2529,16 +2549,10 @@ class FoTyManager extends BreadCrumbs {
       _.bassert(1,BreadCrumbs.areEqual(foty0_0.getTypesForFolder("home"),[]), "no foldertypes set")
       _.bassert(2,BreadCrumbs.areEqual(foty0_1.getTypesForFolder("home"),[]), "no foldertypes set")
       _.bassert(3,BreadCrumbs.areEqual(foty0_2.getTypesForFolder("home"),[]), "no foldertypes set")
-      vaut("1_1", foty1_1.FOLDER2TYPE)
-      vaut("1_2", foty1_2.FOLDER2TYPE)
-      vaut("2_2", foty2_2.FOLDER2TYPE)
       let res4 = foty1_1.getTypesForFolder("home")     
-      vaut("res1_1", res4)
-      aut(typeof res4)//@todo
       _.bassert(4,BreadCrumbs.areEqual(res4,["diary"]),"diary folder type set")
-
     }
-    function validateValuesOrThrowTest() {
+    function validateLiteralOrThrowTest() {
       let un
       let types0 = {}
       let types1 = {__NOTETYPES: { diary: {}}}
@@ -3097,9 +3111,9 @@ async function createNote(tp, setting) {
       return Dialog.Cancel
     } else {
       type = setting.getType(typekey)
-      aut(type)
     }
   }
+  aut(type)
   return Dialog.Ok
 }
 
