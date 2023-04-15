@@ -114,8 +114,8 @@ const Test = {
     TYPE_MAX_ENTRIES: 10, // Max entries in "type" drop down list
   },
   __FOLDER2TYPE: {
-    diary: "diary",
-    others: ["citation", "diary"],
+    test: "diary",
+    "/": ["citation", "diary"],
   },
   __NOTETYPES: {
     diary: {
@@ -126,7 +126,6 @@ const Test = {
     },
     citation: {MARKER: "°"},
   },
-  a: 23,
   // => in frontmatter section
   // a:23
   c: {
@@ -150,8 +149,90 @@ const Test2 = {
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
-const TESTING = false
+var TESTING = false
 if (TESTING) DEBUG = false
+var CHECK_ERROR_OUTPUT = false
+if (CHECK_ERROR_OUTPUT) {
+  DEBUG = false
+  TESTING = false
+}
+
+// prettier-ignore
+/** Prints more than one error message (indirect) to current note
+ *
+ * If output in catch block of main function changes, output here has to be
+ * adapted.
+ * @param {object} YAML
+ */
+function letAllThrow(YAML) {
+  if (!CHECK_ERROR_OUTPUT) return
+  let oldPad = Number.prototype.pad
+  Number.prototype.pad = function (size) {
+    var s = String(this)
+    while (s.length < (size || 3)) {
+      s = "0" + s
+    }
+    return s
+  }
+  function out(e, YAML) {
+    let msg
+    YAML[cnt.pad()] = "---------------------------------------------------"
+    if (e instanceof SettingError) {
+      YAML[cnt.pad(4)] = e.name + " in " + e.caller
+      msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
+      msg += e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
+      } else if (e instanceof CodingError) {
+      YAML[cnt.pad() + "!"] = e.name + " in " + e.caller
+      msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
+      msg += e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
+      } else {
+      YAML[cnt.pad() + "?"] = e.name
+      msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
+    }
+    YAML[cnt.pad() + "\u00A8"] = msg
+  }
+  let un
+  let br = new BreadCrumbs({},"bcRoot",un)
+  let root = new Setting({},"/",un)
+  let rootT = new Setting({__NOTETYPES: {diary: {}}},"/",un)
+  let wrong = new Wrong(un,"wrongInstance",un)
+  let cnt = 0
+  /*01*/try{cnt++;new BreadCrumbs(1,"name1",un)}catch(e){out(e,YAML)}
+  /*02*/try{cnt++;new BreadCrumbs("x","name2",root)}catch(e){out(e,YAML)}
+  /*03*/try{cnt++;new BreadCrumbs({},un,un)}catch(e){out(e,YAML)}
+  /*04*/try{cnt++;new BreadCrumbs({},2,root)}catch(e){out(e,YAML)}
+  /*05*/try{cnt++;new BreadCrumbs({},"name5",{})}catch(e){out(e,YAML)}
+  /*06*/try{cnt++;root.objTypes =root}catch(e){out(e,YAML)}
+  /*07*/try{cnt++;root.objTypes ="a b"}catch(e){out(e,YAML)}
+  /*08*/try{cnt++;root.objTypes ="a"}catch(e){out(e,YAML)}
+  /*09*/try{cnt++;root.objTypes ="ab"}catch(e){out(e,YAML)}
+  /*10*/try{cnt++;new DialogManager(un,"name10",root)}catch(e){out(e,YAML)}
+  /*11*/try{cnt++;new DialogManager({},"name11",un)}catch(e){out(e,YAML)}
+  /*12*/try{cnt++;new DialogManager({NONAME:12},"name12",root)}catch(e){out(e,YAML)}
+  /*13*/try{cnt++;new DialogManager({TYPE_MAX_ENTRIES:false},"name13",root)}catch(e){out(e,YAML)}
+  /*14*/try{cnt++;new DialogManager({TYPE_PROMPT:12},"name14",root)}catch(e){out(e,YAML)}
+  /*15*/try{cnt++;new SpecManager(un,"name15",root)}catch(e){out(e,YAML)}
+  /*16*/try{cnt++;new SpecManager({},"name16",un,{})}catch(e){out(e,YAML)}
+  /*17*/try{cnt++;new SpecManager({},"name17",root,22)}catch(e){out(e,YAML)}
+  /*18*/try{cnt++;new SpecManager({NONAME:12},"name18",root,un)}catch(e){out(e,YAML)}
+  /*19*/try{cnt++;new SpecManager({RENDER:12},"name19",root,un)}catch(e){out(e,YAML)}
+  /*20*/try{cnt++;new TypesManager(un,"name20",root)}catch(e){out(e,YAML)}
+  /*21*/try{cnt++;new TypesManager({},"name21",un)}catch(e){out(e,YAML)}
+  /*22*/try{cnt++;new TypesManager({diary: 22},"name22",root)}catch(e){out(e,YAML)}
+  /*23*/try{cnt++;new TypesManager({diary: {NONAME: 23}},"name23",root)}catch(e){out(e,YAML)}
+  /*24*/try{cnt++;new TypesManager({diary: {MARKER: 24}},"name24",root)}catch(e){out(e,YAML)}
+  /*25*/try{cnt++;new FoTyManager(un,"name25",root)}catch(e){out(e,YAML)}
+  /*26*/try{cnt++;new FoTyManager({},"name26",un)}catch(e){out(e,YAML)}
+  /*27*/try{cnt++;new FoTyManager({},"name27",br)}catch(e){out(e,YAML)}
+  /*28*/try{cnt++;new FoTyManager({diary:"diary"},"name28",root)}catch(e){out(e,YAML)}
+  /*29*/try{cnt++;new FoTyManager({diary:"noNotetype"},"name29",rootT)}catch(e){out(e,YAML)}
+  /*30*/try{cnt++;new FoTyManager({diary:root},"name30",rootT)}catch(e){out(e,YAML)}
+  /*31*/try{cnt++;new Setting(un,"name31",un,un)}catch(e){out(e,YAML)}
+  /*32*/try{cnt++;new Setting({},"name32",br,un)}catch(e){out(e,YAML)}
+  /*33*/try{cnt++;new Setting({},"name33",un,root)}catch(e){out(e,YAML)}
+  
+  Number.prototype.pad = oldPad
+}
 // nach @todo und @remove suchen
 
 /** Colors, to be used without quotation marks during development */
@@ -250,24 +331,32 @@ class FotyError extends Error {
 /** User Error thrown from Setting tree */
 class SettingError extends FotyError {
   //#region member variables
-  section
+  caller
+  lastMsg = ""
   //#endregion member variables
-  constructor(section = "Setting", ...params) {
+  constructor(caller, ...params) {
+    let lastMsg = ""
+    if (params.length > 1) lastMsg = params.shift()
     super(...params)
     this.name = "Setting Error"
-    this.section = section
+    this.caller = caller
+    this.lastMsg = lastMsg
   }
 }
 
 /** Programming Error */
 class CodingError extends FotyError {
   //#region member variables
-  section
+  caller
+  lastMsg = ""
   //#endregion member variables
-  constructor(section = "Setting", ...params) {
+  constructor(caller, ...params) {
+    let lastMsg = ""
+    if (params.length > 1) lastMsg = params.shift()
     super(...params)
     this.name = "Coding Error"
-    this.section = section
+    this.caller = caller
+    this.lastMsg = lastMsg
   }
 }
 
@@ -730,7 +819,7 @@ class Dispatcher {
  * settings are organized in collections and items. A collection contains other
  * collections and items, each identified by a key. Content of collection/item
  * is given as literal description. So every collection has a key and a literal.
- * Besides root collection every collection has a parent BreadCrumbs. Only
+ * Besides root collection every collection has a parent BC. Only
  * literal is handled specifically by subclasses. But it always has to be an
  * Object (js object, but not null and not an array) if defined
  *
@@ -741,6 +830,8 @@ class Dispatcher {
 class BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
+  static sep = " \u00BB " // breadcrumbs separator \u2192
+  static nl = "\n    " //"\n    " // for multiLiner in SettingError
   #ident
   #caller
   #literal
@@ -765,27 +856,24 @@ class BreadCrumbs {
    *                          eval
    */
   set objTypes(className) {
-    this.throwIfNotOfType(className, "string")
+    this.throwIfNotOfType(className, "string", "objTypes", "'className'")
     this.throwIfMightBeMalicious(className)
     try {
       eval(className)
     } catch (e) {
       throw new SettingError(
-        this.constructor.name + " " + "set objTypes",
-        "Breadcrumbs: '" + this.toBreadcrumbs() + "'\n   " + e.message
+        `${this.constructor.name}.set objTypes`,
+        `Path: ${this.toBreadcrumbs()}${BC.nl}RETHROWING: ${e.message}`
       )
     }
     if (!eval(className).instanceOfMe) {
       throw new SettingError(
-        this.constructor.name + " " + "set objTypes",
-        "Breadcrumbs: '" +
-          this.toBreadcrumbs() +
-          "'\n   '" +
-          className +
-          ".instanceOfMe' has to be defined"
+        `${this.constructor.name}.set objTypes`,
+        `Path: ${this.toBreadcrumbs()}${BC.nl}'${className}.instanceOfMe' \
+        has to be defined`
       )
     }
-    BreadCrumbs.#objTypes[className] = eval(className).instanceOfMe
+    BC.#objTypes[className] = eval(className).instanceOfMe
   }
   /** Returns literal given in BreadCrumbs constructor
    * @returns {*}
@@ -802,14 +890,15 @@ class BreadCrumbs {
    * @throws {SettingError} on wrong parameter types
    */
   constructor(literal, key, parent) {
+    let un
     this.#literal = literal
     this.#ident = key
     this.#caller = parent
-    this.throwIfNotOfType(literal, ["undefined", "Object"])
+    this.throwIfNotOfType(literal, ["undefined", "Object"], un, "'literal'")
     this.throwIfUndefined(key, "key")
-    this.throwIfNotOfType(key, ["string", "symbol"])
-    this.throwIfNotOfType(parent, ["undefined", "BreadCrumbs"])
-    if (!BreadCrumbs.#instanceCounter++) this.objTypes = "BreadCrumbs"
+    this.throwIfNotOfType(key, ["string", "symbol"], un, "'key'")
+    this.throwIfNotOfType(parent, ["undefined", "BreadCrumbs"], un, "'parent'")
+    if (!BC.#instanceCounter++) this.objTypes = "BreadCrumbs"
   }
 
   /** Returns whether arg is instance of BreadCrumbs
@@ -840,11 +929,11 @@ class BreadCrumbs {
   toBreadcrumbs() {
     let breadcrumbs = ""
     let sep = ""
-    if (BreadCrumbs.isDefined(this.#caller)) {
+    if (BC.isDefined(this.#caller)) {
       if (typeof this.#caller.toBreadcrumbs == "function")
         breadcrumbs += this.#caller.toBreadcrumbs()
-      else breadcrumbs += this.#caller + "NOBREADCRUMBS"
-      sep = "."
+      else breadcrumbs += "(" + this.#caller + ")"
+      sep = BC.sep
     }
     breadcrumbs += sep + this.#ident
     return breadcrumbs
@@ -854,10 +943,10 @@ class BreadCrumbs {
    * @returns {Boolean}
    */
   isRoot() {
-    return !BreadCrumbs.isDefined(this.#caller)
+    return !BC.isDefined(this.#caller)
   }
 
-  /** Throws if val is not strictly undefined (null is defined)
+  /** Throws if val is strictly undefined (null is defined)
    *
    * Does not throw on parameter type errors
    * @param {*} val
@@ -866,14 +955,21 @@ class BreadCrumbs {
    * @param {String} [msg] - becomes part of Error message
    * @throws {SettingError}
    */
-  throwIfUndefined(val, vname, funame = "constructor", msg = "is undefined") {
+  throwIfUndefined(
+    val,
+    vname,
+    funame = "constructor",
+    msg = "is undefined",
+    lastMsg = ""
+  ) {
     if (typeof vname != "string") vname = ""
     if (typeof funame != "string") funame = ""
-    if (typeof msg != "string") msg = "' is undefined"
-    if (!BreadCrumbs.isDefined(val))
+    if (typeof msg != "string") msg = "is undefined"
+    if (!BC.isDefined(val))
       throw new SettingError(
-        this.constructor.name + " " + funame,
-        "Breadcrumbs: '" + this.toBreadcrumbs() + "'\n   '" + vname + "' " + msg
+        `${this.constructor.name}.${funame}`,
+        lastMsg,
+        `Path: ${this.toBreadcrumbs()}${BC.nl}'${vname}' ${msg}`
       )
   }
 
@@ -886,35 +982,26 @@ class BreadCrumbs {
    * @param {String} [msg] - becomes part of Error message
    * @throws {SettingError}
    */
-  throwIfNotOfType(val, type, funame = "constructor", msg = "is not of type") {
+  throwIfNotOfType(val, type, funame = "constructor", msg = "", lastMsg = "") {
     if (typeof funame != "string") funame = ""
-    if (typeof msg != "string") msg = "' is undefined"
+    if (typeof msg != "string") msg = "is not of type"
+    else msg += " is not of type"
     if (Array.isArray(type)) {
       if (
         !type.some((t) => {
-          return BreadCrumbs.isOfType(val, t)
+          return BC.isOfType(val, t)
         })
       )
         throw new SettingError(
-          this.constructor.name + " " + funame,
-          "Breadcrumbs: '" +
-            this.toBreadcrumbs() +
-            "'\n   " +
-            msg +
-            " '" +
-            type.join(" or ") +
-            "'"
+          `${this.constructor.name}.${funame}`,
+          lastMsg,
+          `Path: ${this.toBreadcrumbs()}${BC.nl}${msg} '${type.join(" or ")}'`
         )
-    } else if (!BreadCrumbs.isOfType(val, type))
+    } else if (!BC.isOfType(val, type))
       throw new SettingError(
-        this.constructor.name + " " + funame,
-        "Breadcrumbs: '" +
-          this.toBreadcrumbs() +
-          "'\n   " +
-          msg +
-          " '" +
-          type +
-          "'"
+        `${this.constructor.name}.${funame}`,
+        lastMsg,
+        `Path: ${this.toBreadcrumbs()}${BC.nl}${msg} '${type}'`
       )
   }
 
@@ -950,7 +1037,7 @@ class BreadCrumbs {
     if (type[0].toLowerCase() == type[0]) {
       answer = typeof val == type
     } else if (typeof val == "object") {
-      let fu = BreadCrumbs.#objTypes[type]
+      let fu = BC.#objTypes[type]
       if (typeof fu == "function") answer = fu(val)
     }
     return answer
@@ -964,18 +1051,19 @@ class BreadCrumbs {
    *                          this includes space character
    */
   throwIfMightBeMalicious(evalString) {
-    this.throwIfNotOfType(evalString, "string")
+    this.throwIfNotOfType(
+      evalString,
+      "string",
+      "throwIfMightBeMalicious",
+      "'evalString'"
+    )
     let isMalicious = false
     isMalicious = -1 != evalString.search(/[ .=\+\-,;?!(){}\[\]<>]/)
     if (isMalicious)
       throw new SettingError(
-        this.constructor.name + " " + "throwIfMightBeMalicious",
-        "Breadcrumbs: '" +
-          this.toBreadcrumbs() +
-          "'\n   " +
-          "evalString '" +
-          evalString +
-          "' might be malicious"
+        `${this.constructor.name}.throwIfMightBeMalicious`,
+        `Path: ${this.toBreadcrumbs()}${BC.nl}evalString '${evalString}' \
+        might be malicious`
       )
   }
 
@@ -999,7 +1087,7 @@ class BreadCrumbs {
       const val2 = arg2[key]
       const areObjects = isObject(val1) && isObject(val2)
       if (
-        (areObjects && !BreadCrumbs.areEqual(val1, val2, ++lv)) ||
+        (areObjects && !BC.areEqual(val1, val2, ++lv)) ||
         (!areObjects && val1 !== val2)
       ) {
         return false
@@ -1037,7 +1125,7 @@ class BreadCrumbs {
       let breadcrumbs0 = new BreadCrumbs({}, "my name1")
       let breadcrumbs1 = new BreadCrumbs({"key1": 87673}, "my name2")
       _.bassert(1,breadcrumbs1.literal.key1 == 87673, "does not return literal given on construction ")
-      _.bassert(2,BreadCrumbs.isDefined(breadcrumbs0.literal), "empty literal given should be defined")
+      _.bassert(2,BC.isDefined(breadcrumbs0.literal), "empty literal given should be defined")
     }
     function constructorTest() {
       let un
@@ -1074,10 +1162,10 @@ class BreadCrumbs {
     }
     function instanceOfMeTest() {
       let un
-      _.bassert(1,BreadCrumbs.instanceOfMe(new BreadCrumbs(un, "BInstance")),"BreadCrumbs instance should be an instance of BreadCrumbs")
-      _.bassert(2,!BreadCrumbs.instanceOfMe(new Error()),"Error instance should not be an instance of BreadCrumbs")
-      _.bassert(3,!BreadCrumbs.instanceOfMe("BreadCrumbs"),"String should not be an instance of BreadCrumbs")
-      _.bassert(4,!BreadCrumbs.instanceOfMe(22),"number should not be an instance of BreadCrumbs")
+      _.bassert(1,BC.instanceOfMe(new BreadCrumbs(un, "BInstance")),"BreadCrumbs instance should be an instance of BreadCrumbs")
+      _.bassert(2,!BC.instanceOfMe(new Error()),"Error instance should not be an instance of BreadCrumbs")
+      _.bassert(3,!BC.instanceOfMe("BreadCrumbs"),"String should not be an instance of BreadCrumbs")
+      _.bassert(4,!BC.instanceOfMe(22),"number should not be an instance of BreadCrumbs")
     }
     function toStringTest() {
       let str = new BreadCrumbs(undefined, "my name11").toString()
@@ -1088,6 +1176,7 @@ class BreadCrumbs {
       _.bassert(4,str.includes("BreadCrumbs"),"result does not contain class name")
     }
     function toBreadCrumbsTest() {
+      let sep = BC.sep
       let parent = new BreadCrumbs(undefined, "parent1")
       let child = new BreadCrumbs(undefined, "child1", parent)
       let grandChild = new BreadCrumbs(undefined, "grandChild1", child)
@@ -1095,8 +1184,8 @@ class BreadCrumbs {
       let childStr = child.toBreadcrumbs()
       let grandChildStr = grandChild.toBreadcrumbs()
       _.bassert(1,parentStr == "parent1","breadCrumbs '" + parentStr + "' are wrong")
-      _.bassert(2,childStr == "parent1.child1","breadCrumbs '" + childStr + "' are wrong")
-      _.bassert(3,grandChildStr == "parent1.child1.grandChild1","breadCrumbs '" + grandChildStr + "' are wrong")
+      _.bassert(2,childStr == "parent1"+ sep +"child1","breadCrumbs '" + childStr + "' are wrong")
+      _.bassert(3,grandChildStr == "parent1"+sep+"child1"+sep+"grandChild1","breadCrumbs '" + grandChildStr + "' are wrong")
     }
     function isRootTest() {
       let parent = new BreadCrumbs(undefined, "parent11")
@@ -1122,9 +1211,9 @@ class BreadCrumbs {
       _.assert(4, _tryThrowIfNotOfType,str, ["String","string"], "test",un,"should not throw as 'string' is correct type and is contained in 2nd parameter")
     }
     function isDefinedTest() {
-      _.bassert(1,BreadCrumbs.isDefined(""),"Empty String should be defined")
-      _.bassert(2,BreadCrumbs.isDefined(null),"null should be defined")
-      _.bassert(3,!BreadCrumbs.isDefined(undefined),"undefined should not be defined")
+      _.bassert(1,BC.isDefined(""),"Empty String should be defined")
+      _.bassert(2,BC.isDefined(null),"null should be defined")
+      _.bassert(3,!BC.isDefined(undefined),"undefined should not be defined")
     }
     function isOfTypeTest() {
       let undef = undefined
@@ -1152,50 +1241,50 @@ class BreadCrumbs {
       let breadcrumb1 = new BreadCrumbs({},"name_b1")
       let breadcrumb2 = new BreadCrumbs(undefined,Symbol("name_s1"))
 
-      _.bassert(1,!BreadCrumbs.isOfType(str2,"Unknown"), "Unknown" + " is not an accepted type")
-      _.bassert(2,!BreadCrumbs.isOfType(undef,undef), "type of type 'Undefined' is not an accepted type")
-      _.bassert(3,!BreadCrumbs.isOfType(num1,num1), "type of Type 'Number' is not an accepted type")
-      _.bassert(4,BreadCrumbs.isOfType(undef,"undefined"), undef + " should be of type " + "undefined")
-      _.bassert(5,BreadCrumbs.isOfType(nul,"object"), nul + " should be of type " + "object")
-      _.bassert(6,BreadCrumbs.isOfType(bool1,"boolean"), bool1 + " should be of type " + "boolean")
-      _.bassert(7,BreadCrumbs.isOfType(bool2,"boolean"), bool2 + " should be of type " + "boolean")
-      _.bassert(8,BreadCrumbs.isOfType(num1,"number"), num1 + " should be of type " + "number")
-      _.bassert(9,BreadCrumbs.isOfType(num2,"number"), num2 + " should be of type " + "number")
-      _.bassert(10,BreadCrumbs.isOfType(num3,"number"), num3 + " should be of type " + "number")
-      _.bassert(11,BreadCrumbs.isOfType(num4,"number"), num4 + " should be of type " + "number")
-      _.bassert(12,BreadCrumbs.isOfType(num5,"number"), num5 + " should be of type " + "number")
-      _.bassert(13,BreadCrumbs.isOfType(num6,"number"), num6 + " should be of type " + "number")
-      _.bassert(14,BreadCrumbs.isOfType(num7,"number"), num7 + " should be of type " + "number")
-      _.bassert(15,BreadCrumbs.isOfType(num8,"number"), num8 + " should be of type " + "number")
-      _.bassert(16,BreadCrumbs.isOfType(bigI1,"bigint"), bigI1 + " should be of type " + "bigint")
-      _.bassert(17,BreadCrumbs.isOfType(str1,"string"), str1 + " should be of type " + "string")
-      _.bassert(18,BreadCrumbs.isOfType(str2,"string"), str2 + " should be of type " + "string")
-      _.bassert(19,BreadCrumbs.isOfType(sym1,"symbol"), "Symbol()" + " should be of type " + "symbol")
-      _.bassert(20,BreadCrumbs.isOfType(sym2,"symbol"), "Symbol(arg)" + " should be of type " + "symbol")
-      _.bassert(21,BreadCrumbs.isOfType(sym3,"symbol"), "Symbol(arg)" + " should be of type " + "symbol")
-      _.bassert(22,BreadCrumbs.isOfType(obj1,"object"), obj1 + " should be of type " + "object")
-      _.bassert(23,BreadCrumbs.isOfType(obj2,"object"), obj2 + " should be of type " + "object")
-      _.bassert(24,BreadCrumbs.isOfType(arr1,"object"), "Empty Array" + " should be of type " + "object")
-      _.bassert(25,BreadCrumbs.isOfType(arr2,"object"), arr2 + " should be of type " + "object")
-      _.bassert(26,BreadCrumbs.isOfType(nul,"Null"), nul + " should be of type " + "Null")
-      _.bassert(27,BreadCrumbs.isOfType(arr1,"Array"), "Empty Array" + " should be of type " + "Array")
-      _.bassert(28,BreadCrumbs.isOfType(arr2,"Array"), arr2 + " should be of type " + "Array")
-      _.bassert(29,BreadCrumbs.isOfType(breadcrumb1,"object"), breadcrumb1 + " should be of type " + "object")
-      _.bassert(30,BreadCrumbs.isOfType(breadcrumb1,"Object"), breadcrumb1 + " should be of type " + "Object")
-      _.bassert(31,BreadCrumbs.isOfType(breadcrumb1,"BreadCrumbs"), breadcrumb1 + " should be of type " + "BreadCrumbs")
-      _.bassert(32,BreadCrumbs.isOfType(breadcrumb2,"object"), breadcrumb2 + " should be of type " + "object")
-      _.bassert(33,BreadCrumbs.isOfType(breadcrumb2,"Object"), breadcrumb2 + " should be of type " + "Object")
-      _.bassert(34,BreadCrumbs.isOfType(breadcrumb2,"BreadCrumbs"), breadcrumb2 + " should be of type " + "BreadCrumbs")
+      _.bassert(1,!BC.isOfType(str2,"Unknown"), "Unknown" + " is not an accepted type")
+      _.bassert(2,!BC.isOfType(undef,undef), "type of type 'Undefined' is not an accepted type")
+      _.bassert(3,!BC.isOfType(num1,num1), "type of Type 'Number' is not an accepted type")
+      _.bassert(4,BC.isOfType(undef,"undefined"), undef + " should be of type " + "undefined")
+      _.bassert(5,BC.isOfType(nul,"object"), nul + " should be of type " + "object")
+      _.bassert(6,BC.isOfType(bool1,"boolean"), bool1 + " should be of type " + "boolean")
+      _.bassert(7,BC.isOfType(bool2,"boolean"), bool2 + " should be of type " + "boolean")
+      _.bassert(8,BC.isOfType(num1,"number"), num1 + " should be of type " + "number")
+      _.bassert(9,BC.isOfType(num2,"number"), num2 + " should be of type " + "number")
+      _.bassert(10,BC.isOfType(num3,"number"), num3 + " should be of type " + "number")
+      _.bassert(11,BC.isOfType(num4,"number"), num4 + " should be of type " + "number")
+      _.bassert(12,BC.isOfType(num5,"number"), num5 + " should be of type " + "number")
+      _.bassert(13,BC.isOfType(num6,"number"), num6 + " should be of type " + "number")
+      _.bassert(14,BC.isOfType(num7,"number"), num7 + " should be of type " + "number")
+      _.bassert(15,BC.isOfType(num8,"number"), num8 + " should be of type " + "number")
+      _.bassert(16,BC.isOfType(bigI1,"bigint"), bigI1 + " should be of type " + "bigint")
+      _.bassert(17,BC.isOfType(str1,"string"), str1 + " should be of type " + "string")
+      _.bassert(18,BC.isOfType(str2,"string"), str2 + " should be of type " + "string")
+      _.bassert(19,BC.isOfType(sym1,"symbol"), "Symbol()" + " should be of type " + "symbol")
+      _.bassert(20,BC.isOfType(sym2,"symbol"), "Symbol(arg)" + " should be of type " + "symbol")
+      _.bassert(21,BC.isOfType(sym3,"symbol"), "Symbol(arg)" + " should be of type " + "symbol")
+      _.bassert(22,BC.isOfType(obj1,"object"), obj1 + " should be of type " + "object")
+      _.bassert(23,BC.isOfType(obj2,"object"), obj2 + " should be of type " + "object")
+      _.bassert(24,BC.isOfType(arr1,"object"), "Empty Array" + " should be of type " + "object")
+      _.bassert(25,BC.isOfType(arr2,"object"), arr2 + " should be of type " + "object")
+      _.bassert(26,BC.isOfType(nul,"Null"), nul + " should be of type " + "Null")
+      _.bassert(27,BC.isOfType(arr1,"Array"), "Empty Array" + " should be of type " + "Array")
+      _.bassert(28,BC.isOfType(arr2,"Array"), arr2 + " should be of type " + "Array")
+      _.bassert(29,BC.isOfType(breadcrumb1,"object"), breadcrumb1 + " should be of type " + "object")
+      _.bassert(30,BC.isOfType(breadcrumb1,"Object"), breadcrumb1 + " should be of type " + "Object")
+      _.bassert(31,BC.isOfType(breadcrumb1,"BreadCrumbs"), breadcrumb1 + " should be of type " + "BreadCrumbs")
+      _.bassert(32,BC.isOfType(breadcrumb2,"object"), breadcrumb2 + " should be of type " + "object")
+      _.bassert(33,BC.isOfType(breadcrumb2,"Object"), breadcrumb2 + " should be of type " + "Object")
+      _.bassert(34,BC.isOfType(breadcrumb2,"BreadCrumbs"), breadcrumb2 + " should be of type " + "BreadCrumbs")
 
-      _.bassert(101,!BreadCrumbs.isOfType(undef,"object"), undef + " should not be of type " + "object")
-      _.bassert(102,!BreadCrumbs.isOfType(undef,"Object"), undef + " should not be of type " + "Object")
-      _.bassert(103,!BreadCrumbs.isOfType(undef,"Null"), undef + " should not be of type " + "Null")
-      _.bassert(104,!BreadCrumbs.isOfType(nul,"undefined"), nul + " should not be of type " + "undefined")
-      _.bassert(105,!BreadCrumbs.isOfType(nul,"Object"), nul + " should not be of type " + "Object")
-      _.bassert(106,!BreadCrumbs.isOfType(arr1,"Object"), "Empty Array" + " should not be of type " + "Object")
-      _.bassert(107,!BreadCrumbs.isOfType(arr2,"Object"), arr2 + " should not be of type " + "Object")
-      _.bassert(108,!BreadCrumbs.isOfType(obj1,"BreadCrumbs"), obj1 + " should not be of type " + "BreadCrumbs")
-      _.bassert(109,!BreadCrumbs.isOfType(breadcrumb2,"Setting"), breadcrumb2 + " should not be of type " + "Setting")
+      _.bassert(101,!BC.isOfType(undef,"object"), undef + " should not be of type " + "object")
+      _.bassert(102,!BC.isOfType(undef,"Object"), undef + " should not be of type " + "Object")
+      _.bassert(103,!BC.isOfType(undef,"Null"), undef + " should not be of type " + "Null")
+      _.bassert(104,!BC.isOfType(nul,"undefined"), nul + " should not be of type " + "undefined")
+      _.bassert(105,!BC.isOfType(nul,"Object"), nul + " should not be of type " + "Object")
+      _.bassert(106,!BC.isOfType(arr1,"Object"), "Empty Array" + " should not be of type " + "Object")
+      _.bassert(107,!BC.isOfType(arr2,"Object"), arr2 + " should not be of type " + "Object")
+      _.bassert(108,!BC.isOfType(obj1,"BreadCrumbs"), obj1 + " should not be of type " + "BreadCrumbs")
+      _.bassert(109,!BC.isOfType(breadcrumb2,"Setting"), breadcrumb2 + " should not be of type " + "Setting")
     }
     function throwIfMightBeMaliciousTest() {
       _.shouldAssert(1,_tryThrowIfMightBeMalicious, "a b", "space character considered malicious")
@@ -1224,9 +1313,9 @@ class BreadCrumbs {
       let obj1_2 = {a:true}
       _.assert(1,_tryAreEqual,22,obj1,"any arguments allowed")
       _.assert(2,_tryAreEqual,obj1, "a","any arguments allowed")
-      _.bassert(3,BreadCrumbs.areEqual(obj1, obj1_0),"objs are equal - see code")
-      _.bassert(4,!BreadCrumbs.areEqual(obj1, obj1_1),"objs are not equal - see code")
-      _.bassert(5,!BreadCrumbs.areEqual(obj1, obj1_2),"objs are not equal - see code")
+      _.bassert(3,BC.areEqual(obj1, obj1_0),"objs are equal - see code")
+      _.bassert(4,!BC.areEqual(obj1, obj1_1),"objs are not equal - see code")
+      _.bassert(5,!BC.areEqual(obj1, obj1_2),"objs are not equal - see code")
 
       let obj2 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
       let obj2_0 = {"a":{"b":{"c":true,"d":"alpha","e":22,"f":22n,"g":null,"h":undefined,"i":_tryConstruct}}}
@@ -1240,17 +1329,17 @@ class BreadCrumbs {
       let obj2_8 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:null,i:_tryConstruct}}}
       let obj2_9 = {a:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryAreEqual}}}
       let obj2_10 = {A:{b:{c:true,d:"alpha",e:22,f:22n,g:null,h:undefined,i:_tryConstruct}}}
-      _.bassert(10,BreadCrumbs.areEqual(obj2, obj2_0),"objs are equal - see code")
-      _.bassert(11,!BreadCrumbs.areEqual(obj2, obj2_1),"objs are not equal - see code")
-      _.bassert(12,!BreadCrumbs.areEqual(obj2, obj2_2),"objs are not equal - see code")
-      _.bassert(13,!BreadCrumbs.areEqual(obj2, obj2_3),"objs are not equal - see code")
-      _.bassert(14,!BreadCrumbs.areEqual(obj2, obj2_4),"objs are not equal - see code")
-      _.bassert(15,!BreadCrumbs.areEqual(obj2, obj2_5),"objs are not equal - see code")
-      _.bassert(16,!BreadCrumbs.areEqual(obj2, obj2_6),"objs are not equal - see code")
-      _.bassert(17,!BreadCrumbs.areEqual(obj2, obj2_7),"objs are not equal - see code")
-      _.bassert(18,!BreadCrumbs.areEqual(obj2, obj2_8),"objs are not equal - see code")
-      _.bassert(19,!BreadCrumbs.areEqual(obj2, obj2_9),"objs are not equal - see code")
-      _.bassert(20,!BreadCrumbs.areEqual(obj2, obj2_10),"objs are not equal - see code")
+      _.bassert(10,BC.areEqual(obj2, obj2_0),"objs are equal - see code")
+      _.bassert(11,!BC.areEqual(obj2, obj2_1),"objs are not equal - see code")
+      _.bassert(12,!BC.areEqual(obj2, obj2_2),"objs are not equal - see code")
+      _.bassert(13,!BC.areEqual(obj2, obj2_3),"objs are not equal - see code")
+      _.bassert(14,!BC.areEqual(obj2, obj2_4),"objs are not equal - see code")
+      _.bassert(15,!BC.areEqual(obj2, obj2_5),"objs are not equal - see code")
+      _.bassert(16,!BC.areEqual(obj2, obj2_6),"objs are not equal - see code")
+      _.bassert(17,!BC.areEqual(obj2, obj2_7),"objs are not equal - see code")
+      _.bassert(18,!BC.areEqual(obj2, obj2_8),"objs are not equal - see code")
+      _.bassert(19,!BC.areEqual(obj2, obj2_9),"objs are not equal - see code")
+      _.bassert(20,!BC.areEqual(obj2, obj2_10),"objs are not equal - see code")
 
       let obj3 = {a:[1]}
       let obj3_0 = {a:[1]}
@@ -1258,17 +1347,17 @@ class BreadCrumbs {
       let obj3_2 = {a:{}}
       let obj3_3 = {a:[2]}
       let obj3_4 = {a:[1,2]}
-      _.bassert(30,BreadCrumbs.areEqual(obj3, obj3_0),"objs are equal - see code")
-      _.bassert(31,!BreadCrumbs.areEqual(obj3, obj3_1),"objs are not equal - see code")
-      _.bassert(32,!BreadCrumbs.areEqual(obj3, obj3_2),"objs are not equal - see code")
-      _.bassert(33,!BreadCrumbs.areEqual(obj3, obj3_3),"objs are not equal - see code")
-      _.bassert(34,!BreadCrumbs.areEqual(obj3, obj3_4),"objs are not equal - see code")
+      _.bassert(30,BC.areEqual(obj3, obj3_0),"objs are equal - see code")
+      _.bassert(31,!BC.areEqual(obj3, obj3_1),"objs are not equal - see code")
+      _.bassert(32,!BC.areEqual(obj3, obj3_2),"objs are not equal - see code")
+      _.bassert(33,!BC.areEqual(obj3, obj3_3),"objs are not equal - see code")
+      _.bassert(34,!BC.areEqual(obj3, obj3_4),"objs are not equal - see code")
 
       let arr1 = []
       let arr1_0 = []
       let arr1_1 = [1]
-      _.bassert(101,BreadCrumbs.areEqual(arr1, arr1_0),"arrays are equal - see code")
-      _.bassert(102,!BreadCrumbs.areEqual(arr1, arr1_1),"arrays are not equal - see code")
+      _.bassert(101,BC.areEqual(arr1, arr1_0),"arrays are equal - see code")
+      _.bassert(102,!BC.areEqual(arr1, arr1_1),"arrays are not equal - see code")
 
       let arr2 = [undefined, null, true, 1, 1n, "string",_tryConstruct,{}]
       let arr2_0 = [undefined, null, true, 1, 1n, "string",_tryConstruct,{}]
@@ -1280,23 +1369,23 @@ class BreadCrumbs {
       let arr2_6 = [undefined, null, true, 1, 1n, "String",_tryConstruct,{}]
       let arr2_7 = [undefined, null, true, 1, 1n, "string",_tryAreEqual,{}]
       let arr2_8 = [undefined, null, true, 1, 1n, "string",_tryAreEqual,{a:1}]
-      _.bassert(111,BreadCrumbs.areEqual(arr2, arr2_0),"arrays are equal - see code")
-      _.bassert(112,!BreadCrumbs.areEqual(arr2, arr2_1),"arrays are not equal - see code")
-      _.bassert(113,!BreadCrumbs.areEqual(arr2, arr2_2),"arrays are not equal - see code")
-      _.bassert(114,!BreadCrumbs.areEqual(arr2, arr2_3),"arrays are not equal - see code")
-      _.bassert(115,!BreadCrumbs.areEqual(arr2, arr2_4),"arrays are not equal - see code")
-      _.bassert(116,!BreadCrumbs.areEqual(arr2, arr2_5),"arrays are not equal - see code")
-      _.bassert(117,!BreadCrumbs.areEqual(arr2, arr2_6),"arrays are not equal - see code")
-      _.bassert(118,!BreadCrumbs.areEqual(arr2, arr2_7),"arrays are not equal - see code")
-      _.bassert(119,!BreadCrumbs.areEqual(arr2, arr2_8),"arrays are not equal - see code")
+      _.bassert(111,BC.areEqual(arr2, arr2_0),"arrays are equal - see code")
+      _.bassert(112,!BC.areEqual(arr2, arr2_1),"arrays are not equal - see code")
+      _.bassert(113,!BC.areEqual(arr2, arr2_2),"arrays are not equal - see code")
+      _.bassert(114,!BC.areEqual(arr2, arr2_3),"arrays are not equal - see code")
+      _.bassert(115,!BC.areEqual(arr2, arr2_4),"arrays are not equal - see code")
+      _.bassert(116,!BC.areEqual(arr2, arr2_5),"arrays are not equal - see code")
+      _.bassert(117,!BC.areEqual(arr2, arr2_6),"arrays are not equal - see code")
+      _.bassert(118,!BC.areEqual(arr2, arr2_7),"arrays are not equal - see code")
+      _.bassert(119,!BC.areEqual(arr2, arr2_8),"arrays are not equal - see code")
 
       let arr3 = [[[1,2,3]]]
       let arr3_0 = [[[1,2,3]]]
       let arr3_1 = [[[1,2]]]
       let arr3_2 = [[[1,2,3,4]]]
-      _.bassert(131,BreadCrumbs.areEqual(arr3, arr3_0),"arrays are equal - see code")
-      _.bassert(132,!BreadCrumbs.areEqual(arr3, arr3_1),"arrays are not equal - see code")
-      _.bassert(133,!BreadCrumbs.areEqual(arr3, arr3_2),"arrays are not equal - see code")      
+      _.bassert(131,BC.areEqual(arr3, arr3_0),"arrays are equal - see code")
+      _.bassert(132,!BC.areEqual(arr3, arr3_1),"arrays are not equal - see code")
+      _.bassert(133,!BC.areEqual(arr3, arr3_2),"arrays are not equal - see code")      
     }
     function _trySetterObjTypes(arg1) {
       let un
@@ -1320,10 +1409,13 @@ class BreadCrumbs {
       breadcrumbs.throwIfMightBeMalicious(arg1)
     }
     function _tryAreEqual(arg1, arg2) {
-      BreadCrumbs.areEqual(arg1, arg2)
+      BC.areEqual(arg1, arg2)
     }
   }
 }
+var BC = BreadCrumbs // shorthand
+/** for testing */
+class Wrong extends BreadCrumbs {}
 
 /** dialog settings parser
  * @classdesc
@@ -1376,27 +1468,21 @@ class DialogManager extends BreadCrumbs {
   constructor(literal, key, parent) {
     function _throwWrongKey(key, names, me) {
       throw new SettingError(
-        me.constructor.name + " " + constructor,
-        "Breadcrumbs: '" +
-          me.toBreadcrumbs() +
-          "'\n   '" +
-          key +
-          "' is no known dialog settings name." +
-          "\n    Remove unknown name from your dialog settings." +
-          "\n   " +
-          "Known names are: '" +
-          names +
-          "'"
+        `${me.constructor.name}.constructor`,
+        `Path: ${me.toBreadcrumbs()}\
+        ${BC.nl}'${key}' is no known dialog setting name.\
+        ${BC.nl}Known names are: '${names}'\
+        ${BC.nl}${BC.nl}Remove unknown name from your dialog settings.`
       )
     }
     function _throwIfWrongType(value, type, key, me) {
+      let un
       me.throwIfNotOfType(
         value,
         type,
-        "constructor",
-        `'${key}: ${value}' - value has wrong type.
-Value of ${key} has to be of type 'number'.
-Change value of ${key} to a`
+        un,
+        `'${key}: ${value}' - value`,
+        `${BC.nl}${BC.nl}Change value to correct type.`
       )
     }
     super(literal, key, parent)
@@ -1409,7 +1495,7 @@ Change value of ${key} to a`
 
     for (const [key, value] of Object.entries(this.literal)) {
       if (!DialogManager.#NAMES.includes(key))
-        _throwWrongKey(key, !DialogManager.#NAMES, this)
+        _throwWrongKey(key, DialogManager.#NAMES, this)
       switch (key) {
         case "TYPE_MAX_ENTRIES":
           _throwIfWrongType(value, "number", key, this)
@@ -1474,22 +1560,22 @@ Change value of ${key} to a`
       let res5 = dlgMan5.literal
       let res6 = dlgMan6.literal
       _.bassert(1,Object.keys(res1).length == 0,"literal should be empty as given")
-      _.bassert(2,BreadCrumbs.areEqual(lit2,res2),"literal should not be changed")
-      _.bassert(3,BreadCrumbs.areEqual(lit3,res3),"literal should not be changed")
-      _.bassert(4,BreadCrumbs.areEqual(lit4,res4),"literal should not be changed")
-      _.bassert(5,BreadCrumbs.areEqual(lit5,res5),"literal should not be changed")
-      _.bassert(6,BreadCrumbs.areEqual(lit6,res6),"literal should not be changed")
+      _.bassert(2,BC.areEqual(lit2,res2),"literal should not be changed")
+      _.bassert(3,BC.areEqual(lit3,res3),"literal should not be changed")
+      _.bassert(4,BC.areEqual(lit4,res4),"literal should not be changed")
+      _.bassert(5,BC.areEqual(lit5,res5),"literal should not be changed")
+      _.bassert(6,BC.areEqual(lit6,res6),"literal should not be changed")
     }
     function getterNamesTest() {
       let names = DialogManager.names
-      _.bassert(1,BreadCrumbs.isOfType(names,"Array"),"should return an array")
+      _.bassert(1,BC.isOfType(names,"Array"),"should return an array")
       _.bassert(2,names.includes("TYPE_PROMPT"),"should contain 'TYPE_PROMPT'")
       _.bassert(3,names.includes("TYPE_MAX_ENTRIES"),"should contain 'TYPE_MAX_ENTRIES'")
       _.bassert(5,names.every((entry) => {return null == entry.match(/[a-z]/)}),"keys should be completely uppercase")
     }
     function getterDefaultsTest() {    
       let defs = DialogManager.defaults
-      _.bassert(1, BreadCrumbs.isOfType(defs,"object","should be an object"))
+      _.bassert(1, BC.isOfType(defs,"object","should be an object"))
       let defTypeKeys = Object.keys(defs)
       let names = DialogManager.names
       _.bassert(2,defTypeKeys.length == names.length,"Default type should contain as many names as there are in TypesManager.keys")
@@ -1572,12 +1658,12 @@ Change value of ${key} to a`
       let un
       let parent = new BreadCrumbs(un, "isOfTypeTest", un)
       let dlg1 = new DialogManager({},"isOfTypeTest1",parent)
-      _.bassert(1, BreadCrumbs.isOfType(dlg1,"object"), "'" + dlg1 + "' should be of type " + "object")
-      _.bassert(2, BreadCrumbs.isOfType(dlg1,"Object"), "'" + dlg1 + "' should be of type " + "Object")
-      _.bassert(3, BreadCrumbs.isOfType(dlg1,"BreadCrumbs"), "'" + dlg1 + "' should be of type " + "BreadCrumbs")
-      _.bassert(4, BreadCrumbs.isOfType(dlg1,"DialogManager"), "'" + dlg1 + "' should be of type " + "DialogManager")
-      _.bassert(5,!BreadCrumbs.isOfType(dlg1,"Error"), "'" + dlg1 + "' should not be of type " + "Error")
-      _.bassert(6,!BreadCrumbs.isOfType(dlg1,"SpecManager"), "'" + dlg1 + "' should not be of type " + "SpecManager")
+      _.bassert(1, BC.isOfType(dlg1,"object"), "'" + dlg1 + "' should be of type " + "object")
+      _.bassert(2, BC.isOfType(dlg1,"Object"), "'" + dlg1 + "' should be of type " + "Object")
+      _.bassert(3, BC.isOfType(dlg1,"BreadCrumbs"), "'" + dlg1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4, BC.isOfType(dlg1,"DialogManager"), "'" + dlg1 + "' should be of type " + "DialogManager")
+      _.bassert(5,!BC.isOfType(dlg1,"Error"), "'" + dlg1 + "' should not be of type " + "Error")
+      _.bassert(6,!BC.isOfType(dlg1,"SpecManager"), "'" + dlg1 + "' should not be of type " + "SpecManager")
     }
     function _tryConstruct(arg1, arg2, arg3) {
       new DialogManager(arg1, arg2, arg3)
@@ -1641,6 +1727,16 @@ class SpecManager extends BreadCrumbs {
    * @throws {SettingError} on wrong parameter types
    */
   constructor(literal, key, parent, grandParentsSpec) {
+    function _throwWrongKey(name, names, me) {
+      throw new SettingError(
+        `${me.constructor.name}.constructor`,
+        `Path: ${me.toBreadcrumbs()}\
+        ${BC.nl}'${name}' is no known specification setting name.\
+        ${BC.nl}Known names are: '${names}'\
+        ${BC.nl}${BC.nl}Remove unknown name from your specification settings.`
+      )
+    }
+    let un
     super(literal, key, parent)
     if (!SpecManager.#instanceCounter++) this.objTypes = "SpecManager"
     this.throwIfUndefined(literal, "literal")
@@ -1648,7 +1744,16 @@ class SpecManager extends BreadCrumbs {
     // key {(String|Symbol)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     // parent {(Undefined|BreadCrumbs)} checked by superclass
-    this.throwIfNotOfType(grandParentsSpec, ["undefined", "SpecManager"])
+    this.throwIfNotOfType(
+      grandParentsSpec,
+      ["undefined", "SpecManager"],
+      un,
+      "'grandParentsSpec'"
+    )
+    for (const key of Object.keys(this.literal)) {
+      if (!SpecManager.#NAMES.includes(key))
+        _throwWrongKey(key, SpecManager.#NAMES, this)
+    }
     this.#setOptionRENDERorThrow(grandParentsSpec)
   }
 
@@ -1666,6 +1771,7 @@ class SpecManager extends BreadCrumbs {
    * if not it uses value of grandParentsSpec if grandParentsSpec given
    * as fallback it uses default value, which is false
    * @param {(Undefined|Object)} grandParentsSpec
+   * @throws {SettingError}
    */
   #setOptionRENDERorThrow(grandParentsSpec) {
     function _throwIfWrongType(value, type, name, me) {
@@ -1673,9 +1779,8 @@ class SpecManager extends BreadCrumbs {
         value,
         type,
         "#setOptionRENDERorThrow",
-        `'${name}: ${value}' - value has wrong type.
-Value of ${name} has to be of type 'boolean'.
-Change value of ${name} to a`
+        `'${name}: ${value}' - value`,
+        `${BC.nl}${BC.nl}Change value to correct type.`
       )
     }
     if (
@@ -1686,10 +1791,10 @@ Change value of ${name} to a`
     }
 
     let defaultRender = false
-    let literalRender = BreadCrumbs.isDefined(this.literal)
+    let literalRender = BC.isDefined(this.literal)
       ? this.literal["RENDER"]
       : undefined
-    let parentRender = BreadCrumbs.isDefined(grandParentsSpec)
+    let parentRender = BC.isDefined(grandParentsSpec)
       ? grandParentsSpec["RENDER"]
       : undefined
     this.#RENDER =
@@ -1726,28 +1831,28 @@ Change value of ${name} to a`
       let parent = new BreadCrumbs(un, "getterLiteralTest", un)
       let sym = Symbol("a")
       let specMan1 = new SpecManager({},"getterLiteralTest02",parent,un)
-      let specMan2 = new SpecManager({sym: "un"},"getterLiteralTest03",parent,un)
-      let specMan3 = new SpecManager({"__SPEC": un},"getterLiteralTest04",parent,un)
+      let specMan2 = new SpecManager({RENDER: true},"getterLiteralTest03",parent,un)
+      let specMan3 = new SpecManager({},"getterLiteralTest04",parent,un)
       let lit1 = specMan1.literal
       let lit2 = specMan2.literal
       let lit3 = specMan3.literal
       _.bassert(1,lit1,"literal should be empty as given")
-      _.bassert(2,lit2.sym == "un","value of Symbol('a') should be 'un' as given")
+      _.bassert(2,lit2.RENDER == true,"value of RENDER should be 'true' as given")
       _.bassert(3,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(4,BreadCrumbs.isOfType(lit3["__SPEC"],"undefined"),"value of '__SPEC' should be undefined")
+      _.bassert(4,BC.isOfType(lit3["__SPEC"],"undefined"),"value of '__SPEC' should be undefined")
     }
     function getterNamesTest() {
       let names = SpecManager.names
-      _.bassert(1,BreadCrumbs.isDefined(names), "should be defined")
-      _.bassert(2,BreadCrumbs.isOfType(names, "Array"),"should return an array")
+      _.bassert(1,BC.isDefined(names), "should be defined")
+      _.bassert(2,BC.isOfType(names, "Array"),"should return an array")
       _.bassert(3,names.includes("RENDER"),"should contain 'RENDER' option")
     }
     function getterDefaultsTest() {
       let defaults = SpecManager.defaults
-      _.bassert(1,BreadCrumbs.isDefined(defaults), "should be defined")
-      _.bassert(2,BreadCrumbs.isOfType(defaults, "Object"),"should return an Object")
-      _.bassert(3,BreadCrumbs.isDefined(defaults.RENDER),"'RENDER' option should be defined")
-      _.bassert(4,BreadCrumbs.isOfType(defaults.RENDER,"boolean"),"'RENDER' option should have a boolean value")
+      _.bassert(1,BC.isDefined(defaults), "should be defined")
+      _.bassert(2,BC.isOfType(defaults, "Object"),"should return an Object")
+      _.bassert(3,BC.isDefined(defaults.RENDER),"'RENDER' option should be defined")
+      _.bassert(4,BC.isOfType(defaults.RENDER,"boolean"),"'RENDER' option should have a boolean value")
     }
     function getterRENDERTest() {
       /* At moment of creation of this test, it is a copy of
@@ -1766,7 +1871,7 @@ Change value of ${name} to a`
       let spec6 = new SpecManager({RENDER:false},"getterRENDERTest1",parent,specTrue)
       let spec7 = new SpecManager({RENDER:true},"getterRENDERTest1",parent,specTrue)
 
-      _.bassert(1,BreadCrumbs.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
+      _.bassert(1,BC.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
       _.bassert(2,spec1.RENDER === false,"RENDER should be false, if no specification for it is given")
       _.bassert(3,specFalse.RENDER === false,"RENDER should be false, as set in specification")
       _.bassert(4,specTrue.RENDER === true,"RENDER should be true, as set in specification")
@@ -1830,12 +1935,12 @@ Change value of ${name} to a`
       let un
       let parent = new BreadCrumbs(un, "isOfTypeTest", un)
       let spec1 = new SpecManager({},"isOfTypeTest1",parent,un)
-      _.bassert(1,BreadCrumbs.isOfType(spec1,"object"), "'" + spec1 + "' should be of type " + "object")
-      _.bassert(2,BreadCrumbs.isOfType(spec1,"Object"), "'" + spec1 + "' should be of type " + "Object")
-      _.bassert(3,BreadCrumbs.isOfType(spec1,"BreadCrumbs"), "'" + spec1 + "' should be of type " + "BreadCrumbs")
-      _.bassert(4,BreadCrumbs.isOfType(spec1,"SpecManager"), "'" + spec1 + "' should be of type " + "SpecManager")
-      _.bassert(5,!BreadCrumbs.isOfType(spec1,"Error"), "'" + spec1 + "' should not be of type " + "Error")
-      _.bassert(6,!BreadCrumbs.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should not be of type " + "TypesManager")
+      _.bassert(1,BC.isOfType(spec1,"object"), "'" + spec1 + "' should be of type " + "object")
+      _.bassert(2,BC.isOfType(spec1,"Object"), "'" + spec1 + "' should be of type " + "Object")
+      _.bassert(3,BC.isOfType(spec1,"BreadCrumbs"), "'" + spec1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4,BC.isOfType(spec1,"SpecManager"), "'" + spec1 + "' should be of type " + "SpecManager")
+      _.bassert(5,!BC.isOfType(spec1,"Error"), "'" + spec1 + "' should not be of type " + "Error")
+      _.bassert(6,!BC.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should not be of type " + "TypesManager")
     }
     function setOptionRENDERorThrowTest() {
       let un
@@ -1850,7 +1955,7 @@ Change value of ${name} to a`
       let spec6 = new SpecManager({RENDER:false},"setOptionRENDERorThrowTest8",parent,specTrue)
       let spec7 = new SpecManager({RENDER:true},"setOptionRenderTest9",parent,specTrue)
 
-      _.bassert(1,BreadCrumbs.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
+      _.bassert(1,BC.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
       _.bassert(2,spec1.RENDER === false,"RENDER should be false, if no specification for it is given")
       _.bassert(3,specFalse.RENDER === false,"RENDER should be false, as set in specification")
       _.bassert(4,specTrue.RENDER === true,"RENDER should be true, as set in specification")
@@ -1964,55 +2069,37 @@ class TypesManager extends BreadCrumbs {
   /** Creates the notetypes from literal, throws for wrong entries
    */
   #createNoteTypesOrThrow() {
-    function _throwIfWrongType1(value, type, name, me) {
-      me.throwIfNotOfType(
-        value,
-        type,
-        "#createNoteTypesOrThrow",
-        `'${name}: ${value}' - value has wrong type.
-Value of ${name} has to be of type '${type}'.
-Change value of ${name} to a`
-      )
-    }
-    function _throwDoesNotInclude(key, allowedKeys, me) {
+    function _throwWrongKey(name, names, me) {
       throw new SettingError(
-        me.constructor.name + " " + constructor,
-        "Breadcrumbs: '" +
-          me.toBreadcrumbs() +
-          "'\n   '" +
-          key +
-          "' is no known note type definition key." +
-          "\n    Remove unknown key from your note type definitions." +
-          "\n   " +
-          "Known keys are: '" +
-          allowedKeys +
-          "'"
+        `${me.constructor.name}.constructor`,
+        `Path: ${me.toBreadcrumbs()}\
+        ${BC.nl}'${name}' is no known notetype setting name.\
+        ${BC.nl}Known names are: '${names}'\
+        ${BC.nl}${BC.nl}Remove unknown name from your notetype settings.`
       )
     }
-    function _throwIfWrongType2(value, type, key, me) {
+    function _throwIfWrongType(value, type, name, me) {
       me.throwIfNotOfType(
         value,
         type,
         "#createNoteTypesOrThrow",
-        `'${key}: ${value}' - value has wrong type.
-Value of ${key} has to be of type '${type}'.
-Change value of ${key} to a`
+        `'${name}: ${value}' - value`,
+        `${BC.nl}${BC.nl}Change value to correct type.`
       )
     }
     for (const [name, entry] of Object.entries(this.literal)) {
-      _throwIfWrongType1(entry, "Object", name, this)
+      _throwIfWrongType(entry, "Object", name, this)
       for (const [key, value] of Object.entries(entry)) {
         let allowedKeys = TypesManager.tnames
-        if (!allowedKeys.includes(key))
-          _throwDoesNotInclude(key, allowedKeys, this)
+        if (!allowedKeys.includes(key)) _throwWrongKey(key, allowedKeys, this)
         switch (key) {
           case "DATE":
-            _throwIfWrongType2(value, "boolean", key, this)
+            _throwIfWrongType(value, "boolean", key, this)
             break
           case "MARKER":
           case "TITLE_BEFORE_DATE":
           case "DATEFORMAT":
-            _throwIfWrongType2(value, "string", key, this)
+            _throwIfWrongType(value, "string", key, this)
             break
         }
       }
@@ -2083,7 +2170,7 @@ Change value of ${key} to a`
     }
     function getterTnamesTest() {
       let tnames = TypesManager.tnames
-      _.bassert(1,BreadCrumbs.isOfType(tnames,"Array"),"should return an array")
+      _.bassert(1,BC.isOfType(tnames,"Array"),"should return an array")
       _.bassert(2,tnames.includes("MARKER"),"should contain 'MARKER'")
       _.bassert(3,tnames.includes("DATE"),"should contain 'DATE'")
       _.bassert(4,tnames.includes("DATEFORMAT"),"should contain 'DATEFORMAT'")
@@ -2091,7 +2178,7 @@ Change value of ${key} to a`
     }
     function getterDefaultTypeTest() {    
       let defType = TypesManager.defaultType
-      _.bassert(1, BreadCrumbs.isOfType(defType,"object","should be an object"))
+      _.bassert(1, BC.isOfType(defType,"object","should be an object"))
       let defTypeKeys = Object.keys(defType)
       let tnames = TypesManager.tnames
       _.bassert(2,defTypeKeys.length == tnames.length,"Default type should contain as many tnames as there are in TypesManager.tnames")
@@ -2208,12 +2295,12 @@ Change value of ${key} to a`
       let un
       let parent = new BreadCrumbs(un, "isOfTypeTest", un)
       let type1 = new TypesManager({},"isOfTypeTest1",parent)
-      _.bassert(1,BreadCrumbs.isOfType(type1,"object"), "'" + type1 + "' should be of type " + "object")
-      _.bassert(2,BreadCrumbs.isOfType(type1,"Object"), "'" + type1 + "' should be of type " + "Object")
-      _.bassert(3,BreadCrumbs.isOfType(type1,"BreadCrumbs"), "'" + type1 + "' should be of type " + "BreadCrumbs")
-      _.bassert(4,BreadCrumbs.isOfType(type1,"TypesManager"), "'" + type1 + "' should be of type " + "TypesManager")
-      _.bassert(5,!BreadCrumbs.isOfType(type1,"Error"), "'" + type1 + "' should not be of type " + "Error")
-      _.bassert(6,!BreadCrumbs.isOfType(type1,"SpecManager"), "'" + type1 + "' should not be of type " + "SpecManager")
+      _.bassert(1,BC.isOfType(type1,"object"), "'" + type1 + "' should be of type " + "object")
+      _.bassert(2,BC.isOfType(type1,"Object"), "'" + type1 + "' should be of type " + "Object")
+      _.bassert(3,BC.isOfType(type1,"BreadCrumbs"), "'" + type1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4,BC.isOfType(type1,"TypesManager"), "'" + type1 + "' should be of type " + "TypesManager")
+      _.bassert(5,!BC.isOfType(type1,"Error"), "'" + type1 + "' should not be of type " + "Error")
+      _.bassert(6,!BC.isOfType(type1,"SpecManager"), "'" + type1 + "' should not be of type " + "SpecManager")
     }
     function createNoteTypesOrThrowTest() {
       let un
@@ -2280,7 +2367,7 @@ Change value of ${key} to a`
       new TypesManager(arg1, arg2, arg3)
     }
     function _tryAreEqual(arg1, arg2) {
-      BreadCrumbs.areEqual(arg1, arg2)
+      BC.areEqual(arg1, arg2)
     }
   }
 }
@@ -2315,13 +2402,14 @@ class FoTyManager extends BreadCrumbs {
    * @throws {SettingError} on wrong parameter types
    */
   constructor(literal, key, parent) {
+    let un
     super(literal, key, parent)
     if (!FoTyManager.#instanceCounter++) this.objTypes = "FoTyManager"
     this.throwIfUndefined(literal, "literal")
     // literal {(Undefined|Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
     this.throwIfUndefined(parent, "parent")
-    this.throwIfNotOfType(parent, "Setting")
+    this.throwIfNotOfType(parent, "Setting", un, "'parent'")
     this.#FOLDER2TYPE = this.#validateLiteralOrThrow(parent.typeNames)
   }
 
@@ -2331,9 +2419,9 @@ class FoTyManager extends BreadCrumbs {
    * @throws {SettingError} on wrong parameter type
    */
   getTypesForFolder(folder) {
-    this.throwIfNotOfType(folder, "string")
+    this.throwIfNotOfType(folder, "string", "getTypesForFolder", "folder")
     let types = this.#FOLDER2TYPE[folder]
-    if (!BreadCrumbs.isDefined(types)) types = []
+    if (!BC.isDefined(types)) types = []
     return types
   }
 
@@ -2343,54 +2431,44 @@ class FoTyManager extends BreadCrumbs {
    * @throws {SettingError}
    */
   #validateLiteralOrThrow(typeNames) {
-    function throwIfWrong(key, value, type, me) {
+    function _throwNoType(type, typeNames, me) {
+      throw new SettingError(
+        `${me.constructor.name}.#validateLiteralOrThrow`,
+        `Path: ${me.toBreadcrumbs()}\
+        ${BC.nl}'${type}' is no is no given notetype.\
+        ${BC.nl}Given notetypes are: '${typeNames}'\
+        ${BC.nl}${BC.nl}Remove unknown notetypes from your FOLDER2TYPE settings\
+        ${BC.nl}or add a notetype definition for '${type}'`
+      )
+    }
+    function _throwIfWrongType(value, type, key, me) {
       me.throwIfNotOfType(
         value,
         type,
-        "constructor",
-        `'${key}: ${value}' - value has wrong type.
-  Value of ${key} has to be of type 'string' or 'array of strings'.
-  Change value of ${key} to `
+        "#validateLiteralOrThrow",
+        `'${key}: ${value}' - value`,
+        `${BC.nl}${BC.nl}Change value to correct type.`
       )
     }
-    function throwNothingSet(value, me) {
+    function _throwNothingSet(value, me) {
       throw new SettingError(
-        me.constructor.name + " " + constructor,
-        "Breadcrumbs: '" +
-          me.toBreadcrumbs() +
-          `\n   You have no __NOTETYPES defined, you can not use __FOLDER2TYPE
-  \n. Define a notetype for '${value}'.`
-      )
-    }
-    function throwNoType(type, typeNames, me) {
-      throw new SettingError(
-        me.constructor.name + " " + constructor,
-        "Breadcrumbs: '" +
-          me.toBreadcrumbs() +
-          "'\n   '" +
-          type +
-          "' is no given notetype." +
-          "\n    Remove unknown notetypes from your FOLDER2TYPE settings or" +
-          "\n    add a notetype definition for '" +
-          type +
-          "' to NOTETYPES" +
-          "\n   " +
-          "Given notetypes are: '" +
-          typeNames +
-          "'"
+        `${me.constructor.name}.#validateLiteralOrThrow`,
+        `Path: ${me.toBreadcrumbs()}\
+        ${BC.nl}You have no __NOTETYPES defined, you can not use __FOLDER2TYPE\
+        ${BC.nl}${BC.nl}Define a notetype for '${value}`
       )
     }
 
     let folder2types = {}
     for (const [key, value] of Object.entries(this.literal)) {
-      throwIfWrong(key, value, ["string", "Array"], this)
+      _throwIfWrongType(value, ["string", "Array"], key, this)
 
       let valueNames = []
-      if (BreadCrumbs.isOfType(value, "string")) valueNames.push(value)
+      if (BC.isOfType(value, "string")) valueNames.push(value)
       else valueNames = value
-      if (typeNames.length == 0) throwNothingSet(valueNames[0], this)
+      if (typeNames.length == 0) _throwNothingSet(valueNames[0], this)
       valueNames.forEach((type) => {
-        if (!typeNames.includes(type)) throwNoType(type, typeNames, this)
+        if (!typeNames.includes(type)) _throwNoType(type, typeNames, this)
       })
       folder2types[key] = valueNames
     }
@@ -2447,11 +2525,11 @@ class FoTyManager extends BreadCrumbs {
       let res5 = ftMan5.literal
       let res6 = ftMan6.literal
       _.bassert(1,Object.keys(res1).length == 0,"literal should be empty as given")
-      _.bassert(2,BreadCrumbs.areEqual(lit2,res2),"literal should not be changed")
-      _.bassert(3,BreadCrumbs.areEqual(lit3,res3),"literal should not be changed")
-      _.bassert(4,BreadCrumbs.areEqual(lit4,res4),"literal should not be changed")
-      _.bassert(5,BreadCrumbs.areEqual(lit5,res5),"literal should not be changed")
-      _.bassert(6,BreadCrumbs.areEqual(lit6,res6),"literal should not be changed")
+      _.bassert(2,BC.areEqual(lit2,res2),"literal should not be changed")
+      _.bassert(3,BC.areEqual(lit3,res3),"literal should not be changed")
+      _.bassert(4,BC.areEqual(lit4,res4),"literal should not be changed")
+      _.bassert(5,BC.areEqual(lit5,res5),"literal should not be changed")
+      _.bassert(6,BC.areEqual(lit6,res6),"literal should not be changed")
     }
     function instanceOfMeTest() {
       let un
@@ -2480,9 +2558,9 @@ class FoTyManager extends BreadCrumbs {
       let res1 = foty1.FOLDER2TYPE
       let res2 = foty2.FOLDER2TYPE
       let res3 = foty3.FOLDER2TYPE
-      _.bassert(1,BreadCrumbs.areEqual(exp1,res1),"foldertypes string should be converted to array of this string")
-      _.bassert(2,BreadCrumbs.areEqual(exp2,res2),"foldertypes string should be converted to array of this string")
-      _.bassert(3,BreadCrumbs.areEqual(exp3,res3),"foldertypes string should be converted to array of this string")
+      _.bassert(1,BC.areEqual(exp1,res1),"foldertypes string should be converted to array of this string")
+      _.bassert(2,BC.areEqual(exp2,res2),"foldertypes string should be converted to array of this string")
+      _.bassert(3,BC.areEqual(exp3,res3),"foldertypes string should be converted to array of this string")
     }
     function constructorTest() {
       let un
@@ -2522,12 +2600,12 @@ class FoTyManager extends BreadCrumbs {
       let un
       let parent = new Setting({}, "isOfTypeTest", un)
       let ft1 = new FoTyManager({},"isOfTypeTest1",parent)
-      _.bassert(1, BreadCrumbs.isOfType(ft1,"object"), "'" + ft1 + "' should be of type " + "object")
-      _.bassert(2, BreadCrumbs.isOfType(ft1,"Object"), "'" + ft1 + "' should be of type " + "Object")
-      _.bassert(3, BreadCrumbs.isOfType(ft1,"BreadCrumbs"), "'" + ft1 + "' should be of type " + "BreadCrumbs")
-      _.bassert(4, BreadCrumbs.isOfType(ft1,"FoTyManager"), "'" + ft1 + "' should be of type " + "FoTyManager")
-      _.bassert(5,!BreadCrumbs.isOfType(ft1,"Error"), "'" + ft1 + "' should not be of type " + "Error")
-      _.bassert(6,!BreadCrumbs.isOfType(ft1,"SpecManager"), "'" + ft1 + "' should not be of type " + "SpecManager")
+      _.bassert(1, BC.isOfType(ft1,"object"), "'" + ft1 + "' should be of type " + "object")
+      _.bassert(2, BC.isOfType(ft1,"Object"), "'" + ft1 + "' should be of type " + "Object")
+      _.bassert(3, BC.isOfType(ft1,"BreadCrumbs"), "'" + ft1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4, BC.isOfType(ft1,"FoTyManager"), "'" + ft1 + "' should be of type " + "FoTyManager")
+      _.bassert(5,!BC.isOfType(ft1,"Error"), "'" + ft1 + "' should not be of type " + "Error")
+      _.bassert(6,!BC.isOfType(ft1,"SpecManager"), "'" + ft1 + "' should not be of type " + "SpecManager")
     }
     function getTypesForFolderTest() {
       let un
@@ -2546,11 +2624,11 @@ class FoTyManager extends BreadCrumbs {
       let foty1_1 = new FoTyManager(lit1,"ff1_1",parent1)
       let foty1_2 = new FoTyManager(lit1,"ff1_2",parent2)
       let foty2_2 = new FoTyManager(lit2,"ff2_2",parent2)
-      _.bassert(1,BreadCrumbs.areEqual(foty0_0.getTypesForFolder("home"),[]), "no foldertypes set")
-      _.bassert(2,BreadCrumbs.areEqual(foty0_1.getTypesForFolder("home"),[]), "no foldertypes set")
-      _.bassert(3,BreadCrumbs.areEqual(foty0_2.getTypesForFolder("home"),[]), "no foldertypes set")
+      _.bassert(1,BC.areEqual(foty0_0.getTypesForFolder("home"),[]), "no foldertypes set")
+      _.bassert(2,BC.areEqual(foty0_1.getTypesForFolder("home"),[]), "no foldertypes set")
+      _.bassert(3,BC.areEqual(foty0_2.getTypesForFolder("home"),[]), "no foldertypes set")
       let res4 = foty1_1.getTypesForFolder("home")     
-      _.bassert(4,BreadCrumbs.areEqual(res4,["diary"]),"diary folder type set")
+      _.bassert(4,BC.areEqual(res4,["diary"]),"diary folder type set")
     }
     function validateLiteralOrThrowTest() {
       let un
@@ -2636,17 +2714,23 @@ class Setting extends BreadCrumbs {
     parent = undefined,
     parentsSpec = undefined
   ) {
+    let un
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
     if (!Setting.#instanceCounter++) this.objTypes = "Setting"
     this.throwIfUndefined(literal, "literal")
     // literal {(Undefined|Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
     // parent {(Undefined|BreadCrumbs)} checked by superclass
-    this.throwIfNotOfType(parent, ["undefined", "Setting"])
-    this.throwIfNotOfType(parentsSpec, ["undefined", "SpecManager"])
+    this.throwIfNotOfType(parent, ["undefined", "Setting"], un, "'parent'")
+    this.throwIfNotOfType(
+      parentsSpec,
+      ["undefined", "SpecManager"],
+      un,
+      "'parentsSpec'"
+    )
 
     let spec = {}
-    if (BreadCrumbs.isDefined(this.literal[SpecManager.handlerKey]))
+    if (BC.isDefined(this.literal[SpecManager.handlerKey]))
       spec = this.literal[SpecManager.handlerKey]
     this.#spec = new SpecManager(
       spec,
@@ -2656,23 +2740,23 @@ class Setting extends BreadCrumbs {
     )
     if (this.isRoot()) {
       let types = {}
-      if (BreadCrumbs.isDefined(this.literal[TypesManager.handlerKey]))
+      if (BC.isDefined(this.literal[TypesManager.handlerKey]))
         types = this.literal[TypesManager.handlerKey]
       this.#types = new TypesManager(types, TypesManager.handlerKey, this)
 
       let dlg = {}
-      if (BreadCrumbs.isDefined(this.literal[DialogManager.handlerKey]))
+      if (BC.isDefined(this.literal[DialogManager.handlerKey]))
         dlg = this.literal[DialogManager.handlerKey]
       this.#dlg = new DialogManager(dlg, DialogManager.handlerKey, this)
 
       let foty = {}
-      if (BreadCrumbs.isDefined(this.literal[FoTyManager.handlerKey]))
+      if (BC.isDefined(this.literal[FoTyManager.handlerKey]))
         foty = this.literal[FoTyManager.handlerKey]
       this.#foty = new FoTyManager(foty, FoTyManager.handlerKey, this)
     }
 
     for (const [key, value] of Object.entries(this.literal)) {
-      if (BreadCrumbs.isOfType(value, "Object")) {
+      if (BC.isOfType(value, "Object")) {
         if (!Setting.#isHandlersKey(key)) {
           this.#children[key] = new Setting(value, key, this, this.#spec)
         }
@@ -2722,7 +2806,7 @@ class Setting extends BreadCrumbs {
    * @returns  {Object.<String.*>}
    */
   getType(name) {
-    if (BreadCrumbs.isDefined(this.#types.notetypes[name])) {
+    if (BC.isDefined(this.#types.notetypes[name])) {
       return this.#types.notetypes[name]
     } else {
       return TypesManager.defaultType
@@ -2744,7 +2828,7 @@ class Setting extends BreadCrumbs {
 
   // prettier-ignore
   static test(outputObj) { // Setting
-    BreadCrumbs.test(outputObj)
+    BC.test(outputObj)
     DialogManager.test(outputObj)
     SpecManager.test(outputObj)
     TypesManager.test(outputObj)
@@ -2959,13 +3043,13 @@ class Setting extends BreadCrumbs {
     function isOfTypeTest() {
       let un
       let setting1 = new Setting({},"isOfTypeTest1",un,un)
-      _.bassert(1,BreadCrumbs.isOfType(setting1,"object"), "'" + setting1 + "' should be of type " + "object")
-      _.bassert(2,BreadCrumbs.isOfType(setting1,"Object"), "'" + setting1 + "' should be of type " + "Object")
-      _.bassert(3,BreadCrumbs.isOfType(setting1,"BreadCrumbs"), "'" + setting1 + "' should be of type " + "BreadCrumbs")
-      _.bassert(4,BreadCrumbs.isOfType(setting1,"Setting"), "'" + setting1 + "' should be of type " + "Setting")
-      _.bassert(5,!BreadCrumbs.isOfType(setting1,"Error"), "'" + setting1 + "' should not be of type " + "Error")
-      _.bassert(6,!BreadCrumbs.isOfType(setting1,"SpecManager"), "'" + setting1 + "' should not be of type " + "SpecManager")
-      _.bassert(7,!BreadCrumbs.isOfType(setting1,"TypesManager"), "'" + setting1 + "' should not be of type " + "TypesManager")
+      _.bassert(1,BC.isOfType(setting1,"object"), "'" + setting1 + "' should be of type " + "object")
+      _.bassert(2,BC.isOfType(setting1,"Object"), "'" + setting1 + "' should be of type " + "Object")
+      _.bassert(3,BC.isOfType(setting1,"BreadCrumbs"), "'" + setting1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4,BC.isOfType(setting1,"Setting"), "'" + setting1 + "' should be of type " + "Setting")
+      _.bassert(5,!BC.isOfType(setting1,"Error"), "'" + setting1 + "' should not be of type " + "Error")
+      _.bassert(6,!BC.isOfType(setting1,"SpecManager"), "'" + setting1 + "' should not be of type " + "SpecManager")
+      _.bassert(7,!BC.isOfType(setting1,"TypesManager"), "'" + setting1 + "' should not be of type " + "TypesManager")
     }
     function getFrontmatterYAMLTest() {
       const lit1 = {a: 23}
@@ -3113,7 +3197,7 @@ async function createNote(tp, setting) {
       type = setting.getType(typekey)
     }
   }
-  aut(type)
+  //aut(type)
   return Dialog.Ok
 }
 
@@ -3123,10 +3207,18 @@ async function createNote(tp, setting) {
  * @returns
  */
 async function main(tp, app) {
+  let checkErrorOutputYAML = {}
   let testYAML = {}
-  test(testYAML)
   let frontmatterYAML = {}
   let renderYAML = {____: ""}
+  let dbgYAML = {}
+
+  if (CHECK_ERROR_OUTPUT) {
+    letAllThrow(checkErrorOutputYAML)
+    return checkErrorOutputYAML
+  }
+
+  test(testYAML)
   try {
     let setting = new Setting(Test)
     await createNote(tp, setting)
@@ -3136,46 +3228,26 @@ async function main(tp, app) {
     /* returns errYAML or rethrows */
     if (e instanceof FotyError) {
       let errYAML = {}
-      if (e instanceof SettingError) {
-        errYAML = {
-          "!": e.name + " in " + e.section,
-          "-": e.message,
-        }
-      } else if (e instanceof CodingError) {
-        errYAML = {
-          "!": e.name + " in " + e.section,
-          "-": e.message,
-        }
-      } else {
-        errYAML = {
-          "!": e.name,
-          "-": e.message,
-        }
-      }
+      if (e instanceof SettingError) errYAML = {ERR: e.name + " in " + e.caller}
+      else if (e instanceof CodingError)
+        errYAML = {"!!!": e.name + " in " + e.caller}
+      else errYAML = {"???": e.name}
+      let msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
+      msg += e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
+      errYAML["\u00A8\u00A8\u00A8"] = msg
       return errYAML
     } else {
       aut("RETHROWING")
       throw e
     }
   }
-  let dbgYAML = {
+  dbgYAML = {
     __notePath: tp.file.path(true /*relative*/),
     __noteTitle: tp.file.title,
     __activeFile: tp.config.active_file.path,
     __runMode: tp.config.run_mode,
     __targetFile: tp.config.target_file.path,
     __templateFile: tp.config.template_file.path,
-  }
-
-  let developCheck = false
-  if (developCheck) {
-    let developYAML = {}
-    let e = new Event()
-    e["key"] = "val"
-    let d = Object.hasOwn(e, "addListener")
-    developYAML = {DEV: d}
-    console.log(d)
-    return developYAML
   }
 
   if (!DEBUG) dbgYAML = undefined
