@@ -112,6 +112,7 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
  * RENDER:
  *
  */
+
 const Test = {
   __DIALOGSETTINGS: {
     TYPE_PROMPT: "Typ wählen" /* String */,
@@ -127,15 +128,30 @@ const Test = {
       /* String */ MARKER: "",
       /* Boolean */ DATE: false,
       /* String */ TITLE_BEFORE_DATE: "",
-      /* Date */ DATEFORMAT: "YYYY-MM-DD",
+      /* Date */ DATEFORMAT: "YY-MM-DD",
+      /* @todo */ FRONTMATTER: {},
     },
+    /*const ONE_FRONTMATTER_ENTRIES = {
+  aliases: {isList: true, def: alias},
+  date_created: {isList: false, def: creat},
+  tags: {isList: true, def: auTag},
+  publish: {isList: false, def: false},
+  cssclass: {isList: true, def: csCls},
+  private: {isList: false, def: false},
+  position: {ignore: true},
+}*/
+
     diary: {
       MARKER: "",
       DATE: true,
       TITLE_BEFORE_DATE: "",
       DATEFORMAT: "YYYY-MM-DD",
+      FRONTMATTER: {private: true},
     },
-    citation: {MARKER: "°"},
+    citation: {
+      MARKER: "°",
+      FRONTMATTER: {cssclass: "garten, tagebuch"},
+    },
   },
   c: {
     __SPEC: {RENDER: /* Boolean */ true},
@@ -1038,6 +1054,7 @@ class BreadCrumbs {
    * @param {*} val
    * @param {String} type - js types have to be written lowercase
    *                        "Date" - Dateformat as String
+   *                        "Frontmatter" - object (with attributes)
    *                        "Null" accepts Null
    *                        "Array" accepts Arrays
    *                        "Object" accepts js Object besides Null and Array
@@ -1058,6 +1075,10 @@ class BreadCrumbs {
       answer = typeof val == type
     } else if (type == "Date") {
       if (typeof val == "string") {
+        answer = true
+      }
+    } else if (type == "Frontmatter") {
+      if (typeof val == "object") {
         answer = true
       }
     } else if (typeof val == "object") {
@@ -2035,7 +2056,7 @@ class DefaultsManager extends BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
   static #DEFAULTS_KEY = "__DEFAULTS"
-  static #ALLOWED_TYPES = ["String", "Boolean", "Date", "Number"]
+  static #ALLOWED_TYPES = ["String", "Boolean", "Date", "Number", "Frontmatter"]
   #GIVEN_NAMES = []
   #GIVEN_TYPES = []
   #GIVEN_DEFAULTS = {}
@@ -2151,7 +2172,10 @@ class DefaultsManager extends BreadCrumbs {
     }
     function _throwIfWrongType(value, t, key, me) {
       let un
-      let type = null == t.match(/[a-z]/) || t == "Date" ? t : t.toLowerCase()
+      let type =
+        null == t.match(/[a-z]/) || t == "Date" || t == "Frontmatter"
+          ? t
+          : t.toLowerCase()
       me.throwIfNotOfType(
         value,
         type,
@@ -2197,7 +2221,8 @@ class DefaultsManager extends BreadCrumbs {
       _.bassert(2,DefaultsManager.allowedTypes.includes("String"), "'String' should be allowed Type")
       _.bassert(3,DefaultsManager.allowedTypes.includes("Date"), "'Date' should be allowed Type")
       _.bassert(4,DefaultsManager.allowedTypes.includes("Number"), "'Number' should be allowed Type")
-      _.bassert(5,!DefaultsManager.allowedTypes.includes("date"), "'date' should not be allowed Type")
+      _.bassert(5,DefaultsManager.allowedTypes.includes("Frontmatter"), "'Frontmatter' should be allowed Type")
+      _.bassert(6,!DefaultsManager.allowedTypes.includes("date"), "'date' should not be allowed Type")
     }
     function getterLiteralTest() {
       let un
@@ -2412,14 +2437,22 @@ class TypesManager extends BreadCrumbs {
   //#region member variables
   static #instanceCounter = 0
   static #TYPES_KEY = "__NOTETYPES"
-  static #TNAMES = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
-  static #TNAMESTYPES = ["String", "Boolean", "String", "Date"]
+  static #TNAMES = [
+    "MARKER",
+    "DATE",
+    "TITLE_BEFORE_DATE",
+    "DATEFORMAT",
+    "FRONTMATTER",
+  ]
+  static #TNAMESTYPES = ["String", "Boolean", "String", "Date", "Frontmatter"]
   static #DEFAULT_TYPE = {
     MARKER: "",
     DATE: false,
     TITLE_BEFORE_DATE: "",
     DATEFORMAT: "YYYY-MM-DD",
+    FRONTMATTER: {},
   }
+  #defMan
   #notetypes = {}
   /** Returns key for entry handled by TypesManager
    * @returns {String}
@@ -2439,11 +2472,17 @@ class TypesManager extends BreadCrumbs {
   static get tnamestypes() {
     return TypesManager.#TNAMESTYPES
   }
-  /** Returns default notetype with all its keys set to default values
+  /** Returns hardcoded default notetype with all its keys set to default values
    * @returns {Object.<String.*>}
    */
   static get defaultType() {
     return TypesManager.#DEFAULT_TYPE
+  }
+  /** Returns default values given from setting
+   * @returns {Object.<String.*>}
+   */
+  get givenDefaults() {
+    return this.#defMan.givenDefaults
   }
   /** Returns Object with all notetypes, bound to their names, all values set
    * @returns {Object.<String.Object.<String.*>>}
@@ -2477,14 +2516,13 @@ class TypesManager extends BreadCrumbs {
     let defLiteral = {}
     if (BC.isDefined(this.literal[DefaultsManager.handlerKey]))
       defLiteral = this.literal[DefaultsManager.handlerKey]
-    let defMan = new DefaultsManager(
+    this.#defMan = new DefaultsManager(
       defLiteral,
       DefaultsManager.handlerKey,
       this,
       TypesManager.#TNAMES,
       TypesManager.#TNAMESTYPES
     )
-
     this.#createNoteTypesOrThrow()
   }
 
@@ -2529,14 +2567,20 @@ class TypesManager extends BreadCrumbs {
             break
           case "MARKER":
           case "TITLE_BEFORE_DATE":
-          case "DATEFORMAT":
             _throwIfWrongType(value, "string", key, this)
+            break
+          case "DATEFORMAT":
+            _throwIfWrongType(value, "Date", key, this)
+            break
+          case "FRONTMATTER":
+            _throwIfWrongType(value, "Frontmatter", key, this)
             break
         }
       }
       this.#notetypes[name] = Object.assign(
         {},
         TypesManager.#DEFAULT_TYPE,
+        this.givenDefaults,
         entry
       )
     }
@@ -2550,6 +2594,7 @@ class TypesManager extends BreadCrumbs {
       _.run(getterLiteralTest)
       _.run(getterTnamesTest)
       _.run(getterDefaultTypeTest)
+      _.run(getterGivenDefaultsTest)
       _.run(getterNotetypesTest)
       _.run(getterNamesTest)
       _.run(getterTnamestypesTest)
@@ -2634,6 +2679,21 @@ class TypesManager extends BreadCrumbs {
       _.bassert(2,defTypeKeys.length == tnames.length,"Default type should contain as many tnames as there are in TypesManager.tnames")
       _.bassert(3,defTypeKeys.every(key => tnames.includes(key)),"Each key should be given in TypesManager.tnames")
     }
+    function getterGivenDefaultsTest() {
+      let un
+      let p = new BreadCrumbs(un, "getterGivenDefaultsTest", un)
+      let lit1 = {__DEFAULTS: {DATEFORMAT: "YY-MM-DD"}}
+      let exp1 = {DATEFORMAT: "YY-MM-DD"}
+      let types1 = new TypesManager(lit1,"GDT1",p)
+      let out1 = types1.givenDefaults
+      _.bassert(1,BC.areEqual(out1,exp1),"output should be: see test code")
+      _.bassert(2,out1.DATEFORMAT == exp1.DATEFORMAT,`DATEFORMAT is '${out1.DATEFORMAT}' but should be '${exp1.DATEFORMAT}'`)
+      let lit3 = {}
+      let exp3 = {}
+      let types3 = new TypesManager(lit3,"GDT1",p)
+      let out3 = types3.givenDefaults
+      _.bassert(3,BC.areEqual(out3,exp3),"output should be: see test code")
+    }
     function getterNotetypesTest() {
       let un
       let p = new BreadCrumbs(un, "getterNotetypesTest", un)
@@ -2643,18 +2703,18 @@ class TypesManager extends BreadCrumbs {
       let lit4 = {diary: {MARKER: "x"}}
       let lit5 = {diary: {}, citation: {}, film: {}, book: {}}
       let lit6 = {diary: {MARKER: "x"}, citation: {DATE: true}, film: {TITLE_BEFORE_DATE: "xyz"}, book: {DATEFORMAT: "YYYY"}}
-      let exp2 = {diary: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
-      let exp3 = {book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
-      let exp4 = {diary: {MARKER: "x", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"}}
-      let exp5 = {diary: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
-                  citation: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
-                  film: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
-                  book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
+      let exp2 = {diary: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}}}
+      let exp3 = {book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}}}
+      let exp4 = {diary: {MARKER: "x", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}}}
+      let exp5 = {diary: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}},
+                  citation: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}},
+                  film: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}},
+                  book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}},
                  }
-      let exp6 = {diary: {MARKER: "x", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
-                  citation: {MARKER: "", DATE: true, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD"},
-                  film: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "xyz", DATEFORMAT: "YYYY-MM-DD"},
-                  book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY"},
+      let exp6 = {diary: {MARKER: "x", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}},
+                  citation: {MARKER: "", DATE: true, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}},
+                  film: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "xyz", DATEFORMAT: "YYYY-MM-DD",FRONTMATTER: {}},
+                  book: {MARKER: "", DATE: false, TITLE_BEFORE_DATE: "", DATEFORMAT: "YYYY",FRONTMATTER: {}},
                  }
       let types1 = new TypesManager(lit1,"TT1",p)
       let types2 = new TypesManager(lit2,"TT2",p)
@@ -2669,11 +2729,11 @@ class TypesManager extends BreadCrumbs {
       let out5 = types5.notetypes
       let out6 = types6.notetypes
       _.bassert(1,Object.keys(out1).length == 0, "no notetypes defined")
-      _.bassert(2,_tryAreEqual,out2,exp2,"output should be: see test code")
-      _.bassert(3,_tryAreEqual,out3,exp3,"output should be: see test code")
-      _.bassert(4,_tryAreEqual,out4,exp4,"output should be: see test code")
-      _.bassert(5,_tryAreEqual,out5,exp5,"output should be: see test code")
-      _.bassert(6,_tryAreEqual,out6,exp6,"output should be: see test code")
+      _.bassert(2,BC.areEqual(out2,exp2),"output should be: see test code")
+      _.bassert(3,BC.areEqual(out3,exp3),"output should be: see test code")
+      _.bassert(4,BC.areEqual(out4,exp4),"output should be: see test code")
+      _.bassert(5,BC.areEqual(out5,exp5),"output should be: see test code")
+      _.bassert(6,BC.areEqual(out6,exp6),"output should be: see test code")
     }
     function getterNamesTest() {
       let un
@@ -2815,9 +2875,6 @@ class TypesManager extends BreadCrumbs {
     }
     function _tryConstruct(arg1, arg2, arg3) {
       new TypesManager(arg1, arg2, arg3)
-    }
-    function _tryAreEqual(arg1, arg2) {
-      BC.areEqual(arg1, arg2)
     }
   }
 }
@@ -3589,8 +3646,8 @@ class Setting extends BreadCrumbs {
       let expAnsw2 = JSON.stringify(TypesManager.defaultType)
       let expAnsw3 = JSON.stringify(TypesManager.defaultType)
       let expAnsw4 = JSON.stringify(TypesManager.defaultType)
-      let expAnsw5 = '{"MARKER":"d","DATE":false,"TITLE_BEFORE_DATE":"","DATEFORMAT":"YYYY-MM-DD"}'
-      let expAnsw6 = '{"MARKER":"b","DATE":false,"TITLE_BEFORE_DATE":"","DATEFORMAT":"YYYY-MM-DD"}'
+      let expAnsw5 = '{"MARKER":"d","DATE":false,"TITLE_BEFORE_DATE":"","DATEFORMAT":"YYYY-MM-DD","FRONTMATTER":{}}'
+      let expAnsw6 = '{"MARKER":"b","DATE":false,"TITLE_BEFORE_DATE":"","DATEFORMAT":"YYYY-MM-DD","FRONTMATTER":{}}'
       let expAnsw7 = JSON.stringify(TypesManager.defaultType)
       _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
       _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
@@ -3651,6 +3708,15 @@ async function createNote(tp, setting) {
   aut(type)
   return Dialog.Ok
 }
+function entries2pairs(entries) {
+  let pairs = {}
+  for (const [key, val] of Object.entries(entries)) {
+    if (val.ignore == undefined || val.ignore == false) {
+      pairs[key] = undefined
+    }
+  }
+  return pairs
+}
 
 /** exported function
  * @param {Object} tp - templater object
@@ -3658,6 +3724,20 @@ async function createNote(tp, setting) {
  * @returns
  */
 async function main(tp, app) {
+  function flatten(inp) {
+    let res = inp
+    if (typeof inp == "object") {
+      let entries = Object.entries(inp)
+      if (entries.length != 0) {
+        res = ""
+        entries.forEach(([key, value], idx) => {
+          let indent = idx == 0 ? "OBJ  " : "\n                        "
+          res += `${indent}${key}: ${value}`
+        })
+      }
+    }
+    return res
+  }
   let checkErrorOutputYAML = {}
   let testYAML = {}
   let frontmatterYAML = {}
@@ -3704,6 +3784,7 @@ async function main(tp, app) {
     __runMode: tp.config.run_mode,
     __targetFile: tp.config.target_file.path,
     __templateFile: tp.config.template_file.path,
+    __frontmatter: flatten(tp.frontmatter),
   }
   if (!DEBUG) dbgYAML = undefined
 
