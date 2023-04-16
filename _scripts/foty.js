@@ -137,7 +137,7 @@ function cssClassCbk(tp, notename, type) {
  * __DEFAULTS: onlyOnce: true (makes only sense for repeat and non flat sections)
  * __SPEC:
  * RENDER:
- * SPEC_TYPE:
+ * TYPE:
  * DEFAULT:
  * IGNORE: (Its possible to IGNORE ancestors, but not descendants)
  */
@@ -159,12 +159,12 @@ const Test = {
       /* String */ TITLE_BEFORE_DATE: "",
       /* Date */ DATEFORMAT: "YY-MM-DD",
       /* @todo */ FRONTMATTER: {
-        aliases: {__SPEC: {SPEC_TYPE: "Array", DEFAULT: aliasCbk}},
-        date_created: {__SPEC: {SPEC_TYPE: "Date", DEFAULT: createdCbk}},
-        tags: {__SPEC: {SPEC_TYPE: "Array", DEFAULT: tagsCbk}},
-        publish: {__SPEC: {SPEC_TYPE: "Boolean", DEFAULT: false}},
-        cssclass: {__SPEC: {SPEC_TYPE: "Array", DEFAULT: cssClassCbk}},
-        private: {__SPEC: {SPEC_TYPE: "Boolean", DEFAULT: false}},
+        aliases: {__SPEC: {TYPE: "Array", DEFAULT: aliasCbk}},
+        date_created: {__SPEC: {TYPE: "Date", DEFAULT: createdCbk}},
+        tags: {__SPEC: {TYPE: "Array", DEFAULT: tagsCbk}},
+        publish: {__SPEC: {TYPE: "Boolean", DEFAULT: false}},
+        cssclass: {__SPEC: {TYPE: "Array", DEFAULT: cssClassCbk}},
+        private: {__SPEC: {TYPE: "Boolean", DEFAULT: false}},
         position: {__SPEC: {IGNORE: true}},
       },
     },
@@ -198,7 +198,7 @@ const Test2 = {
 //  #endregion test configurations
 //#endregion CONFIGURATION
 //#region debug, base, error and test
-var DEBUG = true
+var DEBUG = false
 var TESTING = true
 if (TESTING) DEBUG = false
 var CHECK_ERROR_OUTPUT = false
@@ -230,7 +230,8 @@ function letAllThrow(YAML) {
     if (e instanceof SettingError) {
       YAML[cnt.pad(4)] = e.name + " in " + e.caller
       msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
-      msg += e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
+      if (e.lastMsg.length > 0)      
+      msg += "\n" + e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
       } else if (e instanceof CodingError) {
       YAML[cnt.pad() + "!"] = e.name + " in " + e.caller
       msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
@@ -262,11 +263,6 @@ function letAllThrow(YAML) {
   /*12*/try{cnt++;new DialogManager({NONAME:12},"name12",root)}catch(e){out(e,YAML)}
   /*13*/try{cnt++;new DialogManager({TYPE_MAX_ENTRIES:false},"name13",root)}catch(e){out(e,YAML)}
   /*14*/try{cnt++;new DialogManager({TYPE_PROMPT:12},"name14",root)}catch(e){out(e,YAML)}
-  /*15*/try{cnt++;new SpecManager(un,"name15",root)}catch(e){out(e,YAML)}
-  /*16*/try{cnt++;new SpecManager({},"name16",un,{})}catch(e){out(e,YAML)}
-  /*17*/try{cnt++;new SpecManager({},"name17",root,22)}catch(e){out(e,YAML)}
-  /*18*/try{cnt++;new SpecManager({NONAME:12},"name18",root,un)}catch(e){out(e,YAML)}
-  /*19*/try{cnt++;new SpecManager({RENDER:12},"name19",root,un)}catch(e){out(e,YAML)}
   /*20*/try{cnt++;new TypesManager(un,"name20",root)}catch(e){out(e,YAML)}
   /*21*/try{cnt++;new TypesManager({},"name21",un)}catch(e){out(e,YAML)}
   /*22*/try{cnt++;new TypesManager({diary: 22},"name22",root)}catch(e){out(e,YAML)}
@@ -876,6 +872,100 @@ class Dispatcher {
 }
 //#endregion helper classes
 //#region code
+/** SuperSuperClass, adding __SPEC as essence */
+class Essence {
+  get RENDER() {
+    return this[Essence.#pre + "RENDER"]
+  }
+  get TYPE() {
+    return this[Essence.#pre + "TYPE"]
+  }
+  get DEFAULT() {
+    return this[Essence.#pre + "DEFAULT"]
+  }
+  get IGNORE() {
+    return this[Essence.#pre + "IGNORE"]
+  }
+  get skipped() {
+    return this.#skipped
+  }
+  static #pre = "__"
+  static #SPEC_KEY = "__SPEC"
+  static #RENDER_DEFT = false
+  static #TYPE_DEFT = "String"
+  static #DEFAULT_DEFT = ""
+  static #IGNORE_DEFT = false
+  #skipped = [] //[["name","value","type"],["name2","value2","type2"]]
+
+  constructor(literal, parent) {
+    function checkType(me, value, type, name, isUserType = false) {
+      let ok = false
+      if (value == undefined) ok = true
+      else {
+        if (!isUserType) ok = typeof value == type
+        else {
+          type = BC.userType2BreadCrumbsType(type)
+          if (type[0] == type[0].toLowerCase()) {
+            ok = typeof value == type
+          } else if (Array.isArray(value) && type == "Array") {
+            ok = true
+          } else {
+            ok = typeof value == "string"
+          }
+        }
+      }
+      if (!ok) me.#skipped.push(new Array(name, value, type))
+      return ok
+    }
+    let u
+    let p = parent
+    let specLit = {}
+    if (literal != u) specLit = literal[Essence.#SPEC_KEY]
+    if (specLit == u) specLit = {}
+    let litREN = specLit.RENDER
+    let litTYP = specLit.TYPE
+    let litIGN = specLit.IGNORE
+    delete specLit.RENDER
+    delete specLit.TYPE
+    delete specLit.IGNORE
+    if (!checkType(this, litREN, "boolean", "RENDER")) litREN = u
+    if (!checkType(this, litTYP, "string", "TYPE")) litTYP = u
+    if (!checkType(this, litIGN, "boolean", "IGNORE")) litIGN = u
+    let RENDER = litREN != u ? litREN : p != u ? p.RENDER : Essence.#RENDER_DEFT
+    let TYPE = litTYP != u ? litTYP : p != u ? p.TYPE : Essence.#TYPE_DEFT
+    let IGNORE = litIGN != u ? litIGN : p != u ? p.IGNORE : Essence.#IGNORE_DEFT
+    Object.defineProperty(this, Essence.#pre + "RENDER", {
+      value: RENDER,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "TYPE", {
+      value: TYPE,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "IGNORE", {
+      value: IGNORE,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    let litDEF = specLit.DEFAULT
+    delete specLit.DEFAULT
+    if (!checkType(this, litDEF, this.TYPE, "DEFAULT", true)) litDEF = u
+    let DEFT = litDEF != u ? litDEF : p != u ? p.DEFAULT : Essence.#DEFAULT_DEFT
+    Object.defineProperty(this, Essence.#pre + "DEFAULT", {
+      value: DEFT,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    if (literal != u) delete literal[Essence.#SPEC_KEY]
+  }
+}
+
 /** superclass for all settings classes
  * @classdesc
  * settings are organized in collections and items. A collection contains other
@@ -889,7 +979,7 @@ class Dispatcher {
  * parent; they are nothing the subclasses have to care with,so those are as
  * private members named differently: #ident and #caller.
  */
-class BreadCrumbs {
+class BreadCrumbs extends Essence {
   //#region member variables
   static sep = " \u00BB " // breadcrumbs separator \u2192
   static nl = "\n    " //"\n    " // for multiLiner in SettingError
@@ -953,6 +1043,7 @@ class BreadCrumbs {
    */
   constructor(literal, key, parent) {
     let un
+    super(literal, parent)
     this.#literal = literal
     this.#ident = key
     this.#caller = parent
@@ -1089,7 +1180,6 @@ class BreadCrumbs {
    *                        "BreadCrumbs" accepts BreadCrumb instance
    *                                      and subclass instance
    *                        "Setting" accepts Setting instance
-   *                        "SpecManager" accepts SpecManager instance
    *                        "TypesManager" accepts TypesManager
    *                                           instance
    * @returns {Boolean} - true, if val is of type
@@ -1176,28 +1266,22 @@ class BreadCrumbs {
   static userType2BreadCrumbsType(t) {
     // UserTypes: String, Boolean, Number, Array, Date,  Frontmatter,
     // BCType: string,boolean,number,undefined,null,bigint,symbol,function,object,
-    //         Date, Frontmatter, Null, Array, Object, BreadCrumbs, Setting.
-    //         SpecManager,... all registered classes
-    // Should map String => string
-    //            Boolean => boolean
+    //         Date, Frontmatter, Null, Array, Object, BreadCrumbs, Setting,
+    //         TypeManager,... all registered classes; not Essence (which
+    //         does not register)
+    // maps       String => string
     //            Number => number
+    //            Boolean => boolean
+    //            Function => function
+    //            Null => null
     //            Array => Array
     //            Date => Date
     //            Frontmatter => Frontmatter
-    let types2convert = [
-      "String",
-      "Number",
-      "Boolean",
-      "BigInt",
-      "Function",
-      "Undefined",
-      "Null",
-    ]
-    return typeof t == "string"
-      ? types2convert.includes(t)
-        ? t.toLowerCase()
-        : t
-      : "noKnownType"
+    //            ...
+    //            EveryString else => EveryString else
+    //            nonStrings => no
+    let t2b = ["String", "Number", "Boolean", "Function", "Null"]
+    return typeof t == "string" ? (t2b.includes(t) ? t.toLowerCase() : t) : "no"
   }
   // prettier-ignore
   static test(outputObj) { // BreadCrumbs
@@ -1500,7 +1584,7 @@ class BreadCrumbs {
       _.bassert(6,BC.userType2BreadCrumbsType("Frontmatter")=="Frontmatter","'Frontmatter' should be not converted")
       _.bassert(7,BC.userType2BreadCrumbsType("number")=="number","'number' should be converted to 'number'")
       _.bassert(8,BC.userType2BreadCrumbsType("UnKnown")=="UnKnown","'UnKnown' should be converted to 'UnKnown'")
-      _.bassert(9,BC.userType2BreadCrumbsType(false)=="noKnownType","'false' should be converted to 'noKnownType'")
+      _.bassert(9,BC.userType2BreadCrumbsType(false)=="no","'false' should be converted to 'no'")
     }
     function _trySetterObjTypes(arg1) {
       let un
@@ -1789,12 +1873,12 @@ class DialogManager extends BreadCrumbs {
       let un
       let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
       let dlg1 = new DialogManager({},"instanceOfMeTest1",parent)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      let type1 = new TypesManager({},"instanceOfMeTest2",parent,un)
       _.bassert(1,!DialogManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of DialogManager")
       _.bassert(2,!DialogManager.instanceOfMe(new Error()),"Error instance should not be an instance of DialogManager")
       _.bassert(3,DialogManager.instanceOfMe(dlg1),"DialogManager instance should be an instance of DialogManager")
       _.bassert(4,!DialogManager.instanceOfMe("DialogManager"),"String should not be an instance of DialogManager")
-      _.bassert(5,!DialogManager.instanceOfMe(spec1),"SpecManager should not be an instance of DialogManager")
+      _.bassert(5,!DialogManager.instanceOfMe(type1),"TypesManager should not be an instance of DialogManager")
     }
     function toStringTest() {
       let un
@@ -1812,553 +1896,10 @@ class DialogManager extends BreadCrumbs {
       _.bassert(3, BC.isOfType(dlg1,"BreadCrumbs"), "'" + dlg1 + "' should be of type " + "BreadCrumbs")
       _.bassert(4, BC.isOfType(dlg1,"DialogManager"), "'" + dlg1 + "' should be of type " + "DialogManager")
       _.bassert(5,!BC.isOfType(dlg1,"Error"), "'" + dlg1 + "' should not be of type " + "Error")
-      _.bassert(6,!BC.isOfType(dlg1,"SpecManager"), "'" + dlg1 + "' should not be of type " + "SpecManager")
+      _.bassert(6,!BC.isOfType(dlg1,"TypesManager"), "'" + dlg1 + "' should not be of type " + "TypesManager")
     }
     function _tryConstruct(arg1, arg2, arg3) {
       new DialogManager(arg1, arg2, arg3)
-    }
-  }
-}
-
-/** specification parser
- * @classdesc
- * Specification entries are literals of key SPEC_KEY '__SPEC'. SpecManager
- * parses those literals syntactically - it knows, what entries keys have valid
- * specification keys, it knows the defaults for spec entries, it knows, whether
- * and which way they are inherited.
- *
- * For valid  specification options call SpecManager.names
- * For default values of the options call SpecManager.defaults
- *
- * SpecManager provides a getter for each specification option.
- * It provides a getter for its handler key,
- */
-class SpecManager extends BreadCrumbs {
-  //#region member variables
-  static #instanceCounter = 0
-  static #SPEC_KEY = "__SPEC"
-  static #NAMES = ["RENDER", "SPEC_TYPE", "DEFAULT", "IGNORE"]
-  static #DEFAULTS = {
-    RENDER: false,
-    SPEC_TYPE: "String",
-    DEFAULT: "",
-    IGNORE: false,
-  }
-  #RENDER = SpecManager.#DEFAULTS["RENDER"]
-  #SPEC_TYPE = SpecManager.#DEFAULTS["SPEC_TYPE"]
-  #DEFAULT = SpecManager.#DEFAULTS["DEFAULT"]
-  #IGNORE = SpecManager.#DEFAULTS["IGNORE"]
-  /** Returns key for entry handled by SpecManager
-   * @returns {String}
-   */
-  static get handlerKey() {
-    return SpecManager.#SPEC_KEY
-  }
-  /** Returns options SpecManager manages
-   * @returns @returns {Array.<String>}
-   */
-  static get names() {
-    return SpecManager.#NAMES
-  }
-  /** Returns default values of options
-   * @returns {Object.<String.*>}
-   */
-  static get defaults() {
-    return SpecManager.#DEFAULTS
-  }
-  /** Returns RENDER option value calculated from literal, parent and default
-   * @returns {Boolean}
-   */
-  get RENDER() {
-    return this.#RENDER
-  }
-  /** Returns SPEC_TYPE option value calculated from literal, parent and default
-   * @returns {String}
-   */
-  get SPEC_TYPE() {
-    return this.#SPEC_TYPE
-  }
-  /** Returns DEFAULT option value calculated from literal, parent and default
-   * @returns {*}
-   */
-  get DEFAULT() {
-    return this.#DEFAULT
-  }
-  /** Returns IGNORE option value calculated from literal, parent and default
-   * @returns {Boolean}
-   */
-  get IGNORE() {
-    return this.#IGNORE
-  }
-  //#endregion member variables
-  /** Constructs a new SpecManager and registers its type once
-   * @constructor
-   * @param {(Object|Object.<String.*>)} literal - key has to be from #NAMES
-   * @param {(String|Symbol)} key
-   * @param {BreadCrumbs} parent
-   * @param {(Undefined|SpecManager)} grandParentsSpec
-   * @throws {SettingError} on wrong parameter types
-   */
-  constructor(literal, key, parent, grandParentsSpec) {
-    function _throwWrongKey(name, names, me) {
-      throw new SettingError(
-        `${me.constructor.name}.constructor`,
-        `Path: ${me.toBreadcrumbs()}\
-        ${BC.nl}'${name}' is no known specification setting name.\
-        ${BC.nl}Known names are: '${names}'\
-        ${BC.nl}${BC.nl}Remove unknown name from your specification settings.`
-      )
-    }
-    let un
-    super(literal, key, parent)
-
-    if (!SpecManager.#instanceCounter++) this.objTypes = "SpecManager"
-    this.throwIfUndefined(literal, "literal")
-    // literal {(Undefined|Object)} checked by superclass
-    // key {(String|Symbol)} checked by superclass
-    this.throwIfUndefined(parent, "parent")
-    // parent {(Undefined|BreadCrumbs)} checked by superclass
-    this.throwIfNotOfType(
-      grandParentsSpec,
-      ["undefined", "SpecManager"],
-      un,
-      "'grandParentsSpec'"
-    )
-    for (const key of Object.keys(this.literal)) {
-      if (!SpecManager.#NAMES.includes(key))
-        _throwWrongKey(key, SpecManager.#NAMES, this)
-    }
-    this.#setOptionRENDERorThrow(grandParentsSpec)
-    this.#setOptionSPEC_TYPEorThrow(grandParentsSpec)
-    this.#setOptionDEFAULTorThrow(grandParentsSpec)
-    this.#setOptionIGNOREorThrow(grandParentsSpec)
-  }
-
-  /** Returns whether arg is instance of SpecManager
-   * @param {Object} arg
-   * @returns {Boolean}
-   */
-  static instanceOfMe(arg) {
-    return arg instanceof SpecManager
-  }
-
-  /** Sets RENDER option value for this instance
-   *
-   * Uses value of literal if value given,
-   * if not it uses value of grandParentsSpec if grandParentsSpec given
-   * as fallback it uses default value, which is false
-   * @param {(Undefined|Object)} grandParentsSpec
-   * @throws {SettingError}
-   */
-  #setOptionRENDERorThrow(grandParentsSpec) {
-    function _throwIfWrongType(value, type, name, me) {
-      me.throwIfNotOfType(
-        value,
-        type,
-        "#setOptionRENDERorThrow",
-        `'${name}: ${value}' - value`,
-        `${BC.nl}${BC.nl}Change value to correct type.`
-      )
-    }
-    if (BC.isDefined(this.literal.RENDER)) {
-      _throwIfWrongType(this.literal["RENDER"], "boolean", "RENDER", this)
-    }
-
-    let defaultRender = false
-    let parentRender = BC.isDefined(grandParentsSpec)
-      ? grandParentsSpec["RENDER"]
-      : undefined
-    let literalRender = BC.isDefined(this.literal.RENDER)
-      ? this.literal["RENDER"]
-      : undefined
-    this.#RENDER =
-      literalRender != undefined
-        ? literalRender
-        : parentRender != undefined
-        ? parentRender
-        : defaultRender
-  }
-
-  /** Sets SPEC_TYPE option value for this instance
-   *
-   * Uses value of literal if value given,
-   * if not it uses value of grandParentsSpec if grandParentsSpec given
-   * as fallback it uses default value, which is "String"
-   * @param {(Undefined|Object)} grandParentsSpec
-   * @throws {SettingError}
-   */
-  #setOptionSPEC_TYPEorThrow(grandParentsSpec) {
-    function _throwIfNoAllowedType(spec_type, me) {
-      me.throwIfNotOfType(
-        spec_type,
-        "string",
-        "#setOptionSPEC_TYPEorThrow",
-        `'spec_type: ${spec_type}'`
-      )
-      if (!DefaultsManager.allowedTypes.includes(spec_type))
-        throw new SettingError(
-          `${me.constructor.name}.#setOptionSPEC_TYPEorThrow`,
-          `Path: ${me.toBreadcrumbs()}\
-           ${BC.nl}'spec_type: ${spec_type}' \
-           is no allowed spec_type.\
-           ${BC.nl}${BC.nl}Allowed types are: ${DefaultsManager.allowedTypes}`
-        )
-    }
-
-    if (BC.isDefined(this.literal.SPEC_TYPE)) {
-      _throwIfNoAllowedType(this.literal["SPEC_TYPE"], this)
-    }
-
-    let defaultSpecType = "String"
-    let parentSpecType = BC.isDefined(grandParentsSpec)
-      ? grandParentsSpec["SPEC_TYPE"]
-      : undefined
-    let literalSpecType = BC.isDefined(this.literal.SPEC_TYPE)
-      ? this.literal["SPEC_TYPE"]
-      : undefined
-    this.#SPEC_TYPE =
-      literalSpecType != undefined
-        ? literalSpecType
-        : parentSpecType != undefined
-        ? parentSpecType
-        : defaultSpecType
-  }
-
-  /** Sets DEFAULT option value for this instance
-   *
-   * Uses value of literal if value given,
-   * if not it uses value of grandParentsSpec if grandParentsSpec given
-   * as fallback it uses default value, which is ""
-   * @param {(Undefined|Object)} grandParentsSpec
-   * @throws {SettingError}
-   */
-  #setOptionDEFAULTorThrow(grandParentsSpec) {
-    function _throwIfWrongType(value, type, name, me) {
-      me.throwIfNotOfType(
-        value,
-        type,
-        "#setOptionDEFAULTorThrow",
-        `'${name}: ${value}' - value`,
-        `${BC.nl}${BC.nl}Change value to correct type.`
-      )
-    }
-    if (BC.isDefined(this.literal.DEFAULT)) {
-      let type = BC.userType2BreadCrumbsType(this.#SPEC_TYPE)
-      _throwIfWrongType(this.literal["DEFAULT"], type, "DEFAULT", this)
-    }
-    let defaultDefault = ""
-    let parentDefault = BC.isDefined(grandParentsSpec)
-      ? grandParentsSpec["DEFAULT"]
-      : undefined
-    let literalDefault = BC.isDefined(this.literal.DEFAULT)
-      ? this.literal["DEFAULT"]
-      : undefined
-    this.#DEFAULT =
-      literalDefault != undefined
-        ? literalDefault
-        : parentDefault != undefined
-        ? parentDefault
-        : defaultDefault
-  }
-
-  /** Sets IGNORE option value for this instance
-   *
-   * Uses value of literal if value given,
-   * if not it uses value of grandParentsSpec if grandParentsSpec given
-   * as fallback it uses default value, which is false
-   * @param {(Undefined|Object)} grandParentsSpec
-   * @throws {SettingError}
-   */
-  #setOptionIGNOREorThrow(grandParentsSpec) {
-    function _throwIfWrongType(value, type, name, me) {
-      me.throwIfNotOfType(
-        value,
-        type,
-        "#setOptionIGNOREorThrow",
-        `'${name}: ${value}' - value`,
-        `${BC.nl}${BC.nl}Change value to correct type.`
-      )
-    }
-    if (BC.isDefined(this.literal.IGNORE)) {
-      _throwIfWrongType(this.literal["IGNORE"], "boolean", "IGNORE", this)
-    }
-
-    let defaultIgnore = false
-    let parentIgnore = BC.isDefined(grandParentsSpec)
-      ? grandParentsSpec["IGNORE"]
-      : undefined
-    let literalIgnore = BC.isDefined(this.literal.IGNORE)
-      ? this.literal["IGNORE"]
-      : undefined
-    this.#IGNORE =
-      literalIgnore != undefined
-        ? literalIgnore
-        : parentIgnore != undefined
-        ? parentIgnore
-        : defaultIgnore
-  }
-
-  // prettier-ignore
-  static test(outputObj) { // SpecManager
-    let _ = null
-    if(_ = new TestSuite("SpecManager", outputObj)) {
-      _.run(getterHandlerKeyTest)
-      _.run(getterLiteralTest)
-      _.run(getterNamesTest)
-      _.run(getterDefaultsTest)
-      _.run(getterRENDERTest)
-      _.run(getterSPEC_TYPETest)
-      _.run(getterDEFAULTTest)
-      _.run(getterIGNORETest)
-      _.run(constructorTest)
-      _.run(instanceOfMeTest)
-      _.run(toStringTest)
-      _.run(isOfTypeTest)
-      _.run(setOptionRENDERorThrowTest)
-      _.run(setOptionSPEC_TYPEorThrow)
-      _.run(setOptionDEFAULTorThrow)
-      _.run(setOptionIGNOREorThrow)
-      _.destruct()
-      _ = null
-    }
-    function getterHandlerKeyTest() {
-      _.bassert(1,SpecManager.handlerKey == "__SPEC")
-      _.bassert(2,SpecManager.handlerKey != "SPEC")
-    }
-    function getterLiteralTest() {
-      let un
-      let parent = new BreadCrumbs(un, "getterLiteralTest", un)
-      let sym = Symbol("a")
-      let specMan1 = new SpecManager({},"getterLiteralTest02",parent,un)
-      let specMan2 = new SpecManager({RENDER: true},"getterLiteralTest03",parent,un)
-      let specMan3 = new SpecManager({},"getterLiteralTest04",parent,un)
-      let lit1 = specMan1.literal
-      let lit2 = specMan2.literal
-      let lit3 = specMan3.literal
-      _.bassert(1,lit1,"literal should be empty as given")
-      _.bassert(2,lit2.RENDER == true,"value of RENDER should be 'true' as given")
-      _.bassert(3,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(4,BC.isOfType(lit3["__SPEC"],"undefined"),"value of '__SPEC' should be undefined")
-    }
-    function getterNamesTest() {
-      let names = SpecManager.names
-      _.bassert(1,BC.isDefined(names), "should be defined")
-      _.bassert(2,BC.isOfType(names, "Array"),"should return an array")
-      _.bassert(3,names.includes("RENDER"),"should contain 'RENDER' option")
-    }
-    function getterDefaultsTest() {
-      let defaults = SpecManager.defaults
-      _.bassert(1,BC.isDefined(defaults), "should be defined")
-      _.bassert(2,BC.isOfType(defaults, "Object"),"should return an Object")
-      _.bassert(3,BC.isDefined(defaults.RENDER),"'RENDER' option should be defined")
-      _.bassert(4,BC.isOfType(defaults.RENDER,"boolean"),"'RENDER' option should have a boolean value")
-    }
-    function getterRENDERTest() {
-      /* At moment of creation of this test, it is a copy of
-       * setOptionRENDERorThrowTest, because #RENDER is a private member, no setter
-       * exists, #RENDER will only be set on construction and never change later
-       * But code can change, so the test is added nevertheless */
-      let un
-      let parent = new BreadCrumbs(un, "getterRENDERTest", un)
-      let spec1 = new SpecManager({},"getterRENDERTest1",parent,un)
-      let specFalse = new SpecManager({RENDER:false},"getterRENDERTest2",parent,un)
-      let specTrue = new SpecManager({RENDER:true},"getterRENDERTest3",parent,un)
-      let spec2 = new SpecManager({},"getterRENDERrTest1",parent,specFalse)
-      let spec3 = new SpecManager({},"getterRENDERTest1",parent,specTrue)
-      let spec4 = new SpecManager({RENDER:false},"getterRENDERTest1",parent,specFalse)
-      let spec5 = new SpecManager({RENDER:true},"getterRENDERTest1",parent,specFalse)
-      let spec6 = new SpecManager({RENDER:false},"getterRENDERTest1",parent,specTrue)
-      let spec7 = new SpecManager({RENDER:true},"getterRENDERTest1",parent,specTrue)
-
-      _.bassert(1,BC.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
-      _.bassert(2,spec1.RENDER === false,"RENDER should be false, if no specification for it is given")
-      _.bassert(3,specFalse.RENDER === false,"RENDER should be false, as set in specification")
-      _.bassert(4,specTrue.RENDER === true,"RENDER should be true, as set in specification")
-      _.bassert(5,spec2.RENDER === false,"RENDER should be false, as set in ancestor spec")
-      _.bassert(6,spec3.RENDER === true,"RENDER should be true, as set in ancestor spec")
-      _.bassert(7,spec4.RENDER === false,"RENDER should be false, as set in specification")
-      _.bassert(8,spec5.RENDER === true,"RENDER should be true, as set in specification")
-      _.bassert(9,spec6.RENDER === false,"RENDER should be false, as set in specification")
-      _.bassert(10,spec7.RENDER === true,"RENDER should be true, as set in specification")
-    }
-    function getterSPEC_TYPETest() {
-      let un
-      let grandparent = new BreadCrumbs(un, "getterSPEC_TYPETest", un)
-      /*@remove out comment
-      let parent0 = new SpecManager({},"getterSPEC_TYPETest1",grandparent,un)
-      let parentArray = new SpecManager({SPEC_TYPE:"Array"},"getterSPEC_TYPETest2",grandparent,un)
-      let parentBoolean = new SpecManager({SPEC_TYPE:"Boolean"},"getterSPEC_TYPETest3",grandparent,un)
-      let spec0parent0 = new SpecManager({},"gSP1",parent0)
-      let spec0parentArray = new SpecManager({},"gSP2",parentArray)
-      let spec0parentBoolean = new SpecManager({},"gSP3",parentBoolean)
-      let specArrayParentArray  = new SpecManager({SPEC_TYPE:"Array"},"gSP4",parentArray)
-      let specArrayParentBoolean = new SpecManager({SPEC_TYPE:"Boolean"},"gSP5",parentBoolean)
-      let specBooleanParentArray  = new SpecManager({SPEC_TYPE:"Array"},"gSP6",parentArray)
-      let specBooleanParentBoolean  = new SpecManager({SPEC_TYPE:"Boolean"},"gSP7",parentBoolean)
-      _.bassert(1,BC.isDefined(parent0.SPEC_TYPE),"SPEC_TYPE should be set, if no specification for it is given")
-      _.bassert(2,parent0.SPEC_TYPE == "String","SPEC_TYPE should be 'String', if no specification for it is given")
-      _.bassert(3,parentArray.SPEC_TYPE == "Array","SPEC_TYPE should be 'Array', as set in specification")
-      _.bassert(4,parentBoolean.SPEC_TYPE == "Boolean","SPEC_TYPE should be 'Boolean', as set in specification")
-      _.bassert(5,spec0parent0.SPEC_TYPE == "String","SPEC_TYPE should be 'String', if no specification for it is given")
-      _.bassert(6,spec0parentArray.SPEC_TYPE == "Array","SPEC_TYPE should be 'Array', as set in parent specification")
-      _.bassert(7,spec0parentBoolean.SPEC_TYPE == "Boolean","SPEC_TYPE should be 'Boolean', as set in parent specification")
-      _.bassert(8,specArrayParentArray.SPEC_TYPE == "Array","SPEC_TYPE should be 'Array', as set in specification")
-      _.bassert(9,specArrayParentBoolean.SPEC_TYPE == "Boolean","SPEC_TYPE should be 'Boolean', as set in specification")
-      _.bassert(10,specBooleanParentArray.SPEC_TYPE == "Array","SPEC_TYPE should be 'Array', as set in specification")
-      _.bassert(11,specBooleanParentBoolean.SPEC_TYPE == "Boolean","SPEC_TYPE should be 'Boolean', as set in specification")
-      */
-    }
-    function getterDEFAULTTest() {
-    /*@remove out comment
-      let un
-      let grandparent = new BreadCrumbs(un, "getterDEFAULTTest", un)
-      let parent0 = new SpecManager({},"getterDEFAULTTest1",grandparent,un)
-      let parentStr = new SpecManager({DEFAULT:"°"},"getterDEFAULTTest2",grandparent,un)
-      let parentTrue = new SpecManager({SPEC_TYPE:"Boolean",DEFAULT:true},"getterDEFAULTTest3",grandparent,un)
-      let spec0parent0 = new SpecManager({},"gSP1",parent0)
-      let spec0parentStr = new SpecManager({},"gSP2",parentStr)
-      let spec0parentTrue = new SpecManager({},"gSP3",parentTrue)
-      let specStrParentStr = new SpecManager({DEFAULT:"°"},"gSP4",parentStr)
-      let specStrParentTrue = new SpecManager({SPEC_TYPE:"Boolean",DEFAULT:true},"gSP5",parentTrue)
-      let specTrueParentStr = new SpecManager({DEFAULT:"°"},"gSP6",parentStr)
-      let specTrueParentTrue = new SpecManager({SPEC_TYPE:"Boolean",DEFAULT:true},"gSP7",parentTrue)
-      _.bassert(1,BC.isDefined(parent0.DEFAULT),"DEFAULT should be set, if no specification for it is given")
-      _.bassert(2,parent0.DEFAULT == "","DEFAULT should be '', if no specification for it is given")
-      _.bassert(3,parentStr.DEFAULT == "°","DEFAULT should be '°', as set in specification")
-      _.bassert(4,parentTrue.DEFAULT == true,"DEFAULT should be true, as set in specification")
-      _.bassert(5,spec0parent0.DEFAULT == "","DEFAULT should be '', if no specification for it is given")
-      _.bassert(6,spec0parentStr.DEFAULT == "°","DEFAULT should be '°', as set in parent specification")
-      _.bassert(7,spec0parentTrue.DEFAULT == true,"DEFAULT should be true, as set in parent specification")
-      _.bassert(8,specStrParentStr.DEFAULT == "°","DEFAULT should be '°', as set in specification")
-      _.bassert(9,specStrParentTrue.DEFAULT == true,"DEFAULT should be true, as set in specification")
-      _.bassert(10,specTrueParentStr.DEFAULT == "°","DEFAULT should be '°', as set in specification")
-      _.bassert(11,specTrueParentTrue.DEFAULT == true,"DEFAULT should be true, as set in specification")
-     */
-    }
-    function getterIGNORETest() {
-      /*@remove out comment
-      let un
-      let grandparent = new BreadCrumbs(un, "getterIGNORETest", un)
-      let parent0 = new SpecManager({},"getterIGNORETest1",grandparent,un)
-      let parentTrue = new SpecManager({IGNORE:true},"getterIGNORETest2",grandparent,un)
-      let parentFalse = new SpecManager({IGNORE:false},"getterIGNORETest3",grandparent,un)
-      let spec0parent0 = new SpecManager({},"gIG1",parent0)
-      let spec0parentTrue = new SpecManager({},"gIG2",parentTrue)
-      let spec0parentFalse = new SpecManager({},"gIG3",parentFalse)
-      let specTrueParentTrue = new SpecManager({IGNORE:true},"gIG4",parentTrue)
-      let specTrueParentFalse = new SpecManager({IGNORE:false},"gIG5",parentFalse)
-      let specFalseParentTrue = new SpecManager({IGNORE:true},"gIG6",parentTrue)
-      let specFalseParentFalse = new SpecManager({IGNORE:false},"gIG7",parentFalse)
-
-      _.bassert(1,BC.isDefined(parent0.IGNORE),"IGNORE should be set, if no specification for it is given")
-      _.bassert(2,parent0.IGNORE == false,"IGNORE should be false, if no specification for it is given")
-      _.bassert(3,parentTrue.IGNORE == true,"IGNORE should be true, as set in specification")
-      _.bassert(4,parentFalse.IGNORE == false,"IGNORE should be false, as set in specification")
-      _.bassert(5,spec0parent0.IGNORE == false,"IGNORE should be false, if no specification for it is given")
-      _.bassert(6,spec0parentTrue.IGNORE == true,"IGNORE should be true, as set in parent specification")
-      _.bassert(7,spec0parentFalse.IGNORE == false,"IGNORE should be false, as set in parent specification")
-      _.bassert(8,specTrueParentTrue.IGNORE == true,"IGNORE should be true, as set in specification")
-      _.bassert(9,specTrueParentFalse.IGNORE == false,"IGNORE should be false, as set in specification")
-      _.bassert(10,specFalseParentTrue.IGNORE == true,"IGNORE should be true, as set in specification")
-      _.bassert(11,specFalseParentFalse.IGNORE == false,"IGNORE should be false, as set in specification")
-    */
-    }
-    function constructorTest() {
-      let un
-      let p = new BreadCrumbs(un, "constructorTest", un)
-      let sp = new SpecManager({}, "constructorTest1", p, un)
-      _.assert(1,_tryConstruct,{},"cTest1",p,un,"should be created, all parameters ok")
-      _.shouldAssert(2,_tryConstruct,un,"cTest2",p,un,"should not be created, literal is undefined")
-      _.shouldAssert(3,_tryConstruct,22,"cTest3",p,un,"should not be created, literal is number")
-      _.shouldAssert(4,_tryConstruct,"literal","cTest4",p,un,"should not be created, literal is string")
-      _.shouldAssert(5,_tryConstruct,null,"cTest5",p,un,"should not be created, literal is null")
-      _.shouldAssert(6,_tryConstruct,{},un,p,un,"should not be created, key is undefined")
-      _.shouldAssert(7,_tryConstruct,{},22,p,un,"should not be created, key is number")
-      _.shouldAssert(8,_tryConstruct,{},{},p,un,"should not be created, key is object")
-      _.shouldAssert(9,_tryConstruct,{},p,p,un,"should not be created, key is Object")
-      _.assert(10,_tryConstruct,{},Symbol("a"),p,un,"should be created, key is Symbol")
-      _.shouldAssert(11,_tryConstruct,{},"cTest11",un,un,"should not be be created, parent is undefined")
-      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),un,"should not be be created, parent is Error")
-      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},un,"should not be be created, parent is object")
-      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring",un,"should not be be created, parent is string")
-      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,un,"should not be be created, parent is number")
-      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,un,"should not be be created, parent is null")
-      _.assert(17,_tryConstruct,{},"cTest17",p,sp,"should be created, grandParentsSpec is SpecManager")
-      _.shouldAssert(18,_tryConstruct,{},"cTest18",p,p,"should not be created, grandParentsSpec is BreadCrumbs")
-      _.shouldAssert(19,_tryConstruct,{},"cTest19",p,{},"should not be created, grandParentsSpec is object")
-      _.shouldAssert(20,_tryConstruct,{},"cTest20",p,"SpecManager","should not be created, grandParentsSpec is string")
-
-      let specManager = new SpecManager({},"constructorTest101",p)
-      _.bassert(101,specManager instanceof Object,"'SpecManager' has to be an instance of 'Object'")
-      _.bassert(102,specManager instanceof BreadCrumbs,"'SpecManager' has to be an instance of 'BreadCrumbs'")
-      _.bassert(103,specManager instanceof SpecManager,"'SpecManager' has to be an instance of 'SpecManager'")
-      _.bassert(104,specManager.constructor == SpecManager,"the constructor property is not 'SpecManager'")
-    }
-    function instanceOfMeTest() {
-      let un
-      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
-      let spec1 = new SpecManager({},"instanceOfMeTest1",parent,un)
-      let type1 = new TypesManager({},"instanceOfMeTest2",parent)
-      _.bassert(1,!SpecManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of SpecManager")
-      _.bassert(2,!SpecManager.instanceOfMe(new Error()),"Error instance should not be an instance of SpecManager")
-      _.bassert(3,SpecManager.instanceOfMe(spec1),"SpecManager instance should be an instance of SpecManager")
-      _.bassert(4,!SpecManager.instanceOfMe("SpecManager"),"String should not be an instance of SpecManager")
-      _.bassert(5,!SpecManager.instanceOfMe(type1),"TypesManager should not be an instance of SpecManager")
-    }
-    function toStringTest() {
-      let un
-      let parent = new BreadCrumbs(un, "toStringTest", un)
-      let spec1 = new SpecManager({},"toStringTest1",parent,un)
-      _.bassert(1,spec1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,spec1.toString().includes("SpecManager"),"result does not contain class string"    )
-    }
-    function isOfTypeTest() {
-      let un
-      let parent = new BreadCrumbs(un, "isOfTypeTest", un)
-      let spec1 = new SpecManager({},"isOfTypeTest1",parent,un)
-      _.bassert(1,BC.isOfType(spec1,"object"), "'" + spec1 + "' should be of type " + "object")
-      _.bassert(2,BC.isOfType(spec1,"Object"), "'" + spec1 + "' should be of type " + "Object")
-      _.bassert(3,BC.isOfType(spec1,"BreadCrumbs"), "'" + spec1 + "' should be of type " + "BreadCrumbs")
-      _.bassert(4,BC.isOfType(spec1,"SpecManager"), "'" + spec1 + "' should be of type " + "SpecManager")
-      _.bassert(5,!BC.isOfType(spec1,"Error"), "'" + spec1 + "' should not be of type " + "Error")
-      _.bassert(6,!BC.isOfType(spec1,"TypesManager"), "'" + spec1 + "' should not be of type " + "TypesManager")
-    }
-    function setOptionRENDERorThrowTest() {
-      let un
-      let parent = new BreadCrumbs(un, "setOptionRENDERorThrowTest", un)
-      let spec1 = new SpecManager({},"setOptionRRENDERTest1",parent,un)
-      let specFalse = new SpecManager({RENDER:false},"setOptionRENDERorThrowTest2",parent,un)
-      let specTrue = new SpecManager({RENDER:true},"setOptionRENDERorThrowTest3",parent,un)
-      let spec2 = new SpecManager({},"setOptionRENDERorThrowTest4",parent,specFalse)
-      let spec3 = new SpecManager({},"setOptionRENDERorThrowTest5",parent,specTrue)
-      let spec4 = new SpecManager({RENDER:false},"setOptionRENDERorThrowTest6",parent,specFalse)
-      let spec5 = new SpecManager({RENDER:true},"setOptionRENDERorThrowTest7",parent,specFalse)
-      let spec6 = new SpecManager({RENDER:false},"setOptionRENDERorThrowTest8",parent,specTrue)
-      let spec7 = new SpecManager({RENDER:true},"setOptionRenderTest9",parent,specTrue)
-
-      _.bassert(1,BC.isDefined(spec1.RENDER),"RENDER should be set, if no specification for it is given")
-      _.bassert(2,spec1.RENDER === false,"RENDER should be false, if no specification for it is given")
-      _.bassert(3,specFalse.RENDER === false,"RENDER should be false, as set in specification")
-      _.bassert(4,specTrue.RENDER === true,"RENDER should be true, as set in specification")
-      _.bassert(5,spec2.RENDER === false,"RENDER should be false, as set in ancestor spec")
-      _.bassert(6,spec3.RENDER === true,"RENDER should be true, as set in ancestor spec")
-      _.bassert(7,spec4.RENDER === false,"RENDER should be false, as set in specification")
-      _.bassert(8,spec5.RENDER === true,"RENDER should be true, as set in specification")
-      _.bassert(9,spec6.RENDER === false,"RENDER should be false, as set in specification")
-      _.bassert(10,spec7.RENDER === true,"RENDER should be true, as set in specification")
-    }
-    function setOptionSPEC_TYPEorThrow() {
-
-    }
-    function setOptionDEFAULTorThrow() {
-
-    }
-    function setOptionIGNOREorThrow() {
-
-    }
-
-    function _tryConstruct(arg1, arg2, arg3, arg4) {
-      new SpecManager(arg1, arg2, arg3, arg4)
     }
   }
 }
@@ -2657,12 +2198,12 @@ class DefaultsManager extends BreadCrumbs {
       let un
       let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
       let def1 = new DefaultsManager({},"instanceOfMeTest1",parent,[],[])
-      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      let spec1 = new TypesManager({},"instanceOfMeTest2",parent,un)
       _.bassert(1,!DefaultsManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of DefaultsManager")
       _.bassert(2,!DefaultsManager.instanceOfMe(new Error()),"Error instance should not be an instance of DefaultsManager")
       _.bassert(3,DefaultsManager.instanceOfMe(def1),"DefaultsManager instance should be an instance of DefaultsManager")
       _.bassert(4,!DefaultsManager.instanceOfMe("DefaultsManager"),"String should not be an instance of DefaultsManager")
-      _.bassert(5,!DefaultsManager.instanceOfMe(spec1),"SpecManager should not be an instance of DefaultsManager")
+      _.bassert(5,!DefaultsManager.instanceOfMe(spec1),"TypesManager should not be an instance of DefaultsManager")
     }
     function toStringTest() {
       let un
@@ -2680,7 +2221,7 @@ class DefaultsManager extends BreadCrumbs {
       _.bassert(3, BC.isOfType(def1,"BreadCrumbs"), "'" + def1 + "' should be of type " + "BreadCrumbs")
       _.bassert(4, BC.isOfType(def1,"DefaultsManager"), "'" + def1 + "' should be of type " + "DefaultsManager")
       _.bassert(5,!BC.isOfType(def1,"Error"), "'" + def1 + "' should not be of type " + "Error")
-      _.bassert(6,!BC.isOfType(def1,"SpecManager"), "'" + def1 + "' should not be of type " + "SpecManager")
+      _.bassert(6,!BC.isOfType(def1,"TypesManager"), "'" + def1 + "' should not be of type " + "TypesManager")
     }
     function setGivenTypesOrThrowTest() {
       let un
@@ -3104,12 +2645,12 @@ class TypesManager extends BreadCrumbs {
       let un
       let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
       let type1 = new TypesManager({},"instanceOfMeTest1",parent)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      let def1 = new DefaultsManager({},"instanceOfMeTest2",parent,[],[])
       _.bassert(1,!TypesManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of TypesManager")
       _.bassert(2,!TypesManager.instanceOfMe(new Error()),"Error instance should not be an instance of TypesManager")
       _.bassert(3,TypesManager.instanceOfMe(type1),"TypesManager instance should be an instance of TypesManager")
       _.bassert(4,!TypesManager.instanceOfMe("TypesManager"),"String should not be an instance of TypesManager")
-      _.bassert(5,!TypesManager.instanceOfMe(spec1),"SpecManager should not be an instance of TypesManager")
+      _.bassert(5,!TypesManager.instanceOfMe(def1),"DefaultsManager should not be an instance of TypesManager")
     }
     function toStringTest() {
       let un
@@ -3127,7 +2668,7 @@ class TypesManager extends BreadCrumbs {
       _.bassert(3,BC.isOfType(type1,"BreadCrumbs"), "'" + type1 + "' should be of type " + "BreadCrumbs")
       _.bassert(4,BC.isOfType(type1,"TypesManager"), "'" + type1 + "' should be of type " + "TypesManager")
       _.bassert(5,!BC.isOfType(type1,"Error"), "'" + type1 + "' should not be of type " + "Error")
-      _.bassert(6,!BC.isOfType(type1,"SpecManager"), "'" + type1 + "' should not be of type " + "SpecManager")
+      _.bassert(6,!BC.isOfType(type1,"DefaultsManager"), "'" + type1 + "' should not be of type " + "DefaultsManager")
     }
     function createNoteTypesOrThrowTest() {
       let un
@@ -3406,12 +2947,12 @@ class FoTyManager extends BreadCrumbs {
       let un
       let parent = new Setting({}, "instanceOfMeTest", un)
       let ft1 = new FoTyManager({},"instanceOfMeTest1",parent)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      let spec1 = new TypesManager({},"instanceOfMeTest2",parent,un)
       _.bassert(1,!FoTyManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of FoTyManager")
       _.bassert(2,!FoTyManager.instanceOfMe(new Error()),"Error instance should not be an instance of FoTyManager")
       _.bassert(3,FoTyManager.instanceOfMe(ft1),"FoTyManager instance should be an instance of FoTyManager")
       _.bassert(4,!FoTyManager.instanceOfMe("FoTyManager"),"String should not be an instance of FoTyManager")
-      _.bassert(5,!FoTyManager.instanceOfMe(spec1),"SpecManager should not be an instance of FoTyManager")
+      _.bassert(5,!FoTyManager.instanceOfMe(spec1),"TypesManager should not be an instance of FoTyManager")
     }
     function toStringTest() {
       let un
@@ -3429,7 +2970,7 @@ class FoTyManager extends BreadCrumbs {
       _.bassert(3, BC.isOfType(ft1,"BreadCrumbs"), "'" + ft1 + "' should be of type " + "BreadCrumbs")
       _.bassert(4, BC.isOfType(ft1,"FoTyManager"), "'" + ft1 + "' should be of type " + "FoTyManager")
       _.bassert(5,!BC.isOfType(ft1,"Error"), "'" + ft1 + "' should not be of type " + "Error")
-      _.bassert(6,!BC.isOfType(ft1,"SpecManager"), "'" + ft1 + "' should not be of type " + "SpecManager")
+      _.bassert(6,!BC.isOfType(ft1,"TypesManager"), "'" + ft1 + "' should not be of type " + "TypesManager")
     }
     function getTypesForFolderTest() {
       let un
@@ -3529,15 +3070,9 @@ class Setting extends BreadCrumbs {
    * @param {Object} literal
    * @param {(Undefined|String|Symbol)} key
    * @param {(Undefined|Setting)} parent
-   * @param {(Undefined|SpecManager)} parentsSpec
    * @throws {SettingError} on wrong parameter types
    */
-  constructor(
-    literal,
-    key = undefined,
-    parent = undefined,
-    parentsSpec = undefined
-  ) {
+  constructor(literal, key = undefined, parent = undefined) {
     let un
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
     if (!Setting.#instanceCounter++) this.objTypes = "Setting"
@@ -3546,22 +3081,7 @@ class Setting extends BreadCrumbs {
     // key {(String|Symbol)} checked by superclass
     // parent {(Undefined|BreadCrumbs)} checked by superclass
     this.throwIfNotOfType(parent, ["undefined", "Setting"], un, "'parent'")
-    this.throwIfNotOfType(
-      parentsSpec,
-      ["undefined", "SpecManager"],
-      un,
-      "'parentsSpec'"
-    )
 
-    let spec = {}
-    if (BC.isDefined(this.literal[SpecManager.handlerKey]))
-      spec = this.literal[SpecManager.handlerKey]
-    this.#spec = new SpecManager(
-      spec,
-      SpecManager.handlerKey,
-      this,
-      parentsSpec
-    )
     if (this.isRoot()) {
       let types = {}
       if (BC.isDefined(this.literal[TypesManager.handlerKey]))
@@ -3585,7 +3105,7 @@ class Setting extends BreadCrumbs {
           this.#children[key] = new Setting(value, key, this, this.#spec)
         }
       } else {
-        if (this.#spec.RENDER) this.#renderYAML[key] = value
+        if (this.RENDER) this.#renderYAML[key] = value
         else this.#frontmatterYAML[key] = value
       }
     }
@@ -3643,7 +3163,6 @@ class Setting extends BreadCrumbs {
    */
   static #isHandlersKey(key) {
     return (
-      SpecManager.handlerKey == key ||
       TypesManager.handlerKey == key ||
       DialogManager.handlerKey == key ||
       FoTyManager.handlerKey == key
@@ -3655,7 +3174,6 @@ class Setting extends BreadCrumbs {
     BC.test(outputObj)
     DialogManager.test(outputObj)
     DefaultsManager.test(outputObj)
-    SpecManager.test(outputObj)
     TypesManager.test(outputObj)
     FoTyManager.test(outputObj)
     let _ = null
@@ -3817,7 +3335,6 @@ class Setting extends BreadCrumbs {
     function constructorTest() {
       let un
       let b = new BreadCrumbs(un, "constructorTest", un)
-      let sp = new SpecManager({}, "constructorTest1", b, un)
       let st = new Setting({}, "constructorTest1", un, un)
       _.assert(1,_tryConstruct,{},"cTest1",un,un,"should be created, all parameters ok")
       _.shouldAssert(2,_tryConstruct,un,"cTest2",un,un,"should not be created, literal is undefined")
@@ -3836,10 +3353,6 @@ class Setting extends BreadCrumbs {
       _.shouldAssert(15,_tryConstruct,{},"cTest15",22,un,"should not be be created, parent is number")
       _.shouldAssert(16,_tryConstruct,{},"cTest16",null,un,"should not be be created, parent is null")
       _.shouldAssert(16,_tryConstruct,{},"cTest16",b,un,"should not be be created, parent is BreadCrumbs")
-      _.assert(18,_tryConstruct,{},"cTest18",un,sp,"should be created, parentsSpec is SpecManager")
-      _.shouldAssert(19,_tryConstruct,{},"cTest19",un,b,"should not be created, parentsSpec is BreadCrumbs")
-      _.shouldAssert(20,_tryConstruct,{},"cTest20",un,{},"should not be created, parentsSpec is object")
-      _.shouldAssert(21,_tryConstruct,{},"cTest21",un,"SpecManager","should not be created, parentsSpec is string")
       let setting = new Setting({},"constructorTest101")
       _.bassert(101,setting instanceof Object,"'Setting' has to be an instance of 'Object'")
       _.bassert(102,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
@@ -3850,13 +3363,11 @@ class Setting extends BreadCrumbs {
       let un
       let breadcrumbs = new BreadCrumbs(un, "instanceOfMeTest", un)
       let setting1 = new Setting({},"instanceOfMeTest1",un,un)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",breadcrumbs,un)
       let type1 = new TypesManager({},"instanceOfMeTest3",breadcrumbs)
       _.bassert(1,!Setting.instanceOfMe(breadcrumbs),"BreadCrumbs instance should not be an instance of Setting")
       _.bassert(2,!Setting.instanceOfMe(new Error()),"Error instance should not be an instance of Setting")
       _.bassert(3,Setting.instanceOfMe(setting1),"Setting instance should be an instance of Setting")
       _.bassert(4,!Setting.instanceOfMe("Setting"),"String should not be an instance of Setting")
-      _.bassert(5,!Setting.instanceOfMe(spec1),"SpecManager should not be an instance of Setting")
       _.bassert(6,!Setting.instanceOfMe(type1),"TypesManager should not be an instance of Setting")
     }
     function toStringTest() {
@@ -3873,7 +3384,6 @@ class Setting extends BreadCrumbs {
       _.bassert(3,BC.isOfType(setting1,"BreadCrumbs"), "'" + setting1 + "' should be of type " + "BreadCrumbs")
       _.bassert(4,BC.isOfType(setting1,"Setting"), "'" + setting1 + "' should be of type " + "Setting")
       _.bassert(5,!BC.isOfType(setting1,"Error"), "'" + setting1 + "' should not be of type " + "Error")
-      _.bassert(6,!BC.isOfType(setting1,"SpecManager"), "'" + setting1 + "' should not be of type " + "SpecManager")
       _.bassert(7,!BC.isOfType(setting1,"TypesManager"), "'" + setting1 + "' should not be of type " + "TypesManager")
     }
     function getFrontmatterYAMLTest() {
@@ -3975,14 +3485,12 @@ class Setting extends BreadCrumbs {
       _.bassert(7,JSON.stringify(answ7) == expAnsw7,`output of JSON.stringify(result) is:'${JSON.stringify(answ7)}',but should be:'${expAnsw7}'`)
     }
     function isHandlersKeyTest() {
-      _.bassert(1,Setting.#isHandlersKey(SpecManager.handlerKey),SpecManager.handlerKey + " should be recognized as handler key,but isn't")
       _.bassert(2,Setting.#isHandlersKey(TypesManager.handlerKey),TypesManager.handlerKey +  " should be recognized as handler key,but isn't")
       _.bassert(3,!Setting.#isHandlersKey(TypesManager.tnames[0]),TypesManager.tnames[0] +  " should not be recognized as handlers key,but is")
       _.bassert(4,!Setting.#isHandlersKey("no"),"'no' should not be recognized as handlers key,but is")
       _.bassert(5,!Setting.#isHandlersKey(""),"empty string should not be recognized as handlers key,but is")
       _.bassert(6,!Setting.#isHandlersKey(22),"22 should not be recognized as handlers key,but is")
       _.bassert(7,!Setting.#isHandlersKey(),"no argument should not be recognized as handlers key,but is")
-      _.bassert(8,!Setting.#isHandlersKey(SpecManager.SPEC_KEY),SpecManager.SPEC_KEY + " should be recognized as handler key,but isn't")
       _.bassert(9,!Setting.#isHandlersKey(TypesManager.TYPES_KEY),TypesManager.TYPES_KEY +  " should be recognized as handler key,but isn't")
     }
     function _tryConstruct(arg1, arg2, arg3, arg4) {
@@ -4022,7 +3530,7 @@ async function createNote(tp, setting) {
       type = setting.getType(typekey)
     }
   }
-  aut(type)
+  //aut(type)
   return Dialog.Ok
 }
 function entries2pairs(entries) {
@@ -4067,6 +3575,14 @@ async function main(tp, app) {
   }
   test(testYAML)
   try {
+    let lit = {__SPEC: {DEFAULT: "olla"}}
+    let lit2 = {__SPEC: {IGNORE: true, TYPE: "String", DEFAULT: "olla"}}
+    let x = new Essence(lit)
+    vaut("SKIPPED", x.skipped)
+    vaut("RENDER", x.RENDER)
+    vaut("TYPE", x.TYPE)
+    vaut("DEFAULT", x.DEFAULT)
+    vaut("IGNORE", x.IGNORE)
     let setting = new Setting(Test)
     await createNote(tp, setting)
     frontmatterYAML = setting.getFrontmatterYAML()
@@ -4083,7 +3599,8 @@ async function main(tp, app) {
         errYAML = {"???": e.name}
       }
       let msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
-      msg += e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
+      if (e.lastMsg.length > 0)
+        msg += "\n" + e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
       errYAML["\u00A8\u00A8\u00A8"] = msg
       return errYAML
     } else {
@@ -4104,6 +3621,5 @@ async function main(tp, app) {
     __frontmatter: flatten(tp.frontmatter),
   }
   if (!DEBUG) dbgYAML = undefined
-
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
