@@ -96,29 +96,39 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
  * Defaults:
  *   type: no general default
  *   default: no general default
- *   onlyRoot: false
+ *   onlyOnce: false , if true, has to be the outermost possible
  *   overWriteable: true (descendants can set another value)
- *                       (makes no sense with onlyRoot)
- *   inherited: true (makes no sense with onlyRoot)
+ *                       (makes no sense with onlyOnce)
+ *   inherited: true (makes no sense with onlyOnce)
+ *   flat: true (values are not parsed, even if they are objects)
+ *   repeat: false (same entryType can be added several times under diff. keys)
  *
- * __DIALOGSETTINGS: onlyRoot: true,
- * __NOTETYPES: onlyRoot: true,
- * __FOLDER2TYPE: onlyRoot: true
+ * root: onlyOnce: true, flat: false
+ * __DIALOGSETTINGS: onlyOnce: true,
+ * __NOTETYPES: onlyOnce: true, repeat: true, flat: false
+ * __FOLDER2TYPE: onlyOnce: true, repeat: true
+ * __DEFAULTS: onlyOnce: true (makes only sense for repeat and non flat sections)
  * __SPEC:
  * RENDER:
  *
  */
 const Test = {
   __DIALOGSETTINGS: {
-    TYPE_PROMPT: "Typ wählen",
-    TYPE_MAX_ENTRIES: 10, // Max entries in "type" drop down list
-    TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
+    TYPE_PROMPT: "Typ wählen" /* String */,
+    TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
+    TITLE_NEW_FILE: ["Unbenannt", "Untitled"] /* String or Array of Strings */,
   },
   __FOLDER2TYPE: {
-    test: "diary",
+    /* Values are  String or Array of Strings */ test: "diary",
     "/": ["citation", "diary"],
   },
   __NOTETYPES: {
+    __DEFAULTS: {
+      /* String */ MARKER: "",
+      /* Boolean */ DATE: false,
+      /* String */ TITLE_BEFORE_DATE: "",
+      /* Date */ DATEFORMAT: "YYYY-MM-DD",
+    },
     diary: {
       MARKER: "",
       DATE: true,
@@ -128,7 +138,7 @@ const Test = {
     citation: {MARKER: "°"},
   },
   c: {
-    __SPEC: {RENDER: true},
+    __SPEC: {RENDER: /* Boolean */ true},
     pict: "ja",
     d: {
       __SPEC: {RENDER: false},
@@ -146,7 +156,7 @@ const Test2 = {
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = true
-var TESTING = false
+var TESTING = true
 if (TESTING) DEBUG = false
 var CHECK_ERROR_OUTPUT = false
 if (CHECK_ERROR_OUTPUT) {
@@ -228,6 +238,16 @@ function letAllThrow(YAML) {
   /*31*/try{cnt++;new Setting(un,"name31",un,un)}catch(e){out(e,YAML)}
   /*32*/try{cnt++;new Setting({},"name32",br,un)}catch(e){out(e,YAML)}
   /*33*/try{cnt++;new Setting({},"name33",un,root)}catch(e){out(e,YAML)}
+  /*34*/try{cnt++;new DefaultsManager(un,"name34",root,[],[])}catch(e){out(e,YAML)}
+  /*35*/try{cnt++;new DefaultsManager({},"name35",un,[],[])}catch(e){out(e,YAML)}
+  /*36*/try{cnt++;new DefaultsManager({},"name36",root,un,[])}catch(e){out(e,YAML)}
+  /*37*/try{cnt++;new DefaultsManager({},"name37",root,false,[])}catch(e){out(e,YAML)}
+  /*38*/try{cnt++;new DefaultsManager({},"name38",root,[],un)}catch(e){out(e,YAML)}
+  /*39*/try{cnt++;new DefaultsManager({},"name39",root,[],true)}catch(e){out(e,YAML)}
+  /*40*/try{cnt++;new DefaultsManager({},"name40",root,[],["a"])}catch(e){out(e,YAML)}
+  /*41*/try{cnt++;new DefaultsManager({},"name41",root,["a"],[false])}catch(e){out(e,YAML)}
+  /*42*/try{cnt++;new DefaultsManager({bottle:42},"name42",root,["paragon"],["Boolean"])}catch(e){out(e,YAML)}
+  /*43*/try{cnt++;new DefaultsManager({paragon:43},"name43",root,["paragon"],["Boolean"])}catch(e){out(e,YAML)}
   
   Number.prototype.pad = oldPad
 }
@@ -828,9 +848,9 @@ class Dispatcher {
  */
 class BreadCrumbs {
   //#region member variables
-  static #instanceCounter = 0
   static sep = " \u00BB " // breadcrumbs separator \u2192
   static nl = "\n    " //"\n    " // for multiLiner in SettingError
+  static #instanceCounter = 0
   #ident
   #caller
   #literal
@@ -1017,6 +1037,7 @@ class BreadCrumbs {
    * or "Array" or "BreadCrumbs" or class name of class derived from BreadCrumbs
    * @param {*} val
    * @param {String} type - js types have to be written lowercase
+   *                        "Date" - Dateformat as String
    *                        "Null" accepts Null
    *                        "Array" accepts Arrays
    *                        "Object" accepts js Object besides Null and Array
@@ -1035,6 +1056,10 @@ class BreadCrumbs {
     let answer = false
     if (type[0].toLowerCase() == type[0]) {
       answer = typeof val == type
+    } else if (type == "Date") {
+      if (typeof val == "string") {
+        answer = true
+      }
     } else if (typeof val == "object") {
       let fu = BC.#objTypes[type]
       if (typeof fu == "function") answer = fu(val)
@@ -1493,8 +1518,8 @@ class DialogManager extends BreadCrumbs {
         value,
         type,
         un,
-        `'${key}: ${value}' - value`,
-        `${BC.nl}${BC.nl}Change value to correct type.`
+        `'${key}: ${value}' - value '${value}'`,
+        `${BC.nl}${BC.nl}Change value to correct type.}`
       )
     }
     super(literal, key, parent)
@@ -1546,8 +1571,8 @@ class DialogManager extends BreadCrumbs {
       _.run(getterTYPE_PROMPTTest)
       _.run(getterTYPE_MAX_ENTRIESTest)
       _.run(getterTITLE_NEW_FILETest)
-      _.run(instanceOfMeTest)
       _.run(constructorTest)
+      _.run(instanceOfMeTest)
       _.run(toStringTest)
       _.run(isOfTypeTest)
       _.destruct()
@@ -1642,18 +1667,6 @@ class DialogManager extends BreadCrumbs {
       _.bassert(2,BC.areEqual(dlgMan2.TITLE_NEW_FILE,["keinName"]),"given title should be returned in an array")
       _.bassert(3,BC.areEqual(dlgMan3.TITLE_NEW_FILE,["notset", "unknown"]),"output should be the same as input")
     }
-
-    function instanceOfMeTest() {
-      let un
-      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
-      let dlg1 = new DialogManager({},"instanceOfMeTest1",parent)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
-      _.bassert(1,!DialogManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of DialogManager")
-      _.bassert(2,!DialogManager.instanceOfMe(new Error()),"Error instance should not be an instance of DialogManager")
-      _.bassert(3,DialogManager.instanceOfMe(dlg1),"DialogManager instance should be an instance of DialogManager")
-      _.bassert(4,!DialogManager.instanceOfMe("DialogManager"),"String should not be an instance of DialogManager")
-      _.bassert(5,!DialogManager.instanceOfMe(spec1),"SpecManager should not be an instance of DialogManager")
-    }
     function constructorTest() {
       let un
       let p = new BreadCrumbs(un, "constructorTest", un)
@@ -1680,6 +1693,17 @@ class DialogManager extends BreadCrumbs {
       _.bassert(102,dialogManager instanceof BreadCrumbs,"'DialogManager' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,dialogManager instanceof DialogManager,"'DialogManager' has to be an instance of 'DialogManager'")
       _.bassert(104,dialogManager.constructor == DialogManager,"the constructor property is not 'DialogManager'")
+    }
+    function instanceOfMeTest() {
+      let un
+      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let dlg1 = new DialogManager({},"instanceOfMeTest1",parent)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      _.bassert(1,!DialogManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of DialogManager")
+      _.bassert(2,!DialogManager.instanceOfMe(new Error()),"Error instance should not be an instance of DialogManager")
+      _.bassert(3,DialogManager.instanceOfMe(dlg1),"DialogManager instance should be an instance of DialogManager")
+      _.bassert(4,!DialogManager.instanceOfMe("DialogManager"),"String should not be an instance of DialogManager")
+      _.bassert(5,!DialogManager.instanceOfMe(spec1),"SpecManager should not be an instance of DialogManager")
     }
     function toStringTest() {
       let un
@@ -1848,8 +1872,8 @@ class SpecManager extends BreadCrumbs {
       _.run(getterNamesTest)
       _.run(getterDefaultsTest)
       _.run(getterRENDERTest)
-      _.run(instanceOfMeTest)
       _.run(constructorTest)
+      _.run(instanceOfMeTest)
       _.run(toStringTest)
       _.run(isOfTypeTest)
       _.run(setOptionRENDERorThrowTest)      
@@ -1916,17 +1940,6 @@ class SpecManager extends BreadCrumbs {
       _.bassert(9,spec6.RENDER === false,"RENDER should be false, as set in specification")
       _.bassert(10,spec7.RENDER === true,"RENDER should be true, as set in specification")
     }
-    function instanceOfMeTest() {
-      let un
-      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
-      let spec1 = new SpecManager({},"instanceOfMeTest1",parent,un)
-      let type1 = new TypesManager({},"instanceOfMeTest2",parent)
-      _.bassert(1,!SpecManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of SpecManager")
-      _.bassert(2,!SpecManager.instanceOfMe(new Error()),"Error instance should not be an instance of SpecManager")
-      _.bassert(3,SpecManager.instanceOfMe(spec1),"SpecManager instance should be an instance of SpecManager")
-      _.bassert(4,!SpecManager.instanceOfMe("SpecManager"),"String should not be an instance of SpecManager")
-      _.bassert(5,!SpecManager.instanceOfMe(type1),"TypesManager should not be an instance of SpecManager")
-    }
     function constructorTest() {
       let un
       let p = new BreadCrumbs(un, "constructorTest", un)
@@ -1957,6 +1970,17 @@ class SpecManager extends BreadCrumbs {
       _.bassert(102,specManager instanceof BreadCrumbs,"'SpecManager' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,specManager instanceof SpecManager,"'SpecManager' has to be an instance of 'SpecManager'")
       _.bassert(104,specManager.constructor == SpecManager,"the constructor property is not 'SpecManager'")
+    }
+    function instanceOfMeTest() {
+      let un
+      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let spec1 = new SpecManager({},"instanceOfMeTest1",parent,un)
+      let type1 = new TypesManager({},"instanceOfMeTest2",parent)
+      _.bassert(1,!SpecManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of SpecManager")
+      _.bassert(2,!SpecManager.instanceOfMe(new Error()),"Error instance should not be an instance of SpecManager")
+      _.bassert(3,SpecManager.instanceOfMe(spec1),"SpecManager instance should be an instance of SpecManager")
+      _.bassert(4,!SpecManager.instanceOfMe("SpecManager"),"String should not be an instance of SpecManager")
+      _.bassert(5,!SpecManager.instanceOfMe(type1),"TypesManager should not be an instance of SpecManager")
     }
     function toStringTest() {
       let un
@@ -2006,6 +2030,359 @@ class SpecManager extends BreadCrumbs {
   }
 }
 
+/** defaults parser */
+class DefaultsManager extends BreadCrumbs {
+  //#region member variables
+  static #instanceCounter = 0
+  static #DEFAULTS_KEY = "__DEFAULTS"
+  static #ALLOWED_TYPES = ["String", "Boolean", "Date", "Number"]
+  #GIVEN_NAMES = []
+  #GIVEN_TYPES = []
+  #GIVEN_DEFAULTS = {}
+  /** Returns key for entry handled by DefaultsManager
+   * @returns {String}
+   */
+  static get handlerKey() {
+    return DefaultsManager.#DEFAULTS_KEY
+  }
+  /** Returns types DefaultsManager accepts
+   * @returns @returns {Array.<String>}
+   */
+  static get allowedTypes() {
+    return DefaultsManager.#ALLOWED_TYPES
+  }
+  /** Returns given defaults names
+   * @returns {Array.<String>}
+   */
+  get givenNames() {
+    return this.#GIVEN_NAMES
+  }
+  /** Returns given types or if [] given, array containing "String" entries
+   * @returns {Array.<String>}
+   */
+  get givenTypes() {
+    return this.#GIVEN_TYPES
+  }
+  /** Returns object with all given defaults set to given values
+   * @returns {Object.<String.*>}
+   */
+  get givenDefaults() {
+    return this.#GIVEN_DEFAULTS
+  }
+  //#endregion member variables
+  /** Constructs a new DefaultsManager and registers its type once
+   * @constructor
+   * @param {(Object|Object.<String.*>)} literal
+   * @param {(String|Symbol)} key
+   * @param {BreadCrumbs} parent
+   * @param {Array.String} defaultNames
+   * @param {Array.String} typesForNames
+   * @throws {SettingError} on wrong parameter types
+   */
+  constructor(literal, key, parent, defaultNames, typesForNames) {
+    let un
+    super(literal, key, parent)
+    if (!DefaultsManager.#instanceCounter++) this.objTypes = "DefaultsManager"
+    this.throwIfUndefined(literal, "literal")
+    // literal {(Undefined|Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    // parent {(Undefined|BreadCrumbs)} checked by superclass
+    this.throwIfUndefined(defaultNames, "defaultNames")
+    this.throwIfNotOfType(defaultNames, "Array", un, "'defaultNames'")
+    this.throwIfUndefined(typesForNames, "typesForNames")
+    this.throwIfNotOfType(typesForNames, "Array", un, "'typesForNames'")
+    this.#GIVEN_NAMES = defaultNames
+
+    this.#setGivenTypesOrThrow(typesForNames)
+    this.#setDefaultsOrThrow()
+  }
+
+  /** Returns whether arg is instance of DefaultsManager
+   * @param {Object} arg
+   * @returns {Boolean}
+   */
+  static instanceOfMe(arg) {
+    return arg instanceof DefaultsManager
+  }
+
+  #setGivenTypesOrThrow(typesForNames) {
+    function throwIfLengthNotMatch(l1, l2, me) {
+      if (l2 != 0 && l1 != l2)
+        throw new SettingError(
+          `${me.constructor.name}.#setGivenTypesOrThrow`,
+          `Path: ${me.toBreadcrumbs()}\
+           ${BC.nl}if 'typesForNames' is not empty \
+           it has to have same length as 'defaultNames'`
+        )
+    }
+    function throwIfNoAllowedType(type, idx, me) {
+      me.throwIfNotOfType(
+        type,
+        "string",
+        "#setGivenTypesOrThrow",
+        `'typesForNames[${idx}]:${type}' - value`
+      )
+      if (!DefaultsManager.#ALLOWED_TYPES.includes(type))
+        throw new SettingError(
+          `${me.constructor.name}.#setGivenTypesOrThrow`,
+          `Path: ${me.toBreadcrumbs()}\
+           ${BC.nl}value '${type}' at 'typesForNames[${idx}]' \
+           is no allowed type.\
+           ${BC.nl}${BC.nl}Allowed types are: ${DefaultsManager.#ALLOWED_TYPES}`
+        )
+    }
+    throwIfLengthNotMatch(this.#GIVEN_NAMES.length, typesForNames.length, this)
+    typesForNames.forEach((type, idx) => throwIfNoAllowedType(type, idx, this))
+    this.#GIVEN_TYPES = typesForNames.length
+      ? typesForNames
+      : new Array(this.#GIVEN_NAMES.length).fill("String")
+  }
+
+  #setDefaultsOrThrow() {
+    function _throwWrongKey(name, names, me) {
+      throw new SettingError(
+        `${me.constructor.name}.constructor`,
+        `Path: ${me.toBreadcrumbs()}\
+        ${BC.nl}'${name}' is no known defaults setting name.\
+        ${BC.nl}Known names are: '${names}'\
+        ${BC.nl}${BC.nl}Remove unknown name from your defaults settings.`
+      )
+    }
+    function _throwIfWrongType(value, t, key, me) {
+      let un
+      let type = null == t.match(/[a-z]/) || t == "Date" ? t : t.toLowerCase()
+      me.throwIfNotOfType(
+        value,
+        type,
+        un,
+        `'${key}: ${value}' - value`,
+        `${BC.nl}${BC.nl}Change value to correct type.`
+      )
+    }
+    for (const [key, value] of Object.entries(this.literal)) {
+      if (!this.#GIVEN_NAMES.includes(key))
+        _throwWrongKey(key, this.#GIVEN_NAMES, this)
+      let idx = this.#GIVEN_NAMES.indexOf(key)
+      _throwIfWrongType(value, this.#GIVEN_TYPES[idx], key, this)
+      this.#GIVEN_DEFAULTS[key] = value
+    }
+  }
+
+  // prettier-ignore
+  static test(outputObj) { // DefaultsManager
+    let _ = null
+    if(_ = new TestSuite("DefaultsManager", outputObj)) {
+      _.run(getterHandlerKeyTest)
+      _.run(getterAllowedTypesTest)
+      _.run(getterLiteralTest)
+      _.run(getterGivenNamesTest)
+      _.run(getterGivenTypesTest)
+      _.run(getterGivenDefaultsTest)
+      _.run(constructorTest)
+      _.run(instanceOfMeTest)
+      _.run(toStringTest)
+      _.run(isOfTypeTest)
+      _.run(setGivenTypesOrThrowTest)
+      _.run(setDefaultsOrThrowTest)
+      _.destruct()
+      _ = null
+    }
+    function getterHandlerKeyTest() {
+      _.bassert(1,DefaultsManager.handlerKey == "__DEFAULTS", "should be __DEFAULTS")
+      _.bassert(2,DefaultsManager.handlerKey != "DEFAULTS", "should not be DEFAULTS")
+    }
+    function getterAllowedTypesTest() {
+      _.bassert(1,DefaultsManager.allowedTypes.includes("Boolean"), "'Boolean' should be allowed Type")
+      _.bassert(2,DefaultsManager.allowedTypes.includes("String"), "'String' should be allowed Type")
+      _.bassert(3,DefaultsManager.allowedTypes.includes("Date"), "'Date' should be allowed Type")
+      _.bassert(4,DefaultsManager.allowedTypes.includes("Number"), "'Number' should be allowed Type")
+      _.bassert(5,!DefaultsManager.allowedTypes.includes("date"), "'date' should not be allowed Type")
+    }
+    function getterLiteralTest() {
+      let un
+      let parent = new BreadCrumbs(un, "getterLiteralTest", un)
+      let lit1 = {}
+      let lit2 = {MARKER: "ēlige!"}
+      let lit3 = {"MARKER": "12"}
+      let lit4 = {"MARKER": "choose!"}
+      let lit5 = {"MARKER": "13"}
+      let lit6 = {"MARKER": "wähle!", "DATE": "14"}
+      let defMan1 = new DefaultsManager(lit1,"getterLiteralTest01",parent,[],[])
+      let defMan2 = new DefaultsManager(lit2,"getterLiteralTest02",parent,["MARKER"],["String"])
+      let defMan3 = new DefaultsManager(lit3,"getterLiteralTest03",parent,["MARKER"],["String"])
+      let defMan4 = new DefaultsManager(lit4,"getterLiteralTest04",parent,["MARKER"],["String"])
+      let defMan5 = new DefaultsManager(lit5,"getterLiteralTest05",parent,["MARKER"],["String"])
+      let defMan6 = new DefaultsManager(lit6,"getterLiteralTest06",parent,["MARKER","DATE"],["String","Date"])
+      let res1 = defMan1.literal
+      let res2 = defMan2.literal
+      let res3 = defMan3.literal
+      let res4 = defMan4.literal
+      let res5 = defMan5.literal
+      let res6 = defMan6.literal
+      _.bassert(1,Object.keys(res1).length == 0,"literal should be empty as given")
+      _.bassert(2,BC.areEqual(lit2,res2),"literal should not be changed")
+      _.bassert(3,BC.areEqual(lit3,res3),"literal should not be changed")
+      _.bassert(4,BC.areEqual(lit4,res4),"literal should not be changed")
+      _.bassert(5,BC.areEqual(lit5,res5),"literal should not be changed")
+      _.bassert(6,BC.areEqual(lit6,res6),"literal should not be changed")
+    }
+    function getterGivenNamesTest() {
+      let un
+      let p = new BreadCrumbs(un, "getterGivenNamesTest", un)
+      let lit1 = {MARKER: "abc"}
+      let names1 = ["MARKER","DATE"]
+      let types1 = ["String", "Date"]
+      let def1 = new DefaultsManager(lit1, "getterGivenNamesTest1", p,names1, types1)
+      let answ1 = def1.givenNames
+      _.bassert(1,BC.areEqual(names1,answ1),"should return names as given")
+    }
+    function getterGivenTypesTest() {
+      let un
+      let p = new BreadCrumbs(un, "getterGivenTypesTest", un)
+      let lit1 = {MARKER: "abc"}
+      let names1 = ["MARKER","DATE"]
+      let types1 = ["String", "Date"]
+      let def1 = new DefaultsManager(lit1, "getterGivenTypesTest1", p,names1, types1)
+      let answ1 = def1.givenTypes
+      _.bassert(1,BC.areEqual(types1,answ1),"should return types as given")
+      let lit2 = {MARKER: "abc"}
+      let names2 = ["MARKER","DATE"]
+      let types2 = []
+      let exp2 = ["String", "String"]
+      let def2 = new DefaultsManager(lit2, "getterGivenTypesTest1", p,names2, types2)
+      let answ2 = def2.givenTypes
+      _.bassert(2,BC.areEqual(exp2,answ2),"should return array repeatedly containing type 'String'")
+    }
+    function getterGivenDefaultsTest() {
+      let un
+      let p = new BreadCrumbs(un, "getterGivenDefaultsTest", un)
+      let lit1 = {MARKER: "abc"}
+      let names1 = ["MARKER","DATE"]
+      let types1 = ["String", "Date"]
+      let def1 = new DefaultsManager(lit1, "getterGivenDefaultsTest1", p,names1, types1)
+      let answ1 = def1.givenDefaults
+      _.bassert(1,BC.areEqual(lit1,answ1),"should return defaults")
+
+      let lit2 = {MARKER: "def"}
+      let names2 = ["MARKER","DATE"]
+      let types2 = ["String", "Date"]
+      let def2 = new DefaultsManager(lit2, "getterGivenDefaultsTest2", p,names2, types2)
+      let answ2 = def2.givenDefaults
+      _.bassert(2,BC.areEqual(lit2,answ2),"should return defaults")
+
+      let lit3 = {MARKER: "abc"}
+      let names3 = ["MARKER","TITLE_BEFORE_DATE"]
+      let types3 = []
+      let def3 = new DefaultsManager(lit3, "getterGivenDefaultsTest3", p,names3, types3)
+      let answ3 = def3.givenDefaults
+      _.bassert(3,BC.areEqual(lit3,answ3),"should return defaults as given")
+    }
+    function constructorTest() {
+      let un
+      let p = new BreadCrumbs(un, "constructorTest", un)
+      let def = new DefaultsManager({}, "constructorTest1", p,[],[])
+      _.assert(1,_tryConstruct,{},"cTest1",p,[],[],"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",p,[],[],"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",p,[],[],"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",p,[],[],"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",p,[],[],"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,p,[],[],"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,p,[],[],"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},p,[],[],"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},p,p,[],[],"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),p,[],[],"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"cTest11",un,[],[],"should not be be created, parent is undefined")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),[],[],"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},[],[],"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring",[],[],"should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,[],[],"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,[],[],"should not be be created, parent is null")
+      
+      let lit17 = {MARKER: "abc"}
+      let names17 = ["MARKER"]
+      _.assert(17,_tryConstruct,lit17,"cTest17",p,names17,[],"should be be created, literal fully consists of names in defaultNames")
+      _.shouldAssert(18,_tryConstruct,lit17,"cTest18",p,[],[],"should not be be created, literal contains entry not in defaultNames")
+      _.shouldAssert(19,_tryConstruct,lit17,"cTest19",p,["abc","def"],[],"should not be be created, literal contains entry not in defaultNames")
+
+      let defaultsManager = new DefaultsManager({},"constructorTest101",p,[],[])
+      _.bassert(101,defaultsManager instanceof Object,"'DefaultsManager' has to be an instance of 'Object'")
+      _.bassert(102,defaultsManager instanceof BreadCrumbs,"'DefaultsManager' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,defaultsManager instanceof DefaultsManager,"'DefaultsManager' has to be an instance of 'DefaultsManager'")
+      _.bassert(104,defaultsManager.constructor == DefaultsManager,"the constructor property is not 'DefaultsManager'")
+    }
+    function instanceOfMeTest() {
+      let un
+      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let def1 = new DefaultsManager({},"instanceOfMeTest1",parent,[],[])
+      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      _.bassert(1,!DefaultsManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of DefaultsManager")
+      _.bassert(2,!DefaultsManager.instanceOfMe(new Error()),"Error instance should not be an instance of DefaultsManager")
+      _.bassert(3,DefaultsManager.instanceOfMe(def1),"DefaultsManager instance should be an instance of DefaultsManager")
+      _.bassert(4,!DefaultsManager.instanceOfMe("DefaultsManager"),"String should not be an instance of DefaultsManager")
+      _.bassert(5,!DefaultsManager.instanceOfMe(spec1),"SpecManager should not be an instance of DefaultsManager")
+    }
+    function toStringTest() {
+      let un
+      let parent = new BreadCrumbs(un, "toStringTest", un)
+      let def1 = new DefaultsManager({},"toStringTest1",parent,[],[])
+      _.bassert(1,def1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,def1.toString().includes("DefaultsManager"),"result does not contain class string"    )
+    }
+    function isOfTypeTest() {
+      let un
+      let parent = new BreadCrumbs(un, "isOfTypeTest", un)
+      let def1 = new DefaultsManager({},"isOfTypeTest1",parent,[],[])
+      _.bassert(1, BC.isOfType(def1,"object"), "'" + def1 + "' should be of type " + "object")
+      _.bassert(2, BC.isOfType(def1,"Object"), "'" + def1 + "' should be of type " + "Object")
+      _.bassert(3, BC.isOfType(def1,"BreadCrumbs"), "'" + def1 + "' should be of type " + "BreadCrumbs")
+      _.bassert(4, BC.isOfType(def1,"DefaultsManager"), "'" + def1 + "' should be of type " + "DefaultsManager")
+      _.bassert(5,!BC.isOfType(def1,"Error"), "'" + def1 + "' should not be of type " + "Error")
+      _.bassert(6,!BC.isOfType(def1,"SpecManager"), "'" + def1 + "' should not be of type " + "SpecManager")
+    }
+    function setGivenTypesOrThrowTest() {
+      let un
+      let p = new BreadCrumbs(un, "setGivenTypesOrThrowTest", un)
+      let lit0 = {}
+      let names = ["MARKER","DATE"]
+      let types1 = ["String", "Date"]
+      _.assert(1,_tryConstruct,lit0,"sg1", p, names, types1, "should construct")
+      let types2 = []
+      _.assert(2,_tryConstruct,lit0,"sg2", p, names, types2, "should construct")
+      let types3 = ["String"]
+      _.shouldAssert(3,_tryConstruct,lit0,"sg3", p, names, types3, "less types than names, should not construct")
+      let types4 = ["String", "String", "String"]
+      _.shouldAssert(4,_tryConstruct,lit0,"sg4", p, names, types4, "more types than names, should not construct")
+      let types5 = ["string", "Date"]
+      _.shouldAssert(5,_tryConstruct,lit0,"sg5", p, names, types5, "wrong type name, should not construct")
+      let types6 = [22, "Date"]
+      _.shouldAssert(6,_tryConstruct,lit0,"sg6", p, names, types6, "not all type names are of type string, should not construct")
+    }
+    function setDefaultsOrThrowTest() {
+      let un
+      let p = new BreadCrumbs(un, "setDefaultsOrThrowTest", un)
+      let lit0 = {}
+      let lit1 = {MARKER:"p_", "DATE":true, DATEFORMAT: "abc"}
+      let names = ["MARKER","DATEFORMAT","DATE"]
+      let types0 = []
+      let types = ["String", "Date", "Boolean"]
+      let lit2 = {MARKER:"p_",DATEFORMAT:"abc"}
+      _.assert(0,_tryConstruct,lit0,"sd0", p, names, types, "should construct")
+      _.assert(1,_tryConstruct,lit1,"sd1", p, names, types, "should construct")
+      _.assert(2,_tryConstruct,lit2,"sd1", p, names, types0, "should construct")
+      let lit3 = {UNKNOWN:"p_", "DATE":true, DATEFORMAT: "abc"}
+      _.shouldAssert(3,_tryConstruct,lit3,"sd3", p, names, types, "should not construct")
+      let lit4 = {MARKER:2, "DATE":true, DATEFORMAT: "abc"}
+      _.shouldAssert(4,_tryConstruct,lit4,"sd4", p, names, types, "should not construct")
+      let lit5 = {MARKER:"p_", "DATE":"boolean", DATEFORMAT: "abc"}
+      _.shouldAssert(5,_tryConstruct,lit5,"sd4", p, names, types, "should not construct")
+    }
+    function _tryConstruct(arg1, arg2, arg3, arg4, arg5) {
+      new DefaultsManager(arg1, arg2, arg3, arg4, arg5)
+    }
+  }
+}
+
 /** notetypes parser
  * @classdesc
  * notetypes are the core of foty, which is shorthand for foldertypes.
@@ -2036,6 +2413,7 @@ class TypesManager extends BreadCrumbs {
   static #instanceCounter = 0
   static #TYPES_KEY = "__NOTETYPES"
   static #TNAMES = ["MARKER", "DATE", "TITLE_BEFORE_DATE", "DATEFORMAT"]
+  static #TNAMESTYPES = ["String", "Boolean", "String", "Date"]
   static #DEFAULT_TYPE = {
     MARKER: "",
     DATE: false,
@@ -2054,6 +2432,12 @@ class TypesManager extends BreadCrumbs {
    */
   static get tnames() {
     return TypesManager.#TNAMES
+  }
+  /** Returns types notetype names have
+   * @returns @returns {Array.<String>}
+   */
+  static get tnamestypes() {
+    return TypesManager.#TNAMESTYPES
   }
   /** Returns default notetype with all its keys set to default values
    * @returns {Object.<String.*>}
@@ -2089,6 +2473,18 @@ class TypesManager extends BreadCrumbs {
     // key {(String|Symbol)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     // parent {(Undefined|BreadCrumbs)} checked by superclass
+
+    let defLiteral = {}
+    if (BC.isDefined(this.literal[DefaultsManager.handlerKey]))
+      defLiteral = this.literal[DefaultsManager.handlerKey]
+    let defMan = new DefaultsManager(
+      defLiteral,
+      DefaultsManager.handlerKey,
+      this,
+      TypesManager.#TNAMES,
+      TypesManager.#TNAMESTYPES
+    )
+
     this.#createNoteTypesOrThrow()
   }
 
@@ -2122,6 +2518,7 @@ class TypesManager extends BreadCrumbs {
       )
     }
     for (const [name, entry] of Object.entries(this.literal)) {
+      if (name == DefaultsManager.handlerKey) continue
       _throwIfWrongType(entry, "Object", name, this)
       for (const [key, value] of Object.entries(entry)) {
         let allowedKeys = TypesManager.tnames
@@ -2155,8 +2552,9 @@ class TypesManager extends BreadCrumbs {
       _.run(getterDefaultTypeTest)
       _.run(getterNotetypesTest)
       _.run(getterNamesTest)
-      _.run(instanceOfMeTest)
+      _.run(getterTnamestypesTest)
       _.run(constructorTest)
+      _.run(instanceOfMeTest)
       _.run(toStringTest)
       _.run(isOfTypeTest)
       _.run(createNoteTypesOrThrowTest)      
@@ -2209,6 +2607,24 @@ class TypesManager extends BreadCrumbs {
       _.bassert(3,tnames.includes("DATE"),"should contain 'DATE'")
       _.bassert(4,tnames.includes("DATEFORMAT"),"should contain 'DATEFORMAT'")
       _.bassert(5,tnames.every((entry) => {return null == entry.match(/[a-z]/)}),"tnames should be completely uppercase")
+    }
+    function getterTnamestypesTest() {
+      let tNames = TypesManager.tnames
+      let tTypes = TypesManager.tnamestypes
+      let idxMarker = tNames.indexOf("MARKER")
+      let idxDate = tNames.indexOf("DATE")
+      let idxDateFormat = tNames.indexOf("DATEFORMAT")
+      let idxTitleBeforeDate = tNames.indexOf("TITLE_BEFORE_DATE")
+      let typeMarker = tTypes[idxMarker]
+      let typeDate = tTypes[idxDate]
+      let typeDateFormat = tTypes[idxDateFormat]
+      let typeTitleBeforeDate = tTypes[idxTitleBeforeDate]
+      _.bassert(1,BC.isOfType(tTypes,"Array"),"should return an array")
+      _.bassert(2,tNames.length == tTypes.length, "Type should be defined for each name")
+      _.bassert(3,typeMarker == "String", "type for 'MARKER' should be String")
+      _.bassert(4,typeDate == "Boolean", "type for 'DATE' should be Boolean")
+      _.bassert(5,typeDateFormat == "Date", "type for 'DATEFORMAT' should be Date")
+      _.bassert(6,typeTitleBeforeDate == "String", "type for 'TITLE_BEFORE_DATE' should be String")
     }
     function getterDefaultTypeTest() {    
       let defType = TypesManager.defaultType
@@ -2280,17 +2696,6 @@ class TypesManager extends BreadCrumbs {
       _.bassert(8,names4[1] == "d","'d' is the name")
       _.bassert(9,names4[2] == "c","'c' is the name")
     }
-    function instanceOfMeTest() {
-      let un
-      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
-      let type1 = new TypesManager({},"instanceOfMeTest1",parent)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
-      _.bassert(1,!TypesManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of TypesManager")
-      _.bassert(2,!TypesManager.instanceOfMe(new Error()),"Error instance should not be an instance of TypesManager")
-      _.bassert(3,TypesManager.instanceOfMe(type1),"TypesManager instance should be an instance of TypesManager")
-      _.bassert(4,!TypesManager.instanceOfMe("TypesManager"),"String should not be an instance of TypesManager")
-      _.bassert(5,!TypesManager.instanceOfMe(spec1),"SpecManager should not be an instance of TypesManager")
-    }
     function constructorTest() {
       let un
       let p = new BreadCrumbs(un, "constructorTest", un)
@@ -2317,6 +2722,17 @@ class TypesManager extends BreadCrumbs {
       _.bassert(102,typesManager instanceof BreadCrumbs,"'TypesManager' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,typesManager instanceof TypesManager,"'TypesManager' has to be an instance of 'TypesManager'")
       _.bassert(104,typesManager.constructor == TypesManager,"the constructor property is not 'TypesManager'")
+    }
+    function instanceOfMeTest() {
+      let un
+      let parent = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let type1 = new TypesManager({},"instanceOfMeTest1",parent)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      _.bassert(1,!TypesManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of TypesManager")
+      _.bassert(2,!TypesManager.instanceOfMe(new Error()),"Error instance should not be an instance of TypesManager")
+      _.bassert(3,TypesManager.instanceOfMe(type1),"TypesManager instance should be an instance of TypesManager")
+      _.bassert(4,!TypesManager.instanceOfMe("TypesManager"),"String should not be an instance of TypesManager")
+      _.bassert(5,!TypesManager.instanceOfMe(spec1),"SpecManager should not be an instance of TypesManager")
     }
     function toStringTest() {
       let un
@@ -2447,6 +2863,14 @@ class FoTyManager extends BreadCrumbs {
     this.#FOLDER2TYPE = this.#validateLiteralOrThrow(parent.typeNames)
   }
 
+  /** Returns whether arg is instance of FoTyManager
+   * @param {Object} arg
+   * @returns {Boolean}
+   */
+  static instanceOfMe(arg) {
+    return arg instanceof FoTyManager
+  }
+
   /** Returns notetypes for a foldername, if set, or empty array else
    * @param {String} folder
    * @returns {Array.<String>}
@@ -2480,7 +2904,7 @@ class FoTyManager extends BreadCrumbs {
         value,
         type,
         "#validateLiteralOrThrow",
-        `'${key}: ${value}' - value`,
+        `'${key}: ${value}' - value '${value}'`,
         `${BC.nl}${BC.nl}Change value to correct type.`
       )
     }
@@ -2489,7 +2913,7 @@ class FoTyManager extends BreadCrumbs {
         `${me.constructor.name}.#validateLiteralOrThrow`,
         `Path: ${me.toBreadcrumbs()}\
         ${BC.nl}You have no __NOTETYPES defined, you can not use __FOLDER2TYPE\
-        ${BC.nl}${BC.nl}Define a notetype for '${value}`
+        ${BC.nl}${BC.nl}Define a notetype for '${value}'`
       )
     }
 
@@ -2509,14 +2933,6 @@ class FoTyManager extends BreadCrumbs {
     return folder2types
   }
 
-  /** Returns whether arg is instance of FoTyManager
-   * @param {Object} arg
-   * @returns {Boolean}
-   */
-  static instanceOfMe(arg) {
-    return arg instanceof FoTyManager
-  }
-
   // prettier-ignore
   static test(outputObj) { // FoTyManager
     let _ = null
@@ -2524,8 +2940,8 @@ class FoTyManager extends BreadCrumbs {
       _.run(getterHandlerKeyTest)
       _.run(getterLiteralTest)
       _.run(getterFOLDER2TYPETest)
-      _.run(instanceOfMeTest)
       _.run(constructorTest)
+      _.run(instanceOfMeTest)
       _.run(toStringTest)
       _.run(isOfTypeTest)
       _.run(getTypesForFolderTest)
@@ -2564,17 +2980,6 @@ class FoTyManager extends BreadCrumbs {
       _.bassert(4,BC.areEqual(lit4,res4),"literal should not be changed")
       _.bassert(5,BC.areEqual(lit5,res5),"literal should not be changed")
       _.bassert(6,BC.areEqual(lit6,res6),"literal should not be changed")
-    }
-    function instanceOfMeTest() {
-      let un
-      let parent = new Setting({}, "instanceOfMeTest", un)
-      let ft1 = new FoTyManager({},"instanceOfMeTest1",parent)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
-      _.bassert(1,!FoTyManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of FoTyManager")
-      _.bassert(2,!FoTyManager.instanceOfMe(new Error()),"Error instance should not be an instance of FoTyManager")
-      _.bassert(3,FoTyManager.instanceOfMe(ft1),"FoTyManager instance should be an instance of FoTyManager")
-      _.bassert(4,!FoTyManager.instanceOfMe("FoTyManager"),"String should not be an instance of FoTyManager")
-      _.bassert(5,!FoTyManager.instanceOfMe(spec1),"SpecManager should not be an instance of FoTyManager")
     }
     function getterFOLDER2TYPETest() {
       let un
@@ -2622,6 +3027,17 @@ class FoTyManager extends BreadCrumbs {
       _.bassert(102,dialogManager instanceof BreadCrumbs,"'FoTyManager' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,dialogManager instanceof FoTyManager,"'FoTyManager' has to be an instance of 'FoTyManager'")
       _.bassert(104,dialogManager.constructor == FoTyManager,"the constructor property is not 'FoTyManager'")
+    }
+    function instanceOfMeTest() {
+      let un
+      let parent = new Setting({}, "instanceOfMeTest", un)
+      let ft1 = new FoTyManager({},"instanceOfMeTest1",parent)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",parent,un)
+      _.bassert(1,!FoTyManager.instanceOfMe(parent),"BreadCrumbs instance should not be an instance of FoTyManager")
+      _.bassert(2,!FoTyManager.instanceOfMe(new Error()),"Error instance should not be an instance of FoTyManager")
+      _.bassert(3,FoTyManager.instanceOfMe(ft1),"FoTyManager instance should be an instance of FoTyManager")
+      _.bassert(4,!FoTyManager.instanceOfMe("FoTyManager"),"String should not be an instance of FoTyManager")
+      _.bassert(5,!FoTyManager.instanceOfMe(spec1),"SpecManager should not be an instance of FoTyManager")
     }
     function toStringTest() {
       let un
@@ -2864,6 +3280,7 @@ class Setting extends BreadCrumbs {
   static test(outputObj) { // Setting
     BC.test(outputObj)
     DialogManager.test(outputObj)
+    DefaultsManager.test(outputObj)
     SpecManager.test(outputObj)
     TypesManager.test(outputObj)
     FoTyManager.test(outputObj)
@@ -2874,8 +3291,8 @@ class Setting extends BreadCrumbs {
       _.run(getterFrontmatterYAMLTest)
       _.run(getterRenderYAMLTest)
       _.run(getterDlgTest)
-      _.run(instanceOfMeTest)
       _.run(constructorTest)
+      _.run(instanceOfMeTest)
       _.run(toStringTest)
       _.run(isOfTypeTest)
       _.run(getFrontmatterYAMLTest)
@@ -3023,19 +3440,6 @@ class Setting extends BreadCrumbs {
       _.bassert(5,dlg3.TYPE_PROMPT==DialogManager.defaults.TYPE_PROMPT,"should be default value")
       _.bassert(6,dlg3.TYPE_MAX_ENTRIES==DialogManager.defaults.TYPE_MAX_ENTRIES,"should be default value")
     }
-    function instanceOfMeTest() {
-      let un
-      let breadcrumbs = new BreadCrumbs(un, "instanceOfMeTest", un)
-      let setting1 = new Setting({},"instanceOfMeTest1",un,un)
-      let spec1 = new SpecManager({},"instanceOfMeTest2",breadcrumbs,un)
-      let type1 = new TypesManager({},"instanceOfMeTest3",breadcrumbs)
-      _.bassert(1,!Setting.instanceOfMe(breadcrumbs),"BreadCrumbs instance should not be an instance of Setting")
-      _.bassert(2,!Setting.instanceOfMe(new Error()),"Error instance should not be an instance of Setting")
-      _.bassert(3,Setting.instanceOfMe(setting1),"Setting instance should be an instance of Setting")
-      _.bassert(4,!Setting.instanceOfMe("Setting"),"String should not be an instance of Setting")
-      _.bassert(5,!Setting.instanceOfMe(spec1),"SpecManager should not be an instance of Setting")
-      _.bassert(6,!Setting.instanceOfMe(type1),"TypesManager should not be an instance of Setting")
-    }
     function constructorTest() {
       let un
       let b = new BreadCrumbs(un, "constructorTest", un)
@@ -3067,6 +3471,19 @@ class Setting extends BreadCrumbs {
       _.bassert(102,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,setting instanceof Setting,"'Setting' has to be an instance of 'Setting'")
       _.bassert(104,setting.constructor == Setting,"the constructor property is not 'Setting'")
+    }
+    function instanceOfMeTest() {
+      let un
+      let breadcrumbs = new BreadCrumbs(un, "instanceOfMeTest", un)
+      let setting1 = new Setting({},"instanceOfMeTest1",un,un)
+      let spec1 = new SpecManager({},"instanceOfMeTest2",breadcrumbs,un)
+      let type1 = new TypesManager({},"instanceOfMeTest3",breadcrumbs)
+      _.bassert(1,!Setting.instanceOfMe(breadcrumbs),"BreadCrumbs instance should not be an instance of Setting")
+      _.bassert(2,!Setting.instanceOfMe(new Error()),"Error instance should not be an instance of Setting")
+      _.bassert(3,Setting.instanceOfMe(setting1),"Setting instance should be an instance of Setting")
+      _.bassert(4,!Setting.instanceOfMe("Setting"),"String should not be an instance of Setting")
+      _.bassert(5,!Setting.instanceOfMe(spec1),"SpecManager should not be an instance of Setting")
+      _.bassert(6,!Setting.instanceOfMe(type1),"TypesManager should not be an instance of Setting")
     }
     function toStringTest() {
       let un
