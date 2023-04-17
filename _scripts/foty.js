@@ -120,27 +120,122 @@ function cssClassCbk(tp, notename, type) {
 //  #endregion USER CONFIGURATION
 //  #region test configurations
 /**
- * Defaults:
- *   type: no general default
- *   default: no general default
- *   onlyOnce: false , if true, has to be the outermost possible
- *   overWriteable: true (descendants can set another value)
- *                       (makes no sense with onlyOnce)
- *   inherited: true (makes no sense with onlyOnce)
- *   flat: true (values are not parsed, even if they are objects)
- *   repeat: false (same entryType can be added several times under diff. keys)
+ * Defaults
+ * __DIALOGSETTINGS: ONCE: true,
+ * __NOTETYPES: ONCE: true, REPEAT: true
+ * __FOLDER2TYPE: ONCE: true, REPEAT: true
  *
- * root: onlyOnce: true, flat: false
- * __DIALOGSETTINGS: onlyOnce: true,
- * __NOTETYPES: onlyOnce: true, repeat: true, flat: false
- * __FOLDER2TYPE: onlyOnce: true, repeat: true
- * __DEFAULTS: onlyOnce: true (makes only sense for repeat and non flat sections)
  * __SPEC:
- * RENDER:
- * TYPE:
- * DEFAULT:
- * IGNORE: (Its possible to IGNORE ancestors, but not descendants)
+ *  ROOT: -- false | (set automatically correct)
+ *  RENDER: -- false | (inherited)
+ *  TYPE: -- "String" | (individual)
+ *  DEFAULT: -- "" | (individual)
+ *  IGNORE: -- false | (inherited)(It is possible to IGNORE ancestors, but not descendants)
+ *  FLAT : -- false | (values are not parsed, even if they are objects)
+ *  ONCE: -- false | (if true, has to be the outermost possible)
+ *  REPEAT: -- false | (individual) (same entryType can be added several times under diff. keys)
+ *  DEFAULTS: -- object | (individual)(makes only sense for REPEAT: sections)
  */
+//prettier-ignore
+const TestRead = {ROOT:true, __:"...",
+  __DIALOGSETTINGS: {ONCE:true, __:"...",
+    TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
+    TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
+    TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
+  },
+  __NOTETYPES: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {
+      MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
+      TITLE_BEFORE_DATE: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATEFORMAT: {TYPE:"Date",DEFAULT:"YY-MM-DD", __:"...",},
+      FRONTMATTER: {
+        aliases: {TYPE: "Array", DEFAULT: aliasCbk},
+        date_created: {TYPE: "Date", DEFAULT: createdCbk},
+        tags: {TYPE: "Array", DEFAULT: tagsCbk},
+        publish: {TYPE: "Boolean", DEFAULT: false},
+        cssclass: {TYPE: "Array", DEFAULT: cssClassCbk},
+        private: {TYPE: "Boolean", DEFAULT: false},
+        position: {IGNORE: true},
+      },
+      language: {IGNORE:true, __:"...",},
+    },
+    diary: {
+      DATE: true,
+      DATEFORMAT: "YYYY-MM-DD",
+      FRONTMATTER: {private: true},
+      language: "Portuguese", /* will be ignored */
+    },
+    citation: {
+      MARKER: "°",
+      FRONTMATTER: {cssclass: "garten, tagebuch"},
+    },
+  },
+__FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {TYPE:"(String|Array.<String>)", __:"...",
+    },
+    test: "diary",
+    "/": ["citation", "diary"],
+  },
+  c: {RENDER: true,TYPE:"", __: "...",
+    pict: "ja",
+    d: {RENDER: false, __: "...",
+      d: {RENDER: false/*inherited*/, __: "...", 
+        gloria: "halleluja",
+      },
+    },
+  },
+}
+//prettier-ignore
+const ttx = {
+  __DIALOGSETTINGS: {__SPEC: {__ONCE:true},
+    TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
+    TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
+    TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
+  },
+  __NOTETYPES: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {
+      MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
+      TITLE_BEFORE_DATE: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATEFORMAT: {TYPE:"Date",DEFAULT:"YY-MM-DD", __:"...",},
+      FRONTMATTER: {
+        aliases: {TYPE: "Array", DEFAULT: aliasCbk},
+        date_created: {TYPE: "Date", DEFAULT: createdCbk},
+        tags: {TYPE: "Array", DEFAULT: tagsCbk},
+        publish: {TYPE: "Boolean", DEFAULT: false},
+        cssclass: {TYPE: "Array", DEFAULT: cssClassCbk},
+        private: {TYPE: "Boolean", DEFAULT: false},
+        position: {IGNORE: true},
+      },
+      language: {IGNORE:true, __:"...",},
+    },
+    diary: {
+      DATE: true,
+      DATEFORMAT: "YYYY-MM-DD",
+      FRONTMATTER: {private: true},
+      language: "Portuguese", /* will be ignored */
+    },
+    citation: {
+      MARKER: "°",
+      FRONTMATTER: {cssclass: "garten, tagebuch"},
+    },
+  },
+__FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {TYPE:"(String|Array.<String>)", __:"...",
+    },
+    test: "diary",
+    "/": ["citation", "diary"],
+  },
+  c: {RENDER: true,TYPE:"", __: "...",
+    pict: "ja",
+    d: {RENDER: false, __: "...",
+      d: {RENDER: false/*inherited*/, __: "...", 
+        gloria: "halleluja",
+      },
+    },
+  },
+}
 const Test = {
   __DIALOGSETTINGS: {
     TYPE_PROMPT: "Typ wählen" /* String */,
@@ -199,7 +294,7 @@ const Test2 = {
 //#endregion CONFIGURATION
 //#region debug, base, error and test
 var DEBUG = false
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 var CHECK_ERROR_OUTPUT = false
 if (CHECK_ERROR_OUTPUT) {
@@ -230,7 +325,7 @@ function letAllThrow(YAML) {
     if (e instanceof SettingError) {
       YAML[cnt.pad(4)] = e.name + " in " + e.caller
       msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
-      if (e.lastMsg.length > 0)      
+      if (e.lastMsg.length > 0)
       msg += "\n" + e.lastMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g,' ')
       } else if (e instanceof CodingError) {
       YAML[cnt.pad() + "!"] = e.name + " in " + e.caller
@@ -874,6 +969,9 @@ class Dispatcher {
 //#region code
 /** SuperSuperClass, adding __SPEC as essence */
 class Essence {
+  get ROOT() {
+    return this[Essence.#pre + "ROOT"]
+  }
   get RENDER() {
     return this[Essence.#pre + "RENDER"]
   }
@@ -886,6 +984,15 @@ class Essence {
   get IGNORE() {
     return this[Essence.#pre + "IGNORE"]
   }
+  get FLAT() {
+    return this[Essence.#pre + "FLAT"]
+  }
+  get ONCE() {
+    return this[Essence.#pre + "ONCE"]
+  }
+  get REPEAT() {
+    return this[Essence.#pre + "REPEAT"]
+  }
   get skipped() {
     return this.#skipped
   }
@@ -895,6 +1002,9 @@ class Essence {
   static #TYPE_DEFT = "String"
   static #DEFAULT_DEFT = ""
   static #IGNORE_DEFT = false
+  static #FLAT_DEFT = false
+  static #ONCE_DEFT = false
+  static #REPEAT_DEFT = false
   #skipped = [] //[["name","value","type"],["name2","value2","type2"]]
 
   constructor(literal, parent) {
@@ -925,15 +1035,34 @@ class Essence {
     let litREN = specLit.RENDER
     let litTYP = specLit.TYPE
     let litIGN = specLit.IGNORE
+    let litFLT = specLit.FLAT
+    let litONC = specLit.ONCE
+    let litREP = specLit.REPEAT
     delete specLit.RENDER
     delete specLit.TYPE
     delete specLit.IGNORE
+    delete specLit.FLAT
+    delete specLit.ONCE
+    delete specLit.REPEAT
     if (!checkType(this, litREN, "boolean", "RENDER")) litREN = u
     if (!checkType(this, litTYP, "string", "TYPE")) litTYP = u
     if (!checkType(this, litIGN, "boolean", "IGNORE")) litIGN = u
+    if (!checkType(this, litFLT, "boolean", "FLAT")) litFLT = u
+    if (!checkType(this, litONC, "boolean", "ONCE")) litONC = u
+    if (!checkType(this, litREP, "boolean", "REPEAT")) litREP = u
+    let ROOT = parent != u ? false : true
     let RENDER = litREN != u ? litREN : p != u ? p.RENDER : Essence.#RENDER_DEFT
     let TYPE = litTYP != u ? litTYP : p != u ? p.TYPE : Essence.#TYPE_DEFT
     let IGNORE = litIGN != u ? litIGN : p != u ? p.IGNORE : Essence.#IGNORE_DEFT
+    let FLAT = litFLT != u ? litFLT : p != u ? p.FLAT : Essence.#FLAT_DEFT
+    let ONCE = litONC != u ? litONC : p != u ? p.ONCE : Essence.#ONCE_DEFT
+    let REPEAT = litREP != u ? litREP : p != u ? p.REPEAT : Essence.#REPEAT_DEFT
+    Object.defineProperty(this, Essence.#pre + "ROOT", {
+      value: ROOT,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
     Object.defineProperty(this, Essence.#pre + "RENDER", {
       value: RENDER,
       writable: false,
@@ -948,6 +1077,24 @@ class Essence {
     })
     Object.defineProperty(this, Essence.#pre + "IGNORE", {
       value: IGNORE,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "FLAT", {
+      value: FLAT,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "ONCE", {
+      value: ONCE,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "REPEAT", {
+      value: REPEAT,
       writable: false,
       configurable: false,
       enumerable: false,
@@ -1053,6 +1200,15 @@ class BreadCrumbs extends Essence {
     this.throwIfNotOfType(parent, ["undefined", "BreadCrumbs"], un, "'parent'")
     if (typeof key == "symbol") this.#ident = "Symbol"
     if (!BC.#instanceCounter++) this.objTypes = "BreadCrumbs"
+    if (this.skipped.length) {
+      //prettier-ignore
+      console.log("Breadcrumbs: " + this.toBreadcrumbs() + "\
+\nNot all specification values had been correct. Wrong values \
+\nare skipped and parents setting or hardcoded default is used.\
+\nSkipped values are: [name,value,type]:" +
+          this.skipped
+      )
+    }
   }
 
   /** Returns whether arg is instance of BreadCrumbs
@@ -1761,7 +1917,7 @@ class DialogManager extends BreadCrumbs {
       let un
       let parent = new BreadCrumbs(un, "getterLiteralTest", un)
       let lit1 = {}
-      let lit2 = {TYPE_PROMPT: "ēlige!"}
+      let lit2 = {TYPE_PROMPT: "do choose!"}
       let lit3 = {"TYPE_MAX_ENTRIES": 12}
       let lit4 = {"TYPE_PROMPT": "choose!"}
       let lit5 = {"TYPE_MAX_ENTRIES": 13}
@@ -2086,7 +2242,7 @@ class DefaultsManager extends BreadCrumbs {
       let un
       let parent = new BreadCrumbs(un, "getterLiteralTest", un)
       let lit1 = {}
-      let lit2 = {MARKER: "ēlige!"}
+      let lit2 = {MARKER: "do choose!"}
       let lit3 = {"MARKER": "12"}
       let lit4 = {"MARKER": "choose!"}
       let lit5 = {"MARKER": "13"}
@@ -3575,14 +3731,17 @@ async function main(tp, app) {
   }
   test(testYAML)
   try {
-    let lit = {__SPEC: {DEFAULT: "olla"}}
-    let lit2 = {__SPEC: {IGNORE: true, TYPE: "String", DEFAULT: "olla"}}
-    let x = new Essence(lit)
+    /*
+    let lit0 = {__SPEC: {DEFAULT: 22}}
+    let lit = {__SPEC: {IGNORE: true, TYPE: "String", DEFAULT: "olla"}}
+    let x = new Setting(lit)
     vaut("SKIPPED", x.skipped)
+    vaut("ROOT", x.ROOT)
     vaut("RENDER", x.RENDER)
     vaut("TYPE", x.TYPE)
     vaut("DEFAULT", x.DEFAULT)
     vaut("IGNORE", x.IGNORE)
+    */
     let setting = new Setting(Test)
     await createNote(tp, setting)
     frontmatterYAML = setting.getFrontmatterYAML()
