@@ -1105,7 +1105,7 @@ registeredTests.push(Dispatcher.test)
  * types' was searched for. It should be short, have a meaning near to
  * 'very basic' and it should reasonable not be used further in the code, so
  * that name is replaceable throughout whole file, if another one would be
- * used.
+ * chosen.
  */
 class Gene {
   static #registeredGenes = {}
@@ -1341,6 +1341,13 @@ class Gene {
       Gene.registerAs(genE,gene)
       _.bassert(6,Gene.isA(22,genE),`22 should now be '${genE}', as it is registered as alias`)     
       Gene.unRegister(gene)
+
+      function typeOf(v, gene) {
+        return typeof v == gene.toLowerCase()
+      }
+      Gene.register(genE, typeOf)
+      _.bassert(7,Gene.isA(22,genE),`22 should now be '${genE}', as callback function allows uppercase`)     
+      Gene.unRegister(genE)   
     }
     function _tryIsA(arg1, arg2) {
       Gene.isA(arg1, arg2)
@@ -1356,8 +1363,9 @@ let NO = Gene.NO_GENE
 // UserType: String, Number, Boolean, Function
 // Gene: string,number,boolean,function
 // UserType: String, Boolean, Number, Array, Date, Frontmatter,
-class Genes {}
 //            (ut|ut),Array.<ut>,(ut|Array.<ut>)
+class Genes {}
+
 class Essence extends Genes {
   get ROOT() {
     return this[Essence.#pre + "ROOT"]
