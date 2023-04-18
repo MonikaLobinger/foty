@@ -14,5 +14,7 @@
 !/_vorlagen/One_Vorlage.md
 !/_scripts
 !/_scripts/foty.js
+!/_scripts/jsdocconf.json
+!/_scripts/custom-layout.tmpl
 !/_scripts/onne.js
 

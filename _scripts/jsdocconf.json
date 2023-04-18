@@ -1,0 +1,21 @@
+{
+  "plugins": [],
+  "recurseDepth": 10,
+  "source": {
+    "includePattern": ".+\\.js(doc|x)?$",
+    "excludePattern": "(^|\\/|\\\\)__"
+  },
+  "sourceType": "module",
+  "tags": {
+    "allowUnknownTags": false,
+    "dictionaries": ["jsdoc"]
+  },
+  "templates": {
+    "cleverLinks": true,
+    "monospaceLinks": true,
+    "default": {
+      "layoutFile": "custom-layout.tmpl",
+      "outputSourceFiles": true
+    }
+  }
+}

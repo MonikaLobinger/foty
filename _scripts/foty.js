@@ -1,8 +1,309 @@
 module.exports = main // templater call: "await tp.user.foty(tp, app)"
+/**
+ * @description
+ * Script for obsidian, templater extension needed
+ * Creates new notes with frontmatter and text skeleton based on note types
+ *<p>
+ * Basics<br>
+ * ======<br>
+ * Obsidian creates a new note as empty note.
+ * Notes of given kinds have some text in it in common. This text can be
+ * inserted automatically with a template. One has to write the templates
+ * for the kinds of notes one uses, choose the correct one on new note
+ * creation and the skeleton will be inserted.
+ * Code can also be written in javascript in case templater extension is
+ * installed. This can be done within the template in specific code sections.
+ * With templater parts of javascript code can be written in javascript files
+ * which each export a function. This function can be called from within the
+ * code section.
+ *<p>
+ * Problem description<br>
+ * ===================<br>
+ * For each kind of note another template is needed. If needs change, the
+ * template has to be changed. If general needs change, all templates have
+ * to be changed. Elaborated Templates are difficult to maintain. Not all
+ * users of obsidian can write javascript.
+ *<p>
+ * Intention of foty<br>
+ * =================<br>
+ * Let user needs be configurable and write a full note skeleton from given
+ * configuration.
+ * For changing needs only configuration should have to be changed.
+ *<p>
+ * Presumptions<br>
+ * ============<br>
+ * Note skeleton will contain a frontmatter header and a rendered part.
+ * Frontmatter header has frontmatter entries. Rendered part has plain text
+ * and text based on variable output, e.g. date or links to resources.
+ *<p>
+ * On new unnamed note creation note name will be created. Some kinds of
+ * notes have a marker in its names, which do not belong to the semantic
+ * title.
+ *<p>
+ * This all has to be configurable based on kind of note. Different kinds
+ * of notes in foty are called 'types'. The configuration of a type should
+ * lead to expected output, after foty has identified the type and the
+ * (semantic) title.
+ *<p>
+ * Note types can be bound to folders.
+ *<p>
+ * Realization<br>
+ * ===========<br>
+ * foty consists of two parts: This javascript file and the template file,
+ * which calls this script.
+ *<p>
+ * The script will return a list of key/value entries. One of the keys
+ * is '____'. Before this key all entries are frontmatter entries, entries
+ * after this keys are variables to be used in render part.
+ *<p>
+ * The template will write out all frontmatter entries in notes frontmatter
+ * header section. Then it will write the render section depending on
+ * variables.
+ *<p>
+ * Connection between script and template is tight, the template has to know
+ * the names of the variables.
+ *<p>
+ * One could have realized it the way, that all the output is created from
+ * script file, but than changes in rendering only would require javascript
+ * editing.
+ *<p>
+ * Usage<br>
+ * =====<br>
+ * Different parts of codes are in different regions.
+ * A region starts with //#region REGIONNAME or //# regionname
+ * and it ends with //#endregion REGIONNAME or //#endregion regionname
+ * Regions can be nested.
+ * Using Visual Studio Code (and perhaps other source code editors) regions
+ * marked this way can be folded for convenience.
+ *<p>
+ * Some settings for the script can be adapted to user needs. Those are in
+ * region USER CONFIGURATION.
+ */
 //#region CONFIGURATION
+// This region simulates a configuration dialog
+// It contains a configuration defining section, which user would never
+// see in a configuration dialog, so it is named DONTTOUCH.
+// And it contains the value section, which user can edit, so it is
+// named USER CONFIGURATION.
+//
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+// Only make changes in region USER CONFIGURATION
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//  #region DONTTOUCH
+/**@ignore */
+function aliasCbk(tp, notename, type) {
+  let alias = notename
+  if (type != "ort" && type != "person") {
+    alias = notename.replace(/,/g, ` `).replace(/  /g, ` `)
+  } else {
+    // ort, person
+    alias = notename.replace(/, /g, `,`)
+    let strArr = alias.split(",")
+    alias = strArr[0]
+    strArr.shift()
+    if (type == "ort") {
+      alias += "(" + strArr.join(" ") + ")"
+    } else if (type == "person") {
+      alias = strArr.join(" ") + " " + alias
+    }
+  }
+  return alias
+}
+function tagsCbk(tp, notename, type) {
+  return "0/" + type
+}
+function createdCbk(tp, notename, type) {
+  return tp.date.now()
+}
+function cssClassCbk(tp, notename, type) {
+  return type
+}
+//  #endregion DONTTOUCH
+//  #region USER CONFIGURATION
+//  #endregion USER CONFIGURATION
+//  #region test configurations
+/**
+ * Defaults
+ * __DIALOGSETTINGS: ONCE: true,
+ * __NOTETYPES: ONCE: true, REPEAT: true
+ * __FOLDER2TYPE: ONCE: true, REPEAT: true
+ *
+ * __SPEC:
+ *  ROOT: -- false | (set automatically correct)
+ *  RENDER: -- false | (inherited)
+ *  TYPE: -- "String" | (individual)
+ *  DEFAULT: -- "" | (individual)
+ *  IGNORE: -- false | (inherited)(It is possible to IGNORE ancestors, but not descendants)
+ *  FLAT : -- false | (values are not parsed, even if they are objects)
+ *  ONCE: -- false | (if true, has to be the outermost possible)
+ *  REPEAT: -- false | (individual) (same entryType can be added several times under diff. keys)
+ *  DEFAULTS: -- object | (individual)(makes only sense for REPEAT: sections)
+ * @ignore
+ */
+//prettier-ignore
+const vTest = {ROOT:true, __:"...",
+  __DIALOGSETTINGS: {ONCE:true, __:"...",
+    TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
+    TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
+    TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
+  },
+  __NOTETYPES: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {
+      MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
+      TITLE_BEFORE_DATE: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATEFORMAT: {TYPE:"Date",DEFAULT:"YY-MM-DD", __:"...",},
+      FRONTMATTER: {
+        aliases: {TYPE: "Array", DEFAULT: aliasCbk},
+        date_created: {TYPE: "Date", DEFAULT: createdCbk},
+        tags: {TYPE: "Array", DEFAULT: tagsCbk},
+        publish: {TYPE: "Boolean", DEFAULT: false},
+        cssclass: {TYPE: "Array", DEFAULT: cssClassCbk},
+        private: {TYPE: "Boolean", DEFAULT: false},
+        position: {IGNORE: true},
+      },
+      language: {IGNORE:true, __:"...",},
+    },
+    diary: {
+      DATE: true,
+      DATEFORMAT: "YYYY-MM-DD",
+      FRONTMATTER: {private: true},
+      language: "Portuguese", /* will be ignored */
+    },
+    citation: {
+      MARKER: "°",
+      FRONTMATTER: {cssclass: "garten, tagebuch"},
+    },
+  },
+__FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {TYPE:"(String|Array.<String>)", __:"...",
+    },
+    test: "diary",
+    "/": ["citation", "diary"],
+  },
+  c: {RENDER: true,TYPE:"", __: "...",
+    pict: "ja",
+    d: {RENDER: false, __: "...",
+      d: {RENDER: false/*inherited*/, __: "...", 
+        gloria: "halleluja",
+      },
+    },
+  },
+}
+//prettier-ignore
+const wTest = {
+  __DIALOGSETTINGS: {__SPEC: {__ONCE:true},
+    TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
+    TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
+    TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
+  },
+  __NOTETYPES: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {
+      MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
+      TITLE_BEFORE_DATE: {TYPE:"String",DEFAULT:"", __:"...",},
+      DATEFORMAT: {TYPE:"Date",DEFAULT:"YY-MM-DD", __:"...",},
+      FRONTMATTER: {
+        aliases: {TYPE: "Array", DEFAULT: aliasCbk},
+        date_created: {TYPE: "Date", DEFAULT: createdCbk},
+        tags: {TYPE: "Array", DEFAULT: tagsCbk},
+        publish: {TYPE: "Boolean", DEFAULT: false},
+        cssclass: {TYPE: "Array", DEFAULT: cssClassCbk},
+        private: {TYPE: "Boolean", DEFAULT: false},
+        position: {IGNORE: true},
+      },
+      language: {IGNORE:true, __:"...",},
+    },
+    diary: {
+      DATE: true,
+      DATEFORMAT: "YYYY-MM-DD",
+      FRONTMATTER: {private: true},
+      language: "Portuguese", /* will be ignored */
+    },
+    citation: {
+      MARKER: "°",
+      FRONTMATTER: {cssclass: "garten, tagebuch"},
+    },
+  },
+__FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
+    DEFAULTS: {TYPE:"(String|Array.<String>)", __:"...",
+    },
+    test: "diary",
+    "/": ["citation", "diary"],
+  },
+  c: {RENDER: true,TYPE:"", __: "...",
+    pict: "ja",
+    d: {RENDER: false, __: "...",
+      d: {RENDER: false/*inherited*/, __: "...", 
+        gloria: "halleluja",
+      },
+    },
+  },
+}
+const xTest = {
+  __DIALOGSETTINGS: {
+    TYPE_PROMPT: "Typ wählen" /* String */,
+    TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
+    TITLE_NEW_FILE: ["Unbenannt", "Untitled"] /* String or Array of Strings */,
+  },
+  __FOLDER2TYPE: {
+    /* Values are  String or Array of Strings */ test: "diary",
+    "/": ["citation", "diary"],
+  },
+  __NOTETYPES: {
+    __DEFAULTS: {
+      // Overwrites the hardcoded defaults
+      /* String */ MARKER: "",
+      /* Boolean */ DATE: false,
+      /* String */ TITLE_BEFORE_DATE: "",
+      /* Date */ DATEFORMAT: "YY-MM-DD",
+      /* @todo */ FRONTMATTER: {
+        aliases: {__SPEC: {TYPE: "Array", DEFAULT: aliasCbk}},
+        date_created: {__SPEC: {TYPE: "Date", DEFAULT: createdCbk}},
+        tags: {__SPEC: {TYPE: "Array", DEFAULT: tagsCbk}},
+        publish: {__SPEC: {TYPE: "Boolean", DEFAULT: false}},
+        cssclass: {__SPEC: {TYPE: "Array", DEFAULT: cssClassCbk}},
+        private: {__SPEC: {TYPE: "Boolean", DEFAULT: false}},
+        position: {__SPEC: {IGNORE: true}},
+      },
+    },
+    diary: {
+      MARKER: "",
+      DATE: true,
+      TITLE_BEFORE_DATE: "",
+      DATEFORMAT: "YYYY-MM-DD",
+      FRONTMATTER: {private: true},
+    },
+    citation: {
+      MARKER: "°",
+      FRONTMATTER: {cssclass: "garten, tagebuch"},
+    },
+  },
+  c: {
+    __SPEC: {RENDER: /* Boolean */ true},
+    pict: "ja",
+    d: {
+      __SPEC: {RENDER: false},
+      d: {
+        gloria: "halleluja",
+      },
+    },
+  },
+}
+const yTest = {
+  audio: {marker: "{a}", pict: "a.jpg", frontmatter: {private: true}},
+  plant: {frontmatter: {kind: "", seed: ""}},
+}
+//  #endregion test configurations
 //#endregion CONFIGURATION
-//#region globals
-/** Dialog return codes for functions which call dialogs
+//#region globals and externals
+/**
+ * The built in Error object.
+ * @external Error
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error|Error}
+ */
+
+/** Dialog return codes for functions which call dialogs.
  * <p>
  * The templater dialogs do return the value given by user or
  * not the value, on Cancel
@@ -13,23 +314,25 @@ const Dialog = {
   Ok: "Ok",
   Cancel: "Cancel",
 }
-/** Color, to be used without quotation marks during development */
+
+/** Color, to be used without quotation marks during development. */
 const black = "black"
-/** Color, to be used without quotation marks during development */
+/** Color, to be used without quotation marks during development. */
 const cyan = "cyan"
-/** Color, to be used without quotation marks during development */
+/** Color, to be used without quotation marks during development. */
 const red = "orange"
-/** Color, to be used without quotation marks during development */
+/** Color, to be used without quotation marks during development. */
 const blue = "deepskyblue"
-/** Color, to be used without quotation marks during development */
+/** Color, to be used without quotation marks during development. */
 const yellow = "lightgoldenrodyellow"
-/** Color, to be used without quotation marks during development */
+/** Color, to be used without quotation marks during development. */
 const lime = "lime"
-/** Color, to be used without quotation marks during development */
+/** Color, to be used without quotation marks during development. */
 const green = "lightgreen"
-/** Color, to be used without quotation marks during development */
+/** Color, to be used without quotation marks during development. */
 const gray = "silver"
-/** Adds error message to YAML
+
+/** Adds error message to {@link YAML}.
  *<p>
  * Frontmatter output to current note works with 'key: value'.
  *<p>
@@ -80,7 +383,8 @@ function errOut(e, YAML, cnt) {
 
   Number.prototype.pad = prevPad
 }
-/** Returns string of inp attribute key value pairs, one level
+
+/** Returns string of {@link inp} attribute key value pairs, one level.
  * @param {Object} inp
  * @returns {String}
  */
@@ -98,20 +402,44 @@ function flatten(inp) {
   }
   return res
 }
+
+var registeredTests = []
+/** Runs all registered tests, if {@link TESTING} set; output to {@link outputObj}.
+ * @param {Object} outputObj
+ */
+function test(outputObj) {
+  if (TESTING)
+    registeredTests.forEach((testFunction) => testFunction(outputObj))
+}
+//prettier-ignore
+function testGlobals(outputObj) {
+  let _
+  _ = new TestSuite("Globals", outputObj)
+  _.run(flattenTest)
+  _.destruct()
+  _ = null
+  function flattenTest() {
+    let obj0 = {}
+    let flat0 = flatten(obj0)
+    let exp0 = obj0.toString()
+    _.bassert(1,flat0 == exp0, "empty object should be basic toString output")
+  }
+}
+registeredTests.push(testGlobals)
 //#endregion globals
 //#region debug, error and test
-/** For debugging purpose
+/** For debugging purpose.
  * @type {Boolean}
  */
 var DEBUG = true
-/** For testing purpose
+/** For testing purpose.
  * @type {Boolean}
  */
 var TESTING = true
 if (TESTING) DEBUG = false
-/** For checking error output
+/** For checking error output.
  * <p>
- * If set, all Errors messages are written to current node
+ * If set, all Errors messages are written to current node.
  * @type {Boolean}
  */
 var CHECK_ERROR_OUTPUT = false
@@ -119,10 +447,11 @@ if (CHECK_ERROR_OUTPUT) {
   DEBUG = false
   TESTING = false
 }
-/** Triggers each Exception once and puts all Error messages to YAML attributes,
- * if CHECK_ERROR_OUTPUT is true.
+
+/** Triggers each Exception once and puts all Error messages to {@link YAML} attributes,
+ * if {@link CHECK_ERROR_OUTPUT} is true.
  *<p>
- * Does nothing if CHECK_ERROR_OUTPUT is false
+ * Does nothing if {@link CHECK_ERROR_OUTPUT} is false
  * @param {Object} YAML
  */
 // prettier-ignore
@@ -131,7 +460,8 @@ function letAllThrow(YAML) {
   let cnt = 0
   /*01*/try{a+b}catch(e){errOut(e,YAML,++cnt)}
 }
-/** Logs all parameters to console, if DEBUG is set to true
+
+/** Logs all parameters to console, if {@link DEBUG} is set to true.
  * @param  {...any} strs
  */
 function dbg(...strs) {
@@ -156,8 +486,9 @@ function dbg(...strs) {
     console.log(output, "background: LightSkyBlue")
   }
 }
-/** Logs str colored to console
- * @param  {String} str
+
+/** Logs {@link str}  colored to console.
+ * @param {String} str
  * @param {String} b - background color
  * @param {String} c - foreground color
  */
@@ -177,7 +508,9 @@ function aut(str, b = "yellow", c = "red") {
     console.log(`%c${str}`, css)
   }
 }
-/** Logs all parameters red on yellow to console
+/** Logs all parameters red on yellow to console.
+ * <p>
+ * colors are not configurable as they are in {@link aut}
  * @param {String} str
  * @param  {...String} strs
  */
@@ -190,7 +523,7 @@ function auts(str, ...strs) {
   }
   console.log(`%c${str}`, css)
 }
-/** logs vn and v colored to console
+/** logs {@link vn} and {@link v} colored to console.
  * @param {String} vn - variable name
  * @param {String} v - variable value
  * @param {String} b - background color
@@ -211,19 +544,25 @@ function vaut(vn, v, b = "yellow", c = "red") {
   let css = `background:${b};color:${c};font-weight:normal`
   console.log(`%c${str}`, css)
 }
-/** superclass for all Foty Errors (but not unit test Errors)
- * @classdesc
- * Additionally to the Error properties FotyError on construction
- * receives callers name as string.
+
+/** @classdesc superclass for all foty errors (but not unit test errors).
+ * <p>
+ * Additionally to the {@link external:Error} properties <code>FotyError</code>
+ * receives callers name as string on construction.
+ * @extends external:Error
  */
 class FotyError extends Error {
   //#region member variables
   caller = ""
   //#endregion member variables
-  /** Constructs a FotyError instance, Error.name set to "Foty Error"
+  /** Constructs a FotyError instance,
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name}</code>
+   * set to "Foty Error"
    *
    * @param {String} caller
-   * @param  {...any} params - consists of message and cause
+   * @param  {...any} params - consists of
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|Error.message}</code>
+   * and <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/cause|Error.cause}</code>
    */
   constructor(caller, ...params) {
     super(...params)
@@ -231,22 +570,25 @@ class FotyError extends Error {
     this.caller = caller
   }
 }
-/** User Error thrown from Setting tree
- * @classdesc
- * Some of the errors from Setting tree for sure can only occur if entries in
+/** @classdesc User error thrown from setting tree.
+ * <p>
+ * Some of the errors from setting tree for sure can only occur if entries in
  * setting input are wrong. Those are user errors. Using the 2nd parameter
  * a user specific message can be given.
+ * @extends FotyError
  */
 class SettingError extends FotyError {
   //#region member variables
   usrMsg = ""
   //#endregion member variables
-  /**
-  /** Constructs a SettingError instance, .name set to "Setting Error"
-   * @param {String} caller 
-   * @param  {...String} params - consists of message only or usrMessage and 
-   *                              message
-   * 
+  /** Constructs a SettingError instance,
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name}</code>
+   * set to "Setting Error"
+   * @param {String} caller
+   * @param  {...String} params - consists of
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|Error.message}</code>
+   * only or user specific message and
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|Error.message}</code>
    */
   constructor(caller, ...params) {
     let usrMsg = ""
@@ -256,23 +598,29 @@ class SettingError extends FotyError {
     this.usrMsg = usrMsg
   }
 }
-/** Programming Error
- * @classdesc
+/** @classdesc Programming error.
+ * <p>
  * Some errors only can occur if code is wrong. If this is for sure,
  * CodingError should be thrown.
+ * @extends FotyError
  */
 class CodingError extends FotyError {
-  /** Constructs a CodingError instance, .name set to "Coding Error"
+  /** Constructs a CodingError instance,
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name}</code>
+   * set to "Coding Error"
    *
    * @param {String} caller
-   * @param  {...any} params - consists of message and cause
+   * @param  {...any} params - consists of
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|Error.message}</code>
+   * and <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/cause|Error.cause}</code>
    */
   constructor(caller, ...params) {
     super(caller, ...params)
     this.name = "Coding Error"
   }
 }
-/** Runs unit tests */
+
+/** Runs unit tests. */
 class TestSuite {
   //#region member variables
   static ok = "\u2713"
@@ -552,7 +900,7 @@ class TestSuite {
     this.o[this.z] = `Suites: ${TestSuite.#totalSuites} | Tests: ${TestSuite.#totalTests} | Cases: ${TestSuite.#totalCases}`
   }
 }
-/** Error used for unit tests */
+/** Error used for unit tests. */
 class TestError extends Error {
   constructor(message, ...params) {
     super(message, ...params)
@@ -623,6 +971,7 @@ class Event {
   }
   //#endregion Event tests
 }
+registeredTests.push(Event.test)
 /** Event manager
  *
  */
@@ -662,7 +1011,6 @@ class Dispatcher {
     Dispatcher._.run(Dispatcher.addListenerTest)
     Dispatcher._.destruct()
     Dispatcher._ = null
-    Event.test(outputObj)
   }
   static constructorTest() {
     Dispatcher._.assert(1, Dispatcher._tryConstruct)
@@ -716,34 +1064,353 @@ class Dispatcher {
   }
   //#endregion Dispatcher tests
 }
+registeredTests.push(Dispatcher.test)
 //#endregion helper classes
 //#region code
-//#endregion code
-
-//prettier-ignore
-function testGlobals(outputObj) {
-  let _
-  _ = new TestSuite("Globals", outputObj)
-  _.run(flattenTest)
-  _.destruct()
-  _ = null
-  function flattenTest() {
-    let obj0 = {}
-    let flat0 = flatten(obj0)
-    let exp0 = obj0.toString()
-    _.bassert(1,flat0 == exp0, "empty object should be basic toString output")
-  }
-}
-
-/** Runs all tests, if TESTING is set; output to current note (indirect)
- * @param {*} outputObj
+/** Genes are types used in this application
+ *
+ * @classdesc
+ * All genes have to be registered. There are no hardcoded genes. Only
+ * {@link Gene.NO_GENE} is registered hardCoded
+ * <p>
+ * <b>Why this name</b>
+ * Many types of types we have to deal with. Therefore another name for 'allowed
+ * types' was searched for. It should be short, have a meaning near to
+ * 'very basic' and it should reasonable not be used further in the code, so
+ * that name is replaceable throughout whole file, if another one should be
+ * used.
  */
-function test(outputObj) {
-  if (TESTING) {
-    testGlobals(outputObj)
-    Dispatcher.test(outputObj)
+class Gene {
+  static #registeredGenes = []
+  static #NO_GENE = "noGene"
+  /** The no gene identification */
+  static get NO_GENE() {
+    return Gene.#NO_GENE
+  }
+  /** Registers gene if not yet registered and returns true, false else
+   * @param {String} gene
+   * @returns {Boolean}
+   */
+  static register(gene) {
+    let answ = false
+    if (!Gene.#registeredGenes.includes(gene)) {
+      Gene.#registeredGenes.push(gene)
+      answ = true
+    }
+    return answ
+  }
+  /** Registers gene if registered and returns true, false else
+   * @param {String} gene
+   * @returns {Boolean}
+   */
+  static unRegister(gene) {
+    let answ = false
+    const idx = Gene.#registeredGenes.indexOf(gene)
+    if (idx > -1) {
+      Gene.#registeredGenes.splice(idx, 1)
+      answ = true
+    }
+    return answ
+  }
+  /** Returns whether name is registered gene
+   * @param {String} name
+   * @returns {Boolean}
+   */
+  static is(name) {
+    return Gene.#registeredGenes.includes(name)
+  }
+
+  /** Returns gene if registered, 'noGene' else
+   * @param {String} name
+   * @returns {String}
+   */
+  static gene(name) {
+    return Gene.is(name) ? name : Gene.#NO_GENE
+  }
+
+  static #x_registeredUserTypes = {}
+  static #x_registeredGenes = []
+  static x_gene(uType) {
+    let u2g = ["String", "Number", "Boolean", "Function"]
+    return typeof uType == "string"
+      ? u2g.includes(uType)
+        ? uType.toLowerCase()
+        : Gene.#x_registeredUserTypes[uType]
+      : undefined
+  }
+  static x_registerGene(userType, gene) {
+    Gene.#x_registeredUserTypes[userType] = gene
+  }
+  static x_unRegisterGene(gene) {
+    delete Gene.#x_registeredUserTypes[gene]
+  }
+  static x_isRegistered(name) {
+    return Gene.#x_registeredUserTypes[name] != undefined
+  }
+  // prettier-ignore
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("Gene", outputObj)) {
+      _.run(registerTest)
+      _.run(unRegisterTest)
+      _.run(isTest)
+      _.run(geneTest)
+      _.run(GTest)
+      _.run(NOTest)
+      _.run(x_geneTest)
+      _.run(x_registerGeneTest)
+      _.run(x_unRegisterGeneTest)
+      _.run(x_isRegisteredTest)
+      _.destruct()
+      _ = null
+    }
+    function registerTest() {
+      let name = "abc"
+      _.bassert(1,Gene.register(name),"should register and return true")
+      _.bassert(2,!Gene.register(name),"should not register 2nd time and return false")
+      Gene.unRegister(name)
+    }
+    function unRegisterTest() {
+      let name = "abc"
+      Gene.register(name)
+      _.bassert(1,Gene.unRegister(name),"should unregister and return true")
+      _.bassert(2,!Gene.unRegister(name),"should not unregister 2nd time and return false")
+    }
+    function isTest() {
+      let name0 = "abc_xyz"
+      let name = "abc"
+      Gene.register(name)
+      _.bassert(1,!Gene.is(name0),"should be no gene")
+      _.bassert(2,Gene.is(name),"should be gene as registered")
+      Gene.unRegister(name)
+    }
+    function geneTest() {
+      let name0 = "abc_xyz"
+      let name = "abc"
+      Gene.register(name)
+      _.bassert(1,Gene.gene(name0) == Gene.NO_GENE,"should be no gene")
+      _.bassert(2,Gene.gene(name) == name,"should be a gene and return same name")
+      Gene.unRegister(name)
+    }
+    function GTest() {
+      let name0 = "abc_xyz"
+      let name = "abc"
+      Gene.register(name)
+      _.bassert(1,G(name0) == Gene.gene(name0),"G should be short form of Gene.gene")
+      _.bassert(2,G(name) == Gene.gene(name),"G should be short form of Gene.gene")
+      Gene.unRegister(name)
+    }
+    function NOTest() {
+      let name0 = "abc_xyz"
+      _.bassert(1,Gene.NO_GENE == NO,"NO should be short form of Gene.NO_GENE")
+      _.bassert(2,Gene.gene(name0) == NO,"NO should be short form of Gene.NO_GENE")
+    }
+    function x_geneTest() {
+      _.bassert(1,Gene.x_gene("String") == "string", "'String' is basic user type, should be returned in lowercase")
+      _.bassert(2,Gene.x_gene("Number") == "number", "'Number' is basic user type, should be returned in lowercase")
+      _.bassert(3,Gene.x_gene("Boolean") == "boolean", "'Boolean' is basic user type, should be returned in lowercase")
+      _.bassert(4,Gene.x_gene("Function") == "function", "'Function' is basic user type, should be returned in lowercase")
+    
+      if(!Gene.x_isRegistered("string"))
+      _.bassert(11,Gene.x_gene("string") == undefined, "'string' is no basic user type, undefined")
+      if(!Gene.x_isRegistered("number"))
+      _.bassert(12,Gene.x_gene("number") == undefined, "'number' is no basic user type, undefined")
+      if(!Gene.x_isRegistered("boolean"))
+      _.bassert(13,Gene.x_gene("boolean") == undefined, "'boolean' is no basic user type, undefined")
+      if(!Gene.x_isRegistered("function"))
+      _.bassert(14,Gene.x_gene("function") == undefined, "'function' is no basic user type, undefined")
+
+      let testName = "ABC_teSt_uv_x"
+      let gene = "abc_uva"
+      _.bassert(21,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
+      Gene.x_registerGene(testName, gene)
+      _.bassert(22,Gene.x_gene(testName) == gene,`${testName} has been registered as ${gene}`)
+      Gene.x_unRegisterGene(testName)
+    }
+    function x_registerGeneTest() {
+      let testName = "xy_ab_ABC_teSt"
+      let gene = "abc"
+      _.bassert(1,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
+      Gene.x_registerGene(testName, gene)
+      _.bassert(2,Gene.x_isRegistered(testName), `${testName} should now be registered`)
+      Gene.x_unRegisterGene(testName)
+    }
+    function x_unRegisterGeneTest() {
+      let testName = "ab_ABC_teSt"
+      let gene = "d_a_abc"
+      _.bassert(1,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
+      Gene.x_registerGene(testName, gene)
+      Gene.x_unRegisterGene(testName)
+      _.bassert(2,!Gene.x_isRegistered(testName), `${testName} should no longer be registered`)
+    }
+    function x_isRegisteredTest() {
+      let testName = "okU_ab_ABC_teSt"
+      let gene = "ok_U_d_a_abc"
+      _.bassert(1,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
+      Gene.x_registerGene(testName, gene)
+      _.bassert(2,Gene.x_isRegistered(testName), `${testName} should now be registered`)
+      Gene.x_unRegisterGene(testName)
+    }
   }
 }
+registeredTests.push(Gene.test)
+/** Shorthand for {@link Gene.gene} */
+let G = Gene.gene
+/** Shorthand for {@link Gene.NO_GENE} */
+let NO = Gene.NO_GENE
+
+// UserType: String, Number, Boolean, Function
+// Gene: string,number,boolean,function
+// UserType: String, Boolean, Number, Array, Date, Frontmatter,
+class Genes {}
+//            (ut|ut),Array.<ut>,(ut|Array.<ut>)
+class Essence extends Genes {
+  get ROOT() {
+    return this[Essence.#pre + "ROOT"]
+  }
+  get RENDER() {
+    return this[Essence.#pre + "RENDER"]
+  }
+  get TYPE() {
+    return this[Essence.#pre + "TYPE"]
+  }
+  get DEFAULT() {
+    return this[Essence.#pre + "DEFAULT"]
+  }
+  get IGNORE() {
+    return this[Essence.#pre + "IGNORE"]
+  }
+  get FLAT() {
+    return this[Essence.#pre + "FLAT"]
+  }
+  get ONCE() {
+    return this[Essence.#pre + "ONCE"]
+  }
+  get REPEAT() {
+    return this[Essence.#pre + "REPEAT"]
+  }
+  get skipped() {
+    return this.#skipped
+  }
+  static #pre = "__"
+  static #SPEC_KEY = "__SPEC"
+  static #RENDER_DEFT = false
+  static #TYPE_DEFT = "String"
+  static #DEFAULT_DEFT = ""
+  static #IGNORE_DEFT = false
+  static #FLAT_DEFT = false
+  static #ONCE_DEFT = false
+  static #REPEAT_DEFT = false
+  #skipped = [] //[["name","value","type"],["name2","value2","type2"]]
+
+  constructor(literal, parent) {
+    let u
+    let p = parent
+    let specLit = {}
+    if (literal != u) specLit = literal[Essence.#SPEC_KEY]
+    if (specLit == u) specLit = {}
+    let litREN = specLit.RENDER
+    let litTYP = specLit.TYPE
+    let litIGN = specLit.IGNORE
+    let litFLT = specLit.FLAT
+    let litONC = specLit.ONCE
+    let litREP = specLit.REPEAT
+    delete specLit.RENDER
+    delete specLit.TYPE
+    delete specLit.IGNORE
+    delete specLit.FLAT
+    delete specLit.ONCE
+    delete specLit.REPEAT
+    if (!this.#checkType(litREN, "boolean", "RENDER")) litREN = u
+    if (!this.#checkType(litTYP, "string", "TYPE")) litTYP = u
+    if (!this.#checkType(litIGN, "boolean", "IGNORE")) litIGN = u
+    if (!this.#checkType(litFLT, "boolean", "FLAT")) litFLT = u
+    if (!this.#checkType(litONC, "boolean", "ONCE")) litONC = u
+    if (!this.#checkType(litREP, "boolean", "REPEAT")) litREP = u
+    let ROOT = parent != u ? false : true
+    let RENDER = litREN != u ? litREN : p != u ? p.RENDER : Essence.#RENDER_DEFT
+    let TYPE = litTYP != u ? litTYP : p != u ? p.TYPE : Essence.#TYPE_DEFT
+    let IGNORE = litIGN != u ? litIGN : p != u ? p.IGNORE : Essence.#IGNORE_DEFT
+    let FLAT = litFLT != u ? litFLT : p != u ? p.FLAT : Essence.#FLAT_DEFT
+    let ONCE = litONC != u ? litONC : p != u ? p.ONCE : Essence.#ONCE_DEFT
+    let REPEAT = litREP != u ? litREP : p != u ? p.REPEAT : Essence.#REPEAT_DEFT
+    Object.defineProperty(this, Essence.#pre + "ROOT", {
+      value: ROOT,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "RENDER", {
+      value: RENDER,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "TYPE", {
+      value: TYPE,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "IGNORE", {
+      value: IGNORE,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "FLAT", {
+      value: FLAT,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "ONCE", {
+      value: ONCE,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    Object.defineProperty(this, Essence.#pre + "REPEAT", {
+      value: REPEAT,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    let litDEF = specLit.DEFAULT
+    delete specLit.DEFAULT
+    if (!this.#checkType(litDEF, this.TYPE, "DEFAULT", true)) litDEF = u
+    let DEFT = litDEF != u ? litDEF : p != u ? p.DEFAULT : Essence.#DEFAULT_DEFT
+    Object.defineProperty(this, Essence.#pre + "DEFAULT", {
+      value: DEFT,
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    })
+    if (literal != u) delete literal[Essence.#SPEC_KEY]
+  }
+  #checkType(value, type, name, isUserType = false) {
+    let ok = false
+    if (value == undefined) ok = true
+    else {
+      if (!isUserType) ok = typeof value == type
+      else {
+        type = Gene.gene(type)
+        if (type[0] == type[0].toLowerCase()) {
+          ok = typeof value == type
+        } else if (Array.isArray(value) && type == "Array") {
+          ok = true
+        } else {
+          ok = typeof value == "string"
+        }
+      }
+    }
+    if (!ok) this.#skipped.push(new Array(name, value, type))
+    return ok
+  }
+}
+
+class BreadCrumbs extends Essence {}
+//#endregion code
 
 /** exported function
  * @param {Object} tp - templater object
