@@ -355,7 +355,6 @@ function errOut(e, YAML, cnt) {
   }
   let nameKey
   let msgKey
-  console.log(cnt.pad())
   if (CHECK_ERROR_OUTPUT) {
     if (cnt == undefined) cnt = 0
     if (e instanceof SettingError) nameKey = cnt.pad(4)
@@ -458,7 +457,7 @@ if (CHECK_ERROR_OUTPUT) {
 function letAllThrow(YAML) {
   if (!CHECK_ERROR_OUTPUT) return
   let cnt = 0
-  /*01*/try{a+b}catch(e){errOut(e,YAML,++cnt)}
+  /*01*/try{Gene.isA(1,"NonType")}catch(e){errOut(e,YAML,++cnt)}
 }
 
 /** Logs all parameters to console, if {@link DEBUG} is set to true.
@@ -553,6 +552,13 @@ function vaut(vn, v, b = "yellow", c = "red") {
  */
 class FotyError extends Error {
   //#region member variables
+  /** Newline for multi line error messages
+   * <p>
+   * As shorthand {@link NL} can be used.<br>
+   * @type {String}
+   */
+  static nl = "\n     " // for multiLine messages
+
   caller = ""
   //#endregion member variables
   /** Constructs a FotyError instance,
@@ -570,6 +576,8 @@ class FotyError extends Error {
     this.caller = caller
   }
 }
+/** Shorthand for {@link FotyError.nl} */
+let NL = FotyError.nl
 /** @classdesc User error thrown from setting tree.
  * <p>
  * Some of the errors from setting tree for sure can only occur if entries in
@@ -1067,137 +1075,251 @@ class Dispatcher {
 registeredTests.push(Dispatcher.test)
 //#endregion helper classes
 //#region code
-/** Genes are types used in this application
- *
- * @classdesc
- * All genes have to be registered. There are no hardcoded genes. Only
- * {@link Gene.NO_GENE} is registered hardCoded
+/** @description callback to check {@link variable} against {@link gene}
+ * @callback isOfTypeCallback
+ * @param {*} variable
+ * @param {Gene} gene
+ * @returns {Boolean}
+ */
+
+/** @classdesc Genes are types used in this application.
  * <p>
- * <b>Why this name</b>
+ * All genes have to be registered. There are no hardcoded genes. Only
+ * <code>{@link Gene.NO_GENE}</code> is registered hardCoded
+ * <p>
+ * A gene can have an alias, even more than one. Names of genes and names of
+ * aliases are unique. Case matters. ('String' is not the same as 'string'). No
+ * alias can have a name a gene has and vice versa.
+ * <p>
+ * Every gene has a callback function associated with it. The default callback
+ * function is
+ * '<code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof}</code>
+ * variable == {@link Gene}' . {@link Gene.isA} calls this callback.
+ * <p>
+ * No constructor is defined. All functionality is static. {@link Gene}s are managed
+ * via registration. They are {@link String}s, but not every {@link String} is
+ * a {@link Gene}.
+ * <p>
+ * <b>Why this name? </b>
  * Many types of types we have to deal with. Therefore another name for 'allowed
  * types' was searched for. It should be short, have a meaning near to
  * 'very basic' and it should reasonable not be used further in the code, so
- * that name is replaceable throughout whole file, if another one should be
+ * that name is replaceable throughout whole file, if another one would be
  * used.
  */
 class Gene {
-  static #registeredGenes = []
+  static #registeredGenes = {}
+  static #aliases = {}
   static #NO_GENE = "noGene"
-  /** The no gene identification */
+  /** default isOfTypeCallback
+   * @param {*} v
+   * @param {Gene} gene
+   * @returns {Boolean}
+   */
+  static #typeOf(v, gene) {
+    return typeof v == gene
+  }
+  /** The 'no gene' identification.
+   * <p>
+   * As shorthand {@link NO} can be used.<br>
+   * @type {String}
+   */
   static get NO_GENE() {
     return Gene.#NO_GENE
   }
-  /** Registers gene if not yet registered and returns true, false else
+  /** Registers {@link gene} if not yet registered and returns true, false else.
+   * <p>
+   * Does not register {@link name} it if is registered as {@link Gene} or as alias.
+   * Does not register {@link name} if it is no String. Returns false in this case.
    * @param {String} gene
+   * @param {isOfTypeCallback} cbk - if undefined typeof {@link v} == {@link name} is used
    * @returns {Boolean}
    */
-  static register(gene) {
+  static register(name, cbk) {
+    if (typeof name != "string") return false
     let answ = false
-    if (!Gene.#registeredGenes.includes(gene)) {
-      Gene.#registeredGenes.push(gene)
+    let fu = cbk == undefined ? Gene.#typeOf : cbk
+    if (!Gene.#nameExists(name)) {
+      Gene.#registeredGenes[name] = fu
       answ = true
     }
     return answ
   }
-  /** Registers gene if registered and returns true, false else
+  /** Registers an alias for a existing gene, it it does not exist and returns
+   * true. Returns false otherwise. Returns false on wrong parameter types
+   * @param {String} name
+   * @param {String} gene
+   * @returns {Boolean}
+   */
+  static registerAs(name, gene) {
+    if (typeof name != "string" || typeof gene != "string") return false
+    let answ = false
+    if (!Gene.#nameExists(name) && Gene.isRegistered(gene)) {
+      Gene.#aliases[name] = gene
+      answ = true
+    }
+    return answ
+  }
+  /** Unregisters {@link gene} if registered and returns true, false else.
+   * <p>
+   * {@link gene} is unregistered even if aliases for it exist, they will be
+   * removed
+   * If {@link gene} is an alias, only that alias is removed, true will be
+   * returned
    * @param {String} gene
    * @returns {Boolean}
    */
   static unRegister(gene) {
+    if (typeof gene != "string") return false
     let answ = false
-    const idx = Gene.#registeredGenes.indexOf(gene)
-    if (idx > -1) {
-      Gene.#registeredGenes.splice(idx, 1)
+    if (Gene.#registeredGenes[gene] != undefined) {
+      delete Gene.#registeredGenes[gene]
       answ = true
     }
+    for (const [alias, value] of Object.entries(Gene.#aliases))
+      if (value == gene) {
+        delete Gene.#aliases[alias]
+        answ = true
+      }
     return answ
   }
-  /** Returns whether name is registered gene
+  /** Returns whether {@link name} is registered gene or alias.
    * @param {String} name
    * @returns {Boolean}
    */
-  static is(name) {
-    return Gene.#registeredGenes.includes(name)
+  static isRegistered(name) {
+    if (typeof name != "string") return false
+    return Gene.#nameExists(name)
   }
-
-  /** Returns gene if registered, 'noGene' else
+  /** Returns {@link Gene} for {@link name} if registered or alias, {@link Gene.NO_GENE} else
+   * <p>
+   * If {@link name} is registered {@link Gene}, {@link name} is returned,
+   * if an alias is registered, the {@link Gene} it is bound to is returned,
+   * if none of both is true, {@link Gene.NO_GENE} is returned
+   * <p>
+   * As shorthand {@link G} can be used.<br>
    * @param {String} name
    * @returns {String}
    */
   static gene(name) {
-    return Gene.is(name) ? name : Gene.#NO_GENE
+    if (typeof name != "string") return Gene.#NO_GENE
+    return Gene.#aliases[name] != undefined
+      ? Gene.#aliases[name]
+      : Gene.#nameExists(name)
+      ? name
+      : Gene.#NO_GENE
   }
-
-  static #x_registeredUserTypes = {}
-  static #x_registeredGenes = []
-  static x_gene(uType) {
-    let u2g = ["String", "Number", "Boolean", "Function"]
-    return typeof uType == "string"
-      ? u2g.includes(uType)
-        ? uType.toLowerCase()
-        : Gene.#x_registeredUserTypes[uType]
-      : undefined
+  /** Returns whether {@link v} fulfills {@link gene}'s requirements
+   * <p>
+   * In the use case {@link Gene} was written for, this means, if {@link v} is
+   * of type {@link gene}. This is checked with the callback function of
+   * {@link gene}, so other use cases are possible.
+   * @param {*} v
+   * @param {Gene} gene
+   * @returns {Boolean}
+   * @throws TypeError - if {@link gene} is no {@link Gene}
+   */
+  static isA(v, name) {
+    if (!Gene.#nameExists(name))
+      throw new TypeError(
+        `function 'Gene.isA'${NL}2nd parameter '${name}' is not of type 'Gene'`
+      )
+    return Gene.#registeredGenes[Gene.gene(name)](v, Gene.gene(name))
   }
-  static x_registerGene(userType, gene) {
-    Gene.#x_registeredUserTypes[userType] = gene
-  }
-  static x_unRegisterGene(gene) {
-    delete Gene.#x_registeredUserTypes[gene]
-  }
-  static x_isRegistered(name) {
-    return Gene.#x_registeredUserTypes[name] != undefined
+  static #nameExists(name) {
+    return (
+      Gene.#registeredGenes[name] != undefined ||
+      Gene.#aliases[name] != undefined
+    )
   }
   // prettier-ignore
   static test(outputObj) {
     let _ = null
     if(_ = new TestSuite("Gene", outputObj)) {
       _.run(registerTest)
+      _.run(registerAsTest)
       _.run(unRegisterTest)
-      _.run(isTest)
+      _.run(isRegisteredTest)
       _.run(geneTest)
       _.run(GTest)
       _.run(NOTest)
-      _.run(x_geneTest)
-      _.run(x_registerGeneTest)
-      _.run(x_unRegisterGeneTest)
-      _.run(x_isRegisteredTest)
+      _.run(isATest)
       _.destruct()
       _ = null
     }
     function registerTest() {
       let name = "abc"
-      _.bassert(1,Gene.register(name),"should register and return true")
-      _.bassert(2,!Gene.register(name),"should not register 2nd time and return false")
+      let alias = "uv_wx"
+      _.bassert(1,!Gene.register(22),"should register '22', as it is no 'String' and return true")
+      _.bassert(2,Gene.register(name),"should register and return true")
+      _.bassert(3,!Gene.register(name),"should not register 2nd time and return false")
+      Gene.unRegister(name)
+      _.bassert(4,Gene.register(name),"after unregistration registration should succeed")
+      Gene.registerAs(alias,name)
+      _.bassert(5,!Gene.register(alias), "registering a gene under an existing alias name should not work")
+      Gene.unRegister(name)
+    }
+    function registerAsTest() {
+      let name0 = "abc"
+      let name = "xyz"
+      let name2 = "SSS_xyz"
+      let alias = "uv_wx"
+      Gene.register(name)
+      Gene.register(name2)
+      _.bassert(1,!Gene.registerAs(22,name0),"should not register as '22' is not of type 'String'.")
+      _.bassert(2,!Gene.registerAs(alias,22),"should not register as '22' is not of type 'String'.")
+      _.bassert(3,!Gene.registerAs(alias,name0),"should not register as gene with this name does not exist.")
+      _.bassert(4,Gene.registerAs(alias,name),"should register as gene with this name exists.")
+      _.bassert(5,!Gene.registerAs(alias,name),"Second registration of same alias should not work")
+      _.bassert(6,!Gene.registerAs(alias,name2),"Second registration of same alias should not work even with other gene")
+      _.bassert(7,!Gene.registerAs(name,name),"Registration with alias which is a gene should not work")
+      _.bassert(8,!Gene.registerAs(name,name2),"Registration with alias which is a gene should not work")
+      Gene.unRegister(name2)
       Gene.unRegister(name)
     }
     function unRegisterTest() {
       let name = "abc"
+      let aName = "xAbc"
+      let alias = "Xyz"
       Gene.register(name)
-      _.bassert(1,Gene.unRegister(name),"should unregister and return true")
-      _.bassert(2,!Gene.unRegister(name),"should not unregister 2nd time and return false")
+      Gene.register(aName)
+      Gene.registerAs(alias,aName)
+      _.bassert(1,!Gene.unRegister(22),"should not unregister as '22' is no 'String'")
+      _.bassert(2,Gene.unRegister(name),"should unregister and return true")
+      _.bassert(3,!Gene.unRegister(name),"should not unregister 2nd time and return false")
+      _.bassert(4,Gene.unRegister(aName),"should unregister and return true")
+      _.bassert(5,!Gene.unRegister(aName),"should not unregister 2nd time and return false")
     }
-    function isTest() {
+    function isRegisteredTest() {
       let name0 = "abc_xyz"
       let name = "abc"
       Gene.register(name)
-      _.bassert(1,!Gene.is(name0),"should be no gene")
-      _.bassert(2,Gene.is(name),"should be gene as registered")
+      _.bassert(1,!Gene.isRegistered(22),"'22' should be no gene")
+      _.bassert(2,!Gene.isRegistered(name0),"should be no gene")
+      _.bassert(3,Gene.isRegistered(name),"should be gene as registered")
       Gene.unRegister(name)
     }
     function geneTest() {
       let name0 = "abc_xyz"
       let name = "abc"
+      let alias = "xyz"
       Gene.register(name)
-      _.bassert(1,Gene.gene(name0) == Gene.NO_GENE,"should be no gene")
-      _.bassert(2,Gene.gene(name) == name,"should be a gene and return same name")
+      Gene.registerAs(alias, name)
+      _.bassert(2,Gene.gene(22) == Gene.NO_GENE,"'22'should be no gene")
+      _.bassert(2,Gene.gene(name0) == Gene.NO_GENE,"should be no gene")
+      _.bassert(3,Gene.gene(name) == name,"should be a gene and return same name")
+      _.bassert(4,Gene.gene(alias) == name, "should return bound gene")
       Gene.unRegister(name)
     }
     function GTest() {
       let name0 = "abc_xyz"
       let name = "abc"
+      let alias = "xyz"
+      Gene.registerAs(alias, name)
       Gene.register(name)
       _.bassert(1,G(name0) == Gene.gene(name0),"G should be short form of Gene.gene")
       _.bassert(2,G(name) == Gene.gene(name),"G should be short form of Gene.gene")
+      _.bassert(3,G(alias) == Gene.gene(alias),"G should be short form of Gene.gene")
       Gene.unRegister(name)
     }
     function NOTest() {
@@ -1205,51 +1327,23 @@ class Gene {
       _.bassert(1,Gene.NO_GENE == NO,"NO should be short form of Gene.NO_GENE")
       _.bassert(2,Gene.gene(name0) == NO,"NO should be short form of Gene.NO_GENE")
     }
-    function x_geneTest() {
-      _.bassert(1,Gene.x_gene("String") == "string", "'String' is basic user type, should be returned in lowercase")
-      _.bassert(2,Gene.x_gene("Number") == "number", "'Number' is basic user type, should be returned in lowercase")
-      _.bassert(3,Gene.x_gene("Boolean") == "boolean", "'Boolean' is basic user type, should be returned in lowercase")
-      _.bassert(4,Gene.x_gene("Function") == "function", "'Function' is basic user type, should be returned in lowercase")
-    
-      if(!Gene.x_isRegistered("string"))
-      _.bassert(11,Gene.x_gene("string") == undefined, "'string' is no basic user type, undefined")
-      if(!Gene.x_isRegistered("number"))
-      _.bassert(12,Gene.x_gene("number") == undefined, "'number' is no basic user type, undefined")
-      if(!Gene.x_isRegistered("boolean"))
-      _.bassert(13,Gene.x_gene("boolean") == undefined, "'boolean' is no basic user type, undefined")
-      if(!Gene.x_isRegistered("function"))
-      _.bassert(14,Gene.x_gene("function") == undefined, "'function' is no basic user type, undefined")
-
-      let testName = "ABC_teSt_uv_x"
-      let gene = "abc_uva"
-      _.bassert(21,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
-      Gene.x_registerGene(testName, gene)
-      _.bassert(22,Gene.x_gene(testName) == gene,`${testName} has been registered as ${gene}`)
-      Gene.x_unRegisterGene(testName)
+    function isATest() {
+      let gene = "number"     
+      let genE = "Number"     
+      _.shouldAssert(1,_tryIsA,22,22,`'22' is not a 'String'`)
+      _.shouldAssert(2,_tryIsA,22,gene,`'$(gene)' is not registered as Gene`)
+      Gene.register(gene)
+      _.assert(3,_tryIsA,22,gene,`'$(gene)' is registered`)
+      _.bassert(4,Gene.isA(22,gene),`22 should be '$(gene)'`)
+      Gene.register(genE)
+      _.bassert(5,!Gene.isA(22,genE),`22 should not be '${genE}'`)     
+      Gene.unRegister(genE)
+      Gene.registerAs(genE,gene)
+      _.bassert(6,Gene.isA(22,genE),`22 should now be '${genE}', as it is registered as alias`)     
+      Gene.unRegister(gene)
     }
-    function x_registerGeneTest() {
-      let testName = "xy_ab_ABC_teSt"
-      let gene = "abc"
-      _.bassert(1,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
-      Gene.x_registerGene(testName, gene)
-      _.bassert(2,Gene.x_isRegistered(testName), `${testName} should now be registered`)
-      Gene.x_unRegisterGene(testName)
-    }
-    function x_unRegisterGeneTest() {
-      let testName = "ab_ABC_teSt"
-      let gene = "d_a_abc"
-      _.bassert(1,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
-      Gene.x_registerGene(testName, gene)
-      Gene.x_unRegisterGene(testName)
-      _.bassert(2,!Gene.x_isRegistered(testName), `${testName} should no longer be registered`)
-    }
-    function x_isRegisteredTest() {
-      let testName = "okU_ab_ABC_teSt"
-      let gene = "ok_U_d_a_abc"
-      _.bassert(1,!Gene.x_isRegistered(testName), `${testName} should not be registered`)
-      Gene.x_registerGene(testName, gene)
-      _.bassert(2,Gene.x_isRegistered(testName), `${testName} should now be registered`)
-      Gene.x_unRegisterGene(testName)
+    function _tryIsA(arg1, arg2) {
+      Gene.isA(arg1, arg2)
     }
   }
 }
