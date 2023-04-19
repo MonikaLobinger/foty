@@ -1411,7 +1411,8 @@ class Essence extends GenePool {
     return this[Essence.#pre + "TYPE"]
   }
   /** DEFAULT essence
-   * @type {*} - is of type given in {@link Essence#TYPE|Essence.TYPE}
+   *  is of type given in {@link Essence#TYPE|Essence.TYPE}
+   * @type {*}
    */
   get DEFAULT() {
     return this[Essence.#pre + "DEFAULT"]
@@ -1441,7 +1442,7 @@ class Essence extends GenePool {
     return this[Essence.#pre + "REPEAT"]
   }
   /** skipped essences
-   * @type {Array[Object]}
+   * @type {Array.<Object>}
    */
   get skipped() {
     return this.#skipped
