@@ -14,7 +14,11 @@
     "cleverLinks": true,
     "monospaceLinks": true,
     "default": {
-      "layoutFile": "custom-layout.tmpl",
+      "staticFiles": {
+        "include": [
+            "/home/monika/OneDrive/Notes/_/_scripts/static"
+        ]
+      },
       "outputSourceFiles": true
     }
   }

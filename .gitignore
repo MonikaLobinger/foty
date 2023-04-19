@@ -15,6 +15,9 @@
 !/_scripts
 !/_scripts/foty.js
 !/_scripts/jsdocconf.json
-!/_scripts/custom-layout.tmpl
 !/_scripts/onne.js
+!/_scripts/static
+!/_scripts/static/styles
+!/_scripts/static/styles/jsdoc-default.css
+
 
