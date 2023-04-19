@@ -1,4 +1,4 @@
-module.exports = main // templater call: "await tp.user.foty(tp, app)"
+module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 /**
  * @description
  * Script for obsidian, templater extension needed
@@ -362,10 +362,10 @@ function errOut(e, YAML, cnt) {
     else nameKey = cnt.pad() + "?"
     msgKey = cnt.pad() + "\u00A8"
   } else {
-    if (e instanceof SettingError) nameKey = "ERR:"
-    else if (e instanceof CodingError) nameKey = "!!!:"
-    else nameKey = "???:"
-    msgKey = "\u00A8\u00A8\u00A8"
+    if (e instanceof SettingError) nameKey = "_ERR"
+    else if (e instanceof CodingError) nameKey = "!!!!"
+    else nameKey = "????"
+    msgKey = "\u00A8\u00A8\u00A8\u00A8"
   }
   let msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
   if (e.usrMsg != undefined && e.usrMsg.length > 0)
@@ -434,36 +434,43 @@ var DEBUG = true
 /** For testing purpose.
  * @type {Boolean}
  */
-var TESTING = false
+var TESTING = true
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
  * If set, all Errors messages are written to current node.
  * @type {Boolean}
  */
-var CHECK_ERROR_OUTPUT = false
+var CHECK_ERROR_OUTPUT = true
 if (CHECK_ERROR_OUTPUT) {
   DEBUG = false
   TESTING = false
 }
+/** For exception testing, array of strings to be evaluated */
+var registeredExceptions = []
 
-/** Triggers each Exception once and puts all Error messages to {@link YAML} attributes,
- * if {@link CHECK_ERROR_OUTPUT} is true.
- *<p>
+/** Triggers each Exception in {@link registeredExceptions} once and puts all
+ * Error messages to {@link YAML} attributes,
+ * if {@link CHECK_ERROR_OUTPUT} is true.<br>
  * Does nothing if {@link CHECK_ERROR_OUTPUT} is false
+ * <p>
+ * Register exception test as string to be evaluated. Local callback function
+ * {@link cbk} which returns false is defined
  * @param {Object} YAML
  */
-// prettier-ignore
 function letAllThrow(YAML) {
   if (!CHECK_ERROR_OUTPUT) return
   let cnt = 0
-  function cbk() {return false}
-  /*01*/try{new Gene(2,cbk)}catch(e){errOut(e,YAML,++cnt)}
-  /*02*/try{new Gene("name",3)}catch(e){errOut(e,YAML,++cnt)}
-  /*03*/try{new Genes(4)}catch(e){errOut(e,YAML,++cnt)}
-  /*04*/try{new Genes().allowed({})}catch(e){errOut(e,YAML,++cnt)}
-  /*05*/try{new Genes().is(cnt,{})}catch(e){errOut(e,YAML,++cnt)}
-  /*06*/try{new Genes().is(cnt,"number")}catch(e){errOut(e,YAML,++cnt)}
+  function cbk() {
+    return false
+  }
+  registeredExceptions.forEach((exp) => {
+    try {
+      eval(exp)
+    } catch (e) {
+      errOut(e, YAML, ++cnt)
+    }
+  })
 }
 
 /** Logs all parameters to console, if {@link DEBUG} is set to true.
@@ -1081,22 +1088,54 @@ class Dispatcher {
 registeredTests.push(Dispatcher.test)
 //#endregion helper classes
 //#region code
-/** @description callback to check {@link variable} against {@link gene}
- * @callback isOfTypeCallback
+/** callback to check {@link variable} against {@link gene}
+ * @callback GeneCallback
  * @param {*} variable
  * @param {Gene} gene
  * @returns {Boolean}
  */
 
+/** @classdesc Genes are types used in this application.
+ * <p>
+ * Every gene has a {@link GeneCallback} function associated with it. The default callback
+ * function is '
+ * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof}</code>
+ * variable == {@link Gene}' . {@link Gene.isA} calls this callback, comparing
+ * variable to check against name of {@link Gene}.
+ * <p>
+ * <b>Why this name? </b>
+ * Many types of types we have to deal with. Therefore another name for 'allowed
+ * types' was searched for. It should be short, have a meaning near to
+ * 'very basic' and it should reasonable not be used further in the code, so
+ * that name is replaceable throughout whole file, if another one would be
+ * chosen.
+ */
 class Gene {
   #cbk
   #name
+
+  /** Name of the {@link Gene}
+   * @type {String}
+   */
   get name() {
     return this.#name
   }
+
+  /** Returns whether typeof {@link v} is equal to {@link gene.name}
+   * @param {*} v
+   * @param {Gene} gene
+   * @returns {Boolean}
+   */
   static #typeOf(v, gene) {
     return typeof v == gene.name
   }
+  /** Constructs a Gene instance. Throws on wrong parameter types.
+   * @param {String} name
+   * @param {GeneCallback} cbk - default is private static function {@link #typeOf},
+   *                             which compares typeof its first parameter against
+   *                             {@link name}
+   * @throws TypeError
+   */
   constructor(name, cbk) {
     if (typeof name != "string")
       throw new TypeError(
@@ -1109,9 +1148,15 @@ class Gene {
     this.#name = name
     this.#cbk = cbk == undefined ? Gene.#typeOf : cbk
   }
-  is(v) {
+
+  /** Returns result of {@link GeneCallback}( {@link v}, {@link this} )
+   * @param {*} v
+   * @returns {Boolean}
+   */
+  isA(v) {
     return this.#cbk(v, this)
   }
+
   //prettier-ignore
   static test(outputObj) {
     let _ = null
@@ -1137,13 +1182,13 @@ class Gene {
       let gG = new Gene("Number",cbk)
       let A = new Gene("Array",ACbk)
       let a = new Gene("array",aCbk)
-      _.bassert(1,g.is(22),"22 is a number")
-      _.bassert(2,!G.is(22),"22 is not a Number")
-      _.bassert(3,gG.is(22),"22 is a Number to lowercase")
-      _.bassert(4,A.is([]),"'[]' is an Array")
-      _.bassert(5,!A.is({}),"'{}' is not an Array")
-      _.bassert(6,a.is([]),"'[]' is an Array")
-      _.bassert(7,!a.is({}),"'{}' is not an Array")
+      _.bassert(1,g.isA(22),"22 is a number")
+      _.bassert(2,!G.isA(22),"22 is not a Number")
+      _.bassert(3,gG.isA(22),"22 is a Number to lowercase")
+      _.bassert(4,A.isA([]),"'[]' is an Array")
+      _.bassert(5,!A.isA({}),"'{}' is not an Array")
+      _.bassert(6,a.isA([]),"'[]' is an Array")
+      _.bassert(7,!a.isA({}),"'{}' is not an Array")
     }
     function _tryConstruct(arg1, arg2) {
       new Gene(arg1,arg2)
@@ -1151,14 +1196,8 @@ class Gene {
   }
 }
 registeredTests.push(Gene.test)
-
-// UserType: String, Number, Boolean, Function
-// Gene: string,number,boolean,function
-// UserType: String, Boolean, Number, Array, Date, Frontmatter,
-//            (ut|ut),Array.<ut>,(ut|Array.<ut>)
-class XGenes {
-  constructor() {}
-}
+registeredExceptions.push("new Gene(2,cbk)")
+registeredExceptions.push("new Gene('name',3)")
 
 class Genes {
   static #typeOf(v, gene) {
@@ -1186,9 +1225,9 @@ class Genes {
     if (!this.allowed(type))
       throw new TypeError(
         `function 'Genes.is'${NL}parameter '${type}' is no allowed type.\
-      ${NL} allowed types are: ${Object.keys(this.#genes)}`
+      ${NL}allowed types are: ${Object.keys(this.#genes)}`
       )
-    return this.#genes[type].is(v)
+    return this.#genes[type].isA(v)
   }
   //prettier-ignore
   static test(outputObj) {
@@ -1241,6 +1280,27 @@ class Genes {
   }
 }
 registeredTests.push(Genes.test)
+registeredExceptions.push("new Genes(4)")
+registeredExceptions.push("new Genes().allowed({})")
+registeredExceptions.push("new Genes().is(cnt,{})")
+registeredExceptions.push("new Genes().is(cnt,'number')")
+
+// UserType: String, Number, Boolean, Function
+// Gene: string,number,boolean,function
+// UserType: String, Boolean, Number, Array, Date, Frontmatter,
+//            (ut|ut),Array.<ut>,(ut|Array.<ut>)
+/*
+ * <p>
+ * All genes have to be registered. There are no hardcoded genes. Only
+ * <code>{@link Gene.NO_GENE}</code> is registered hardCoded
+ * <p>
+ * A gene can have an alias, even more than one. Names of genes and names of
+ * aliases are unique. Case matters. ('String' is not the same as 'string'). No
+ * alias can have a name a gene has and vice versa.
+ */
+class XGenes {
+  constructor() {}
+}
 
 class Essence extends Genes {
   get ROOT() {
@@ -1395,7 +1455,7 @@ class BreadCrumbs extends Essence {}
  * @param {Object} app - obsidian api object
  * @returns {Object}
  */
-async function main(tp, app) {
+async function foty(tp, app) {
   let checkErrorOutputYAML = {}
   let testYAML = {}
   let frontmatterYAML = {}

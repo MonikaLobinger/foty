@@ -358,5 +358,5 @@ tr > th:last-child { border-right: 1px solid #ddd; }
 }
 h4{display: table;background-color: #a9cce3;color:black;     line-height: 100%;}
 h4>span.type-signature, h5>span.signature {color: grey}
-.description code{background-color: #E4E4E4;}
+code{background-color: #E4E4E4;}
 
