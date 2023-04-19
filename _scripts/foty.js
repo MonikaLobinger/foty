@@ -1242,7 +1242,8 @@ class GenePool {
   constructor(...params) {
     if (params.length > 0 && typeof params[0] == "function")
       this.#defaultCallback = params.shift()
-    while (params.length > 0) this.add(params.shift(), this.#defaultCallback)
+    while (params.length > 0)
+      this.addAsGene(params.shift(), this.#defaultCallback)
   }
 
   /** Adds {@link ident} as new Gene with {@link cbk} as {@link GeneCallback|callback} function.
@@ -1258,7 +1259,7 @@ class GenePool {
    * throws if {@link cbk} is no function
    * @returns {Gene}
    */
-  add(ident, cbk) {
+  addAsGene(ident, cbk) {
     if (this.#genes[ident] == undefined)
       this.#genes[ident] = new Gene(
         ident,
@@ -1276,13 +1277,41 @@ class GenePool {
   }
 
   /** Returns whether {@link v} fulfills {@link ident}s requirements as {@link Gene}.
+   * <p>
+   * Compound {@link ident} possible:<br>
+   * - ({@link ident1}|{@link ident2}|{@link ident3})<br>
+   * - Array.&lt;{@link ident1}&gt;<br>
+   * - combination of both
    * @param {*} v
    * @param {*} ident
    * @returns {Boolean}
    */
   is(v, ident) {
-    if (!this.has(ident)) return false
-    else return this.#genes[ident].isA(v)
+    if (GenePool.isCompoundOr(ident)) {
+      let ids = ident.slice(1, -1).split("|")
+      return ids.some((id) => this.is(v, id), this)
+    } else if (GenePool.isCompoundArr(ident)) {
+      if (!Array.isArray(v)) return false
+      let innerIdent = ident.slice("Array.<".length, -1)
+      return v.every((innerV) => this.is(innerV, innerIdent), this)
+    } else {
+      if (!this.has(ident)) return false
+      return this.#genes[ident].isA(v)
+    }
+  }
+  static isCompoundOr(id) {
+    let answ = false
+    if (typeof id == "string") {
+      if (id.startsWith("(") && id.endsWith(")")) answ = true
+    }
+    return answ
+  }
+  static isCompoundArr(id) {
+    let answ = false
+    if (typeof id == "string") {
+      if (id.startsWith("Array.<") && id.endsWith(">")) answ = true
+    }
+    return answ
   }
 
   //prettier-ignore
@@ -1309,15 +1338,15 @@ class GenePool {
     }
     function addTest() {
       let gns = new GenePool("Number")
-      let gn = gns.add("Number")
+      let gn = gns.addAsGene("Number")
       let gn2
       function cbk() { return false}
-      _.bassert(1, gn = gns.add("Number"),"Trying to add existing Gene should return it")
+      _.bassert(1, gn = gns.addAsGene("Number"),"Trying to add existing Gene should return it")
       _.bassert(2, gn.ident == "Number", "The added Gene should be returned")
-      _.bassert(3, gn2 = gns.add("String"),"Adding new Gene should return it")
+      _.bassert(3, gn2 = gns.addAsGene("String"),"Adding new Gene should return it")
       _.bassert(4, gn2.ident == "String", "The added Gene should be returned")
-      _.assert(5,_tryAdd,gns,22,cbk,"Adding Gene with no string as ident should work")
-      _.shouldAssert(6,_tryAdd,gns,"abc",22,"Adding Gene with no function as callback should throw")
+      _.assert(5,_tryAddAsGene,gns,22,cbk,"Adding Gene with no string as ident should work")
+      _.shouldAssert(6,_tryAddAsGene,gns,"abc",22,"Adding Gene with no function as callback should throw")
     }
     function hasTest() {
       let gns = new GenePool("Number")
@@ -1335,67 +1364,90 @@ class GenePool {
       _.bassert(4,!gns.is({}),"2nd argument not given should return false")
       _.bassert(5,!gns.is({},{}),"2nd argument not a string should return false")
       _.bassert(6,!gns.is({},"String"),"2nd argument not allowed type should return false")
+
+      let gns2 = new GenePool("Number","Boolean","String")
+      _.bassert(11,gns2.is(["a","b","c"],"Array.<String>"),"array of strings should be recognized")
+      _.bassert(12,!gns2.is(["a","b",3],"Array.<String>"),"array of strings with number should be rejected")
+      _.bassert(13,gns2.is(3,"(String|Number)"),"Number should be recognized for String or Number")
+      _.bassert(14,gns2.is("a","(String|Number)"),"String should be recognized for String or Number")
+      _.bassert(15,!gns2.is(false,"(String|Number)"),"Boolean should not be recognized for String or Number")
+      _.bassert(16,gns2.is(["a","b","c"],"(String|Array.<String>)"),"array of strings should be recognized for String or Array of Strings")
+      _.bassert(17,gns2.is("a","(String|Array.<String>)"),"String should be recognized for String or Array of Strings")
+      _.bassert(18,gns2.is(2,"(Number|Array.<String>)"),"Number should be recognized for Number or Array of Strings")      
     }
     function _tryConstruct0() { new GenePool() }
     function _tryConstruct1(a) { new GenePool(a) }
     function _tryConstruct2(a,b) { new GenePool(a,b) }
     function _tryConstruct3(a,b,c) { new GenePool(a,b,c) }
     function _tryConstruct4(a,b,c,d) { new GenePool(a,b,c,d) }
-    function _tryAdd(genes, arg1, arg2) {genes.add(arg1, arg2)}
+    function _tryAddAsGene(genes, arg1, arg2) {genes.addAsGene(arg1, arg2)}
   }
 }
 registeredTests.push(GenePool.test)
 registeredExceptions.push("new GenePool().addGene('noGene')")
-const guardianPool = new GenePool(clsCbk, Gene, GenePool)
-//prettier-ignore
-aut(`Is guardianPool a Gene? - '${guardianPool.is(guardianPool,Gene)}'. Is guardianPool a GenePool? - '${guardianPool.is(guardianPool,GenePool)}'.`)
 
-// UserType: String, Number, Boolean, Function
-// Gene: string,number,boolean,function
-// UserType: String, Boolean, Number, Array, Date, Frontmatter,
-//            (ut|ut),Array.<ut>,(ut|Array.<ut>)
-/*
- * <p>
- * All genes have to be registered. There are no hardcoded genes. Only
- * <code>{@link Gene.NO_GENE}</code> is registered hardCoded
- * <p>
- * A gene can have an alias, even more than one. Names of genes and names of
- * aliases are unique. Case matters. ('String' is not the same as 'string'). No
- * alias can have a name a gene has and vice versa.
+/** @classdesc Essence is unrecognizable except through me.
+ * Reads and stores specification attributes and removes them from literal.
+ * So __SPEC becomes essence and nobody will no longer be bothered by it.
+ * Essence is always there. Either as found in __SPEC or as given from parent (if one)
+ * or hardcoded default. If some __SPEC entry has wrong  {@link Gene} it will be
+ * {@link Essence#skipped|Essence.skipped} and parent essence or (if no parent)
+ * hardcoded essence will be chosen.
  */
-class XGenePool {
-  constructor() {}
-}
-
 class Essence extends GenePool {
   get ROOT() {
     return this[Essence.#pre + "ROOT"]
   }
+  /** RENDER essence
+   * @type {Boolean}
+   */
   get RENDER() {
     return this[Essence.#pre + "RENDER"]
   }
+  /** TYPE essence
+   * @type {String}
+   */
   get TYPE() {
     return this[Essence.#pre + "TYPE"]
   }
+  /** DEFAULT essence
+   * @type {*} - is of type given in {@link Essence#TYPE|Essence.TYPE}
+   */
   get DEFAULT() {
     return this[Essence.#pre + "DEFAULT"]
   }
+  /** IGNORE essence
+   * @type {Boolean}
+   */
   get IGNORE() {
     return this[Essence.#pre + "IGNORE"]
   }
+  /** FLAT essence
+   * @type {Boolean}
+   */
   get FLAT() {
     return this[Essence.#pre + "FLAT"]
   }
+  /** ONCE essence
+   * @type {Boolean}
+   */
   get ONCE() {
     return this[Essence.#pre + "ONCE"]
   }
+  /** REPEAT essence
+   * @type {Boolean}
+   */
   get REPEAT() {
     return this[Essence.#pre + "REPEAT"]
   }
+  /** skipped essences
+   * @type {Array[Object]}
+   */
   get skipped() {
     return this.#skipped
   }
   static #pre = "__"
+  #userPool = new GenePool("String", "Number", "Boolean", "Function")
   static #SPEC_KEY = "__SPEC"
   static #RENDER_DEFT = false
   static #TYPE_DEFT = "String"
@@ -1404,9 +1456,21 @@ class Essence extends GenePool {
   static #FLAT_DEFT = false
   static #ONCE_DEFT = false
   static #REPEAT_DEFT = false
-  #skipped = [] //[["name","value","type"],["name2","value2","type2"]]
+  #skipped = [] //[{.name,.value,.expectedType}]
 
+  /** Creates instance, removes {@link ESSENCE.#SPEC_KEY} attribute from {@link literal}
+   * @param {String} literal
+   * @param {GenePool} parent
+   * @throws TypeError if {@link parent} is no {@link GenePool}
+   */
   constructor(literal, parent) {
+    super(clsCbk, Gene, GenePool)
+    if (parent != undefined && !this.is(parent, GenePool))
+      throw new TypeError(
+        `function 'Essence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
+      )
+    this.addAsGene(Essence)
+
     let u
     let p = parent
     let specLit = {}
@@ -1424,12 +1488,12 @@ class Essence extends GenePool {
     delete specLit.FLAT
     delete specLit.ONCE
     delete specLit.REPEAT
-    if (!this.#checkType(litREN, "boolean", "RENDER")) litREN = u
-    if (!this.#checkType(litTYP, "string", "TYPE")) litTYP = u
-    if (!this.#checkType(litIGN, "boolean", "IGNORE")) litIGN = u
-    if (!this.#checkType(litFLT, "boolean", "FLAT")) litFLT = u
-    if (!this.#checkType(litONC, "boolean", "ONCE")) litONC = u
-    if (!this.#checkType(litREP, "boolean", "REPEAT")) litREP = u
+    if (!this.#validateOrInform(litREN, "Boolean", "RENDER")) litREN = u
+    if (!this.#validateOrInform(litTYP, "String", "TYPE")) litTYP = u
+    if (!this.#validateOrInform(litIGN, "Boolean", "IGNORE")) litIGN = u
+    if (!this.#validateOrInform(litFLT, "Boolean", "FLAT")) litFLT = u
+    if (!this.#validateOrInform(litONC, "Boolean", "ONCE")) litONC = u
+    if (!this.#validateOrInform(litREP, "Boolean", "REPEAT")) litREP = u
     let ROOT = parent != u ? false : true
     let RENDER = litREN != u ? litREN : p != u ? p.RENDER : Essence.#RENDER_DEFT
     let TYPE = litTYP != u ? litTYP : p != u ? p.TYPE : Essence.#TYPE_DEFT
@@ -1481,7 +1545,7 @@ class Essence extends GenePool {
     })
     let litDEF = specLit.DEFAULT
     delete specLit.DEFAULT
-    if (!this.#checkType(litDEF, this.TYPE, "DEFAULT", true)) litDEF = u
+    if (!this.#validateOrInform(litDEF, this.TYPE, "DEFAULT")) litDEF = u
     let DEFT = litDEF != u ? litDEF : p != u ? p.DEFAULT : Essence.#DEFAULT_DEFT
     Object.defineProperty(this, Essence.#pre + "DEFAULT", {
       value: DEFT,
@@ -1491,26 +1555,106 @@ class Essence extends GenePool {
     })
     if (literal != u) delete literal[Essence.#SPEC_KEY]
   }
-  #checkType(value, type, name, isUserType = false) {
-    let ok = false
-    if (value == undefined) ok = true
-    else {
-      if (!isUserType) ok = typeof value == type
-      else {
-        type = Gene.gene(type)
-        if (type[0] == type[0].toLowerCase()) {
-          ok = typeof value == type
-        } else if (Array.isArray(value) && type == "Array") {
-          ok = true
-        } else {
-          ok = typeof value == "string"
-        }
-      }
+  #validateOrInform(value, type, name) {
+    let ok = value == undefined || this.#userPool.is(value, type)
+    if (!ok) {
+      let errObj = {}
+      errObj.name = name
+      errObj.value = value
+      errObj.expectedType = type
+      this.#skipped.push(errObj)
     }
-    if (!ok) this.#skipped.push(new Array(name, value, type))
     return ok
   }
+  //prettier-ignore
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("Essence", outputObj)) {
+      _.run(constructorTest)
+      _.run(getterEssences)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      _.assert(1,_tryConstruct1,{__SPEC: {RENDER:true}},"Should construct")
+      _.assert(2,_tryConstruct1,{__SPEC: {IGNORE:true}},"Should construct")
+      _.assert(3,_tryConstruct1,{__SPEC: {ONCE:true}},"Should construct")
+      _.assert(4,_tryConstruct1,{__SPEC: {FLAT:true}},"Should construct")
+      _.assert(5,_tryConstruct1,{__SPEC: {REPEAT:true}},"Should construct")
+      _.assert(6,_tryConstruct1,{__SPEC: {TYPE:"Boolean"}},"Should construct")
+      _.assert(7,_tryConstruct1,{__SPEC: {DEFAULT:""}},"Should construct")
+      _.assert(11,_tryConstruct1,{__SPEC: {RENDER:"abc"}},"Should construct")
+      _.assert(12,_tryConstruct1,{__SPEC: {IGNORE:"abc"}},"Should construct")
+      _.assert(13,_tryConstruct1,{__SPEC: {ONCE:"abc"}},"Should construct")
+      _.assert(14,_tryConstruct1,{__SPEC: {FLAT:"abc"}},"Should construct")
+      _.assert(15,_tryConstruct1,{__SPEC: {REPEAT:"abc"}},"Should construct")
+      _.assert(16,_tryConstruct1,{__SPEC: {TYPE:false}},"Should construct")
+      _.assert(17,_tryConstruct1,{__SPEC: {DEFAULT:false}},"Should construct")
+      let wrong1 = new Essence({__SPEC: {RENDER:"abc"}})
+      let wrong2 = new Essence({__SPEC: {IGNORE:"abc"}})
+      let wrong3 = new Essence({__SPEC: {ONCE:"abc"}})
+      let wrong4 = new Essence({__SPEC: {FLAT:"abc"}})
+      let wrong5 = new Essence({__SPEC: {REPEAT:"abc"}})
+      let wrong6 = new Essence({__SPEC: {TYPE:false}})
+      let wrong7 = new Essence({__SPEC: {DEFAULT:false}})
+      _.bassert(21,wrong1.skipped[0]["name"]=="RENDER","RENDER should be skipped")
+      _.bassert(22,wrong2.skipped[0]["name"]=="IGNORE","IGNORE should be skipped")
+      _.bassert(23,wrong3.skipped[0]["name"]=="ONCE","ONCE should be skipped")
+      _.bassert(24,wrong4.skipped[0]["name"]=="FLAT","FLAT should be skipped")
+      _.bassert(25,wrong5.skipped[0]["name"]=="REPEAT","REPEAT should be skipped")
+      _.bassert(26,wrong6.skipped[0]["name"]=="TYPE","TYPE should be skipped")
+      _.bassert(27,wrong7.skipped[0]["name"]=="DEFAULT","DEFAULT should be skipped")
+      let lit = {__SPEC: {RENDER:true},myValue:"22"}
+      _.bassert(31,lit.__SPEC != undefined,"just to show it is defined")
+      _.bassert(32,lit.myValue != undefined,"just to show it is defined")
+      let ess1 = new Essence(lit)
+      _.bassert(33,lit.__SPEC == undefined,"SPEC should no longer be defined")
+      _.bassert(34,lit.myValue != undefined,"just to show it is still defined")
+
+      _.shouldAssert(41,_tryConstruct2,{__SPEC: {RENDER:true}},new Error(),"Should not be constructed")
+      _.assert(42,_tryConstruct2,{__SPEC: {RENDER:true}},ess1,"Should be constructed")
+    }
+    function getterEssences() {
+      let ess0 = new Essence()
+      _.bassert(1,ess0.ROOT==true,"Should always be defined")
+      _.bassert(2,ess0.RENDER==false,"Should always be defined")
+      _.bassert(3,ess0.IGNORE==false,"Should always be defined")
+      _.bassert(4,ess0.ONCE==false,"Should always be defined")
+      _.bassert(5,ess0.FLAT==false,"Should always be defined")
+      _.bassert(6,ess0.REPEAT==false,"Should always be defined")
+      _.bassert(7,ess0.TYPE=="String","Should always be defined")
+      _.bassert(8,ess0.DEFAULT=="","Should always be defined")
+      let lit1 = {__SPEC: {RENDER:true,IGNORE:true,ONCE:true,FLAT:true,REPEAT:true,TYPE:"Boolean",DEFAULT:false}}
+      let ess1 = new Essence(lit1)
+      _.bassert(11,ess1.ROOT==true,"Should always be defined")
+      _.bassert(12,ess1.RENDER==true,"Should be set to literal value")
+      _.bassert(13,ess1.IGNORE==true,"Should be set to literal value")
+      _.bassert(14,ess1.ONCE==true,"Should be set to literal value")
+      _.bassert(15,ess1.FLAT==true,"Should be set to literal value")
+      _.bassert(16,ess1.REPEAT==true,"Should be set to literal value")
+      _.bassert(17,ess1.TYPE=="Boolean","Should be set to literal value")
+      _.bassert(18,ess1.DEFAULT==false,"Should be set to literal value")
+      let ess2 = new Essence(undefined,ess1)
+      _.bassert(11,ess2.ROOT==false,"Should always be defined")
+      _.bassert(12,ess2.RENDER==true,"Should be set to parent value")
+      _.bassert(13,ess2.IGNORE==true,"Should be set to parent value")
+      _.bassert(14,ess2.ONCE==true,"Should be set to parent value")
+      _.bassert(15,ess2.FLAT==true,"Should be set to parent value")
+      _.bassert(16,ess2.REPEAT==true,"Should be set to parent value")
+      _.bassert(17,ess2.TYPE=="Boolean","Should be set to parent value")
+      _.bassert(18,ess2.DEFAULT==false,"Should be set to parent value")
+    }
+
+    function _tryConstruct1(arg1) { 
+      new Essence(arg1) 
+    }
+    function _tryConstruct2(arg1, arg2) { 
+      new Essence(arg1, arg2) 
+    }
+  }
 }
+registeredTests.push(Essence.test)
+registeredExceptions.push("new Essence({}, new Error())")
 
 class BreadCrumbs extends Essence {}
 //#endregion code
