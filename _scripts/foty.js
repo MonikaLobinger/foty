@@ -441,7 +441,7 @@ if (TESTING) DEBUG = false
  * If set, all Errors messages are written to current node.
  * @type {Boolean}
  */
-var CHECK_ERROR_OUTPUT = true
+var CHECK_ERROR_OUTPUT = false
 if (CHECK_ERROR_OUTPUT) {
   DEBUG = false
   TESTING = false
@@ -1088,20 +1088,29 @@ class Dispatcher {
 registeredTests.push(Dispatcher.test)
 //#endregion helper classes
 //#region code
-/** callback to check {@link variable} against {@link gene}
+/** callback to check {@link variable} against {@link gene}.
  * @callback GeneCallback
  * @param {*} variable
  * @param {Gene} gene
  * @returns {Boolean}
  */
+/** {@link GeneCallback}, returns '{@link v} instanceof {@link gene.ident}'.
+ * @type {GeneCallback}
+ * @param {*} v
+ * @param {Gene} gene
+ * @returns {Boolean}
+ */
+function clsCbk(v, gene) {
+  return v instanceof gene.ident
+}
 
-/** @classdesc Genes are types used in this application.
+/** @classdesc Gene is type used in this application.
  * <p>
  * Every gene has a {@link GeneCallback} function associated with it. The default callback
  * function is '
  * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof}</code>
- * variable == {@link Gene}' . {@link Gene.isA} calls this callback, comparing
- * variable to check against name of {@link Gene}.
+ * variable == {@link Gene#ident|Gene.ident}' . {@link Gene#isA} calls this callback, comparing
+ * variable to check against ident of {@link Gene}.
  * <p>
  * <b>Why this name? </b>
  * Many types of types we have to deal with. Therefore another name for 'allowed
@@ -1112,44 +1121,42 @@ registeredTests.push(Dispatcher.test)
  */
 class Gene {
   #cbk
-  #name
+  #ident
 
-  /** Name of the {@link Gene}
-   * @type {String}
+  /** Ident of the {@link Gene}.
+   * @type {*}
    */
-  get name() {
-    return this.#name
+  get ident() {
+    return this.#ident
   }
 
-  /** Returns whether typeof {@link v} is equal to {@link gene.name}
+  /** {@link GeneCallback}, returns whether typeof '{@link v}' is equal to '{@link gene.ident}'.
+   * @type {GeneCallback}
    * @param {*} v
    * @param {Gene} gene
    * @returns {Boolean}
    */
   static #typeOf(v, gene) {
-    return typeof v == gene.name
+    return typeof v == gene.ident
   }
+
   /** Constructs a Gene instance. Throws on wrong parameter types.
-   * @param {String} name
+   * @param {*} ident
    * @param {GeneCallback} cbk - default is private static function {@link #typeOf},
    *                             which compares typeof its first parameter against
-   *                             {@link name}
+   *                             {@link ident}
    * @throws TypeError
    */
-  constructor(name, cbk) {
-    if (typeof name != "string")
-      throw new TypeError(
-        `function 'Gene.constructor'${NL}1st parameter '${name}' is not of type 'String'`
-      )
+  constructor(ident, cbk) {
     if (cbk != undefined && typeof cbk != "function")
       throw new TypeError(
         `function 'Gene.constructor'${NL}2nd parameter '${cbk}' is not of type 'Function'`
       )
-    this.#name = name
+    this.#ident = ident
     this.#cbk = cbk == undefined ? Gene.#typeOf : cbk
   }
 
-  /** Returns result of {@link GeneCallback}( {@link v}, {@link this} )
+  /** Returns result of {@link GeneCallback}( {@link v}, {@link this} ).
    * @param {*} v
    * @returns {Boolean}
    */
@@ -1161,21 +1168,23 @@ class Gene {
   static test(outputObj) {
     let _ = null
     if(_ = new TestSuite("Gene", outputObj)) {
+      _.run(getterIdentTest)
       _.run(constructorTest)
       _.run(isTest)
       _.destruct()
       _ = null
     }
+    function getterIdentTest() {}
     function constructorTest() {
       function cbk() {return false}
-      _.shouldAssert(1,_tryConstruct,22,cbk,"arg1 has to be a String")
+      _.assert(1,_tryConstruct,22,cbk,"arg1 can be of any type")
       _.shouldAssert(2,_tryConstruct,"number",22,"arg2 has to be a Function")
       _.assert(3,_tryConstruct,"number",undefined,"arg2 may be undefined")
       _.assert(4,_tryConstruct,"number",cbk,"all args are ok")
     }
     function isTest() {
-      function cbk(v,gene) {return typeof v == gene.name.toLowerCase()}
-      function ACbk(v,gene) {return gene.name == "Array" && typeof v == "object" && Array.isArray(v)}
+      function cbk(v,gene) {return typeof v == gene.ident.toLowerCase()}
+      function ACbk(v,gene) {return gene.ident == "Array" && typeof v == "object" && Array.isArray(v)}
       function aCbk(v) {return typeof v == "object" && Array.isArray(v)}
       let g = new Gene("number")
       let G = new Gene("Number")
@@ -1196,45 +1205,93 @@ class Gene {
   }
 }
 registeredTests.push(Gene.test)
-registeredExceptions.push("new Gene(2,cbk)")
 registeredExceptions.push("new Gene('name',3)")
 
-class Genes {
+/** @classdesc Collection of allowed/used Genes.
+ * <p>
+ * Stores  {@link Gene}s. The default {@link GeneCallback|callback} function for created
+ * by adding {@link Gene}s is '
+ * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof}</code>
+ * variable == tolower({@link Gene#ident|Gene.ident})'. (Whereas the default {@link GeneCallback}|callback)
+ * function for plain {@link Gene}s is '
+ * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof}</code>
+ * variable == {@link Gene#ident|Gene.ident}'.
+ */
+class GenePool {
+  /** {@link GeneCallback}, returns whether typeof '{@link v}' is equal to '{@link gene.ident}.toLowerCase()'
+   * @type {GeneCallback}
+   * @param {*} v
+   * @param {Gene} gene
+   * @returns {Boolean}
+   */
   static #typeOf(v, gene) {
-    return typeof v == gene.name.toLowerCase()
+    return typeof v == gene.ident.toLowerCase()
   }
   #genes = {}
+  #defaultCallback = GenePool.#typeOf
+
+  /** Creates new instance of {@link GenePool}.
+   * <p>
+   * If first parameter is a function, it becomes the default {@link GeneCallback|callback} function.
+   * All other parameters (including the first, if not a function) are registered as {@link Gene}s
+   * with the default {@link GeneCallback|callback} function set as {@link GeneCallback|callback} function .
+   * <p>
+   * should never throw
+   * @param  {...any} params
+   */
   constructor(...params) {
-    while (params.length > 0) {
-      let name = params.shift()
-      if (typeof name != "string")
-        throw new TypeError(
-          `function 'Genes.constructor'${NL}parameter '${name}' is not of type 'String'`
-        )
-      this.#genes[name] = new Gene(name, Genes.#typeOf)
-    }
+    if (params.length > 0 && typeof params[0] == "function")
+      this.#defaultCallback = params.shift()
+    while (params.length > 0) this.add(params.shift(), this.#defaultCallback)
   }
-  allowed(type) {
-    if (typeof type != "string")
-      throw new TypeError(
-        `function 'Genes.allowed'${NL}parameter '${type}' is not of type 'String'`
+
+  /** Adds {@link ident} as new Gene with {@link cbk} as {@link GeneCallback|callback} function.
+   * <p>
+   * If {@link cbk} is undefined, the newly created {@link Gene} gets default {@link GeneCallback|callback} function
+   * as {@link GeneCallback|callback} function
+   * <p>
+   * The newly created {@link Gene} is returned. <br>
+   * If {@link cbk} is already set, it is not changed, but returned at it is.
+   * @param {*} ident
+   * @param {Function|undefined} cbk
+   * @throws TypeError - does not catch from {@link @Gene|Gene.constructor}, which
+   * throws if {@link cbk} is no function
+   * @returns {Gene}
+   */
+  add(ident, cbk) {
+    if (this.#genes[ident] == undefined)
+      this.#genes[ident] = new Gene(
+        ident,
+        cbk == undefined ? this.#defaultCallback : cbk
       )
-    return this.#genes[type] != undefined
+    return this.#genes[ident]
   }
-  is(v, type) {
-    if (!this.allowed(type))
-      throw new TypeError(
-        `function 'Genes.is'${NL}parameter '${type}' is no allowed type.\
-      ${NL}allowed types are: ${Object.keys(this.#genes)}`
-      )
-    return this.#genes[type].isA(v)
+
+  /** Returns whether {@link ident} contained in this pool.
+   * @param {*} ident
+   * @returns {Boolean}
+   */
+  has(ident) {
+    return this.#genes[ident] != undefined
   }
+
+  /** Returns whether {@link v} fulfills {@link ident}s requirements as {@link Gene}.
+   * @param {*} v
+   * @param {*} ident
+   * @returns {Boolean}
+   */
+  is(v, ident) {
+    if (!this.has(ident)) return false
+    else return this.#genes[ident].isA(v)
+  }
+
   //prettier-ignore
   static test(outputObj) {
     let _ = null
-    if(_ = new TestSuite("Genes", outputObj)) {
+    if(_ = new TestSuite("GenePool", outputObj)) {
       _.run(constructorTest)
-      _.run(allowedTest)
+      _.run(addTest)
+      _.run(hasTest)
       _.run(isTest)
       _.destruct()
       _ = null
@@ -1245,45 +1302,53 @@ class Genes {
       _.assert(3,_tryConstruct2,"String","Number","should construct")
       _.assert(4,_tryConstruct3,"String","Number","Boolean","should construct")
       _.assert(5,_tryConstruct4,"String","Number","Boolean","Function","should construct")
-      _.shouldAssert(12,_tryConstruct1,{},"should not construct")
-      _.shouldAssert(13,_tryConstruct2,"String",{},"should not construct")
-      _.shouldAssert(14,_tryConstruct3,"String","Number",{},"should not construct")
-      _.shouldAssert(15,_tryConstruct4,{},"Number","Boolean","Function","should not construct")
+      _.assert(12,_tryConstruct1,{},"should construct")
+      _.assert(13,_tryConstruct2,"String",{},"should construct")
+      _.assert(14,_tryConstruct3,"String","Number",{},"should construct")
+      _.assert(15,_tryConstruct4,{},"Number","Boolean","Function","should construct")
     }
-    function allowedTest() {
-      let ess1 = new Genes("Number")
-      _.bassert(1,ess1.allowed("Number"),"'Number' was given to constructor")
-      _.bassert(2,!ess1.allowed("number"),"'number' was not given to constructor")
-      _.bassert(3,!ess1.allowed("string"),"'string' was not given to constructor")
-      _.shouldAssert(4,_tryAllowed0,ess1,"undefined argument not accepted")
-      _.shouldAssert(5,_tryAllowed1,ess1,{},"'{}' is no string argument")
+    function addTest() {
+      let gns = new GenePool("Number")
+      let gn = gns.add("Number")
+      let gn2
+      function cbk() { return false}
+      _.bassert(1, gn = gns.add("Number"),"Trying to add existing Gene should return it")
+      _.bassert(2, gn.ident == "Number", "The added Gene should be returned")
+      _.bassert(3, gn2 = gns.add("String"),"Adding new Gene should return it")
+      _.bassert(4, gn2.ident == "String", "The added Gene should be returned")
+      _.assert(5,_tryAdd,gns,22,cbk,"Adding Gene with no string as ident should work")
+      _.shouldAssert(6,_tryAdd,gns,"abc",22,"Adding Gene with no function as callback should throw")
+    }
+    function hasTest() {
+      let gns = new GenePool("Number")
+      _.bassert(1,gns.has("Number"),"'Number' was given to constructor")
+      _.bassert(2,!gns.has("number"),"'number' was not given to constructor")
+      _.bassert(3,!gns.has("string"),"'string' was not given to constructor")
+      _.bassert(4,!gns.has(),"undefined argument is no allowed type")
+      _.bassert(5,!gns.has({}),"'{}' as no string argument is no allowed type")
     }
     function isTest() {
-      let ess1 = new Genes("Number")
-      _.bassert(1,ess1.is(22,"Number"),"22 is Number")
-      _.bassert(2,!ess1.is({},"Number"),"'{}' is no Number")
-      _.shouldAssert(3,_tryIs0,ess1,"no arguments given")
-      _.shouldAssert(4,_tryIs1,ess1,{},"2nd argument not given")
-      _.shouldAssert(5,_tryIs2,ess1,{},{},"2nd argument no string")
-      _.shouldAssert(6,_tryIs2,ess1,22,"String","2nd argument no allowed type")
+      let gns = new GenePool("Number")
+      _.bassert(1,gns.is(22,"Number"),"22 is Number")
+      _.bassert(2,!gns.is({},"Number"),"'{}' is no Number")
+      _.bassert(3,!gns.is(),"no arguments given should return false")
+      _.bassert(4,!gns.is({}),"2nd argument not given should return false")
+      _.bassert(5,!gns.is({},{}),"2nd argument not a string should return false")
+      _.bassert(6,!gns.is({},"String"),"2nd argument not allowed type should return false")
     }
-    function _tryConstruct0() { new Genes() }
-    function _tryConstruct1(a) { new Genes(a) }
-    function _tryConstruct2(a,b) { new Genes(a,b) }
-    function _tryConstruct3(a,b,c) { new Genes(a,b,c) }
-    function _tryConstruct4(a,b,c,d) { new Genes(a,b,c,d) }
-    function _tryAllowed0(ess,) {ess.allowed()}
-    function _tryAllowed1(ess,arg1) {ess.allowed(arg1)}
-    function _tryIs0(ess) {ess.is()}
-    function _tryIs1(ess,arg1) {ess.is(arg1)}
-    function _tryIs2(ess,arg1,arg2) {ess.is(arg1,arg2)}
+    function _tryConstruct0() { new GenePool() }
+    function _tryConstruct1(a) { new GenePool(a) }
+    function _tryConstruct2(a,b) { new GenePool(a,b) }
+    function _tryConstruct3(a,b,c) { new GenePool(a,b,c) }
+    function _tryConstruct4(a,b,c,d) { new GenePool(a,b,c,d) }
+    function _tryAdd(genes, arg1, arg2) {genes.add(arg1, arg2)}
   }
 }
-registeredTests.push(Genes.test)
-registeredExceptions.push("new Genes(4)")
-registeredExceptions.push("new Genes().allowed({})")
-registeredExceptions.push("new Genes().is(cnt,{})")
-registeredExceptions.push("new Genes().is(cnt,'number')")
+registeredTests.push(GenePool.test)
+registeredExceptions.push("new GenePool().addGene('noGene')")
+const guardianPool = new GenePool(clsCbk, Gene, GenePool)
+//prettier-ignore
+aut(`Is guardianPool a Gene? - '${guardianPool.is(guardianPool,Gene)}'. Is guardianPool a GenePool? - '${guardianPool.is(guardianPool,GenePool)}'.`)
 
 // UserType: String, Number, Boolean, Function
 // Gene: string,number,boolean,function
@@ -1298,11 +1363,11 @@ registeredExceptions.push("new Genes().is(cnt,'number')")
  * aliases are unique. Case matters. ('String' is not the same as 'string'). No
  * alias can have a name a gene has and vice versa.
  */
-class XGenes {
+class XGenePool {
   constructor() {}
 }
 
-class Essence extends Genes {
+class Essence extends GenePool {
   get ROOT() {
     return this[Essence.#pre + "ROOT"]
   }
