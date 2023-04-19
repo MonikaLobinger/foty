@@ -70,8 +70,8 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
  * Usage<br>
  * =====<br>
  * Different parts of codes are in different regions.
- * A region starts with //#region REGIONNAME or //# regionname
- * and it ends with //#endregion REGIONNAME or //#endregion regionname
+ * A region starts with //#region REGION_NAME or //# REGION_NAME
+ * and it ends with //#endregion REGION_NAME or //#endregion REGION_NAME
  * Regions can be nested.
  * Using Visual Studio Code (and perhaps other source code editors) regions
  * marked this way can be folded for convenience.
@@ -82,22 +82,22 @@ module.exports = main // templater call: "await tp.user.foty(tp, app)"
 //#region CONFIGURATION
 // This region simulates a configuration dialog
 // It contains a configuration defining section, which user would never
-// see in a configuration dialog, so it is named DONTTOUCH.
+// see in a configuration dialog, so it is named DO_NOT_TOUCH.
 // And it contains the value section, which user can edit, so it is
 // named USER CONFIGURATION.
 //
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Only make changes in region USER CONFIGURATION
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//  #region DONTTOUCH
+//  #region DO_NOT_TOUCH
 /**@ignore */
-function aliasCbk(tp, notename, type) {
-  let alias = notename
+function aliasCbk(tp, noteName, type) {
+  let alias = noteName
   if (type != "ort" && type != "person") {
-    alias = notename.replace(/,/g, ` `).replace(/  /g, ` `)
+    alias = noteName.replace(/,/g, ` `).replace(/  /g, ` `)
   } else {
     // ort, person
-    alias = notename.replace(/, /g, `,`)
+    alias = noteName.replace(/, /g, `,`)
     let strArr = alias.split(",")
     alias = strArr[0]
     strArr.shift()
@@ -109,23 +109,23 @@ function aliasCbk(tp, notename, type) {
   }
   return alias
 }
-function tagsCbk(tp, notename, type) {
+function tagsCbk(tp, noteName, type) {
   return "0/" + type
 }
-function createdCbk(tp, notename, type) {
+function createdCbk(tp, noteName, type) {
   return tp.date.now()
 }
-function cssClassCbk(tp, notename, type) {
+function cssClassCbk(tp, noteName, type) {
   return type
 }
-//  #endregion DONTTOUCH
+//  #endregion DO_NOT_TOUCH
 //  #region USER CONFIGURATION
 //  #endregion USER CONFIGURATION
 //  #region test configurations
 /**
  * Defaults
- * __DIALOGSETTINGS: ONCE: true,
- * __NOTETYPES: ONCE: true, REPEAT: true
+ * __DIALOG_SETTINGS: ONCE: true,
+ * __NOTE_TYPES: ONCE: true, REPEAT: true
  * __FOLDER2TYPE: ONCE: true, REPEAT: true
  *
  * __SPEC:
@@ -142,12 +142,12 @@ function cssClassCbk(tp, notename, type) {
  */
 //prettier-ignore
 const vTest = {ROOT:true, __:"...",
-  __DIALOGSETTINGS: {ONCE:true, __:"...",
+  __DIALOG_SETTINGS: {ONCE:true, __:"...",
     TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
     TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
     TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
   },
-  __NOTETYPES: {ONCE:true,REPEAT:true, __:"...",
+  __NOTE_TYPES: {ONCE:true,REPEAT:true, __:"...",
     DEFAULTS: {
       MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
       DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
@@ -192,12 +192,12 @@ __FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
 }
 //prettier-ignore
 const wTest = {
-  __DIALOGSETTINGS: {__SPEC: {__ONCE:true},
+  __DIALOG_SETTINGS: {__SPEC: {__ONCE:true},
     TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
     TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
     TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
   },
-  __NOTETYPES: {ONCE:true,REPEAT:true, __:"...",
+  __NOTE_TYPES: {ONCE:true,REPEAT:true, __:"...",
     DEFAULTS: {
       MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
       DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
@@ -241,7 +241,7 @@ __FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
   },
 }
 const xTest = {
-  __DIALOGSETTINGS: {
+  __DIALOG_SETTINGS: {
     TYPE_PROMPT: "Typ wählen" /* String */,
     TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
     TITLE_NEW_FILE: ["Unbenannt", "Untitled"] /* String or Array of Strings */,
@@ -250,7 +250,7 @@ const xTest = {
     /* Values are  String or Array of Strings */ test: "diary",
     "/": ["citation", "diary"],
   },
-  __NOTETYPES: {
+  __NOTE_TYPES: {
     __DEFAULTS: {
       // Overwrites the hardcoded defaults
       /* String */ MARKER: "",
@@ -434,7 +434,7 @@ var DEBUG = true
 /** For testing purpose.
  * @type {Boolean}
  */
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -457,7 +457,13 @@ if (CHECK_ERROR_OUTPUT) {
 function letAllThrow(YAML) {
   if (!CHECK_ERROR_OUTPUT) return
   let cnt = 0
-  /*01*/try{Gene.isA(1,"NonType")}catch(e){errOut(e,YAML,++cnt)}
+  function cbk() {return false}
+  /*01*/try{new Gene(2,cbk)}catch(e){errOut(e,YAML,++cnt)}
+  /*02*/try{new Gene("name",3)}catch(e){errOut(e,YAML,++cnt)}
+  /*03*/try{new Genes(4)}catch(e){errOut(e,YAML,++cnt)}
+  /*04*/try{new Genes().allowed({})}catch(e){errOut(e,YAML,++cnt)}
+  /*05*/try{new Genes().is(cnt,{})}catch(e){errOut(e,YAML,++cnt)}
+  /*06*/try{new Genes().is(cnt,"number")}catch(e){errOut(e,YAML,++cnt)}
 }
 
 /** Logs all parameters to console, if {@link DEBUG} is set to true.
@@ -576,7 +582,7 @@ class FotyError extends Error {
     this.caller = caller
   }
 }
-/** Shorthand for {@link FotyError.nl} */
+/** shorthand for {@link FotyError.nl} */
 let NL = FotyError.nl
 /** @classdesc User error thrown from setting tree.
  * <p>
@@ -1082,289 +1088,159 @@ registeredTests.push(Dispatcher.test)
  * @returns {Boolean}
  */
 
-/** @classdesc Genes are types used in this application.
- * <p>
- * All genes have to be registered. There are no hardcoded genes. Only
- * <code>{@link Gene.NO_GENE}</code> is registered hardCoded
- * <p>
- * A gene can have an alias, even more than one. Names of genes and names of
- * aliases are unique. Case matters. ('String' is not the same as 'string'). No
- * alias can have a name a gene has and vice versa.
- * <p>
- * Every gene has a callback function associated with it. The default callback
- * function is
- * '<code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof}</code>
- * variable == {@link Gene}' . {@link Gene.isA} calls this callback.
- * <p>
- * No constructor is defined. All functionality is static. {@link Gene}s are managed
- * via registration. They are {@link String}s, but not every {@link String} is
- * a {@link Gene}.
- * <p>
- * <b>Why this name? </b>
- * Many types of types we have to deal with. Therefore another name for 'allowed
- * types' was searched for. It should be short, have a meaning near to
- * 'very basic' and it should reasonable not be used further in the code, so
- * that name is replaceable throughout whole file, if another one would be
- * chosen.
- */
 class Gene {
-  static #registeredGenes = {}
-  static #aliases = {}
-  static #NO_GENE = "noGene"
-  /** default isOfTypeCallback
-   * @param {*} v
-   * @param {Gene} gene
-   * @returns {Boolean}
-   */
+  #cbk
+  #name
+  get name() {
+    return this.#name
+  }
   static #typeOf(v, gene) {
-    return typeof v == gene
+    return typeof v == gene.name
   }
-  /** The 'no gene' identification.
-   * <p>
-   * As shorthand {@link NO} can be used.<br>
-   * @type {String}
-   */
-  static get NO_GENE() {
-    return Gene.#NO_GENE
-  }
-  /** Registers {@link gene} if not yet registered and returns true, false else.
-   * <p>
-   * Does not register {@link name} it if is registered as {@link Gene} or as alias.
-   * Does not register {@link name} if it is no String. Returns false in this case.
-   * @param {String} gene
-   * @param {isOfTypeCallback} cbk - if undefined typeof {@link v} == {@link name} is used
-   * @returns {Boolean}
-   */
-  static register(name, cbk) {
-    if (typeof name != "string") return false
-    let answ = false
-    let fu = cbk == undefined ? Gene.#typeOf : cbk
-    if (!Gene.#nameExists(name)) {
-      Gene.#registeredGenes[name] = fu
-      answ = true
-    }
-    return answ
-  }
-  /** Registers an alias for a existing gene, it it does not exist and returns
-   * true. Returns false otherwise. Returns false on wrong parameter types
-   * @param {String} name
-   * @param {String} gene
-   * @returns {Boolean}
-   */
-  static registerAs(name, gene) {
-    if (typeof name != "string" || typeof gene != "string") return false
-    let answ = false
-    if (!Gene.#nameExists(name) && Gene.isRegistered(gene)) {
-      Gene.#aliases[name] = gene
-      answ = true
-    }
-    return answ
-  }
-  /** Unregisters {@link gene} if registered and returns true, false else.
-   * <p>
-   * {@link gene} is unregistered even if aliases for it exist, they will be
-   * removed
-   * If {@link gene} is an alias, only that alias is removed, true will be
-   * returned
-   * @param {String} gene
-   * @returns {Boolean}
-   */
-  static unRegister(gene) {
-    if (typeof gene != "string") return false
-    let answ = false
-    if (Gene.#registeredGenes[gene] != undefined) {
-      delete Gene.#registeredGenes[gene]
-      answ = true
-    }
-    for (const [alias, value] of Object.entries(Gene.#aliases))
-      if (value == gene) {
-        delete Gene.#aliases[alias]
-        answ = true
-      }
-    return answ
-  }
-  /** Returns whether {@link name} is registered gene or alias.
-   * @param {String} name
-   * @returns {Boolean}
-   */
-  static isRegistered(name) {
-    if (typeof name != "string") return false
-    return Gene.#nameExists(name)
-  }
-  /** Returns {@link Gene} for {@link name} if registered or alias, {@link Gene.NO_GENE} else
-   * <p>
-   * If {@link name} is registered {@link Gene}, {@link name} is returned,
-   * if an alias is registered, the {@link Gene} it is bound to is returned,
-   * if none of both is true, {@link Gene.NO_GENE} is returned
-   * <p>
-   * As shorthand {@link G} can be used.<br>
-   * @param {String} name
-   * @returns {String}
-   */
-  static gene(name) {
-    if (typeof name != "string") return Gene.#NO_GENE
-    return Gene.#aliases[name] != undefined
-      ? Gene.#aliases[name]
-      : Gene.#nameExists(name)
-      ? name
-      : Gene.#NO_GENE
-  }
-  /** Returns whether {@link v} fulfills {@link gene}'s requirements
-   * <p>
-   * In the use case {@link Gene} was written for, this means, if {@link v} is
-   * of type {@link gene}. This is checked with the callback function of
-   * {@link gene}, so other use cases are possible.
-   * @param {*} v
-   * @param {Gene} gene
-   * @returns {Boolean}
-   * @throws TypeError - if {@link gene} is no {@link Gene}
-   */
-  static isA(v, name) {
-    if (!Gene.#nameExists(name))
+  constructor(name, cbk) {
+    if (typeof name != "string")
       throw new TypeError(
-        `function 'Gene.isA'${NL}2nd parameter '${name}' is not of type 'Gene'`
+        `function 'Gene.constructor'${NL}1st parameter '${name}' is not of type 'String'`
       )
-    return Gene.#registeredGenes[Gene.gene(name)](v, Gene.gene(name))
+    if (cbk != undefined && typeof cbk != "function")
+      throw new TypeError(
+        `function 'Gene.constructor'${NL}2nd parameter '${cbk}' is not of type 'Function'`
+      )
+    this.#name = name
+    this.#cbk = cbk == undefined ? Gene.#typeOf : cbk
   }
-  static #nameExists(name) {
-    return (
-      Gene.#registeredGenes[name] != undefined ||
-      Gene.#aliases[name] != undefined
-    )
+  is(v) {
+    return this.#cbk(v, this)
   }
-  // prettier-ignore
+  //prettier-ignore
   static test(outputObj) {
     let _ = null
     if(_ = new TestSuite("Gene", outputObj)) {
-      _.run(registerTest)
-      _.run(registerAsTest)
-      _.run(unRegisterTest)
-      _.run(isRegisteredTest)
-      _.run(geneTest)
-      _.run(GTest)
-      _.run(NOTest)
-      _.run(isATest)
+      _.run(constructorTest)
+      _.run(isTest)
       _.destruct()
       _ = null
     }
-    function registerTest() {
-      let name = "abc"
-      let alias = "uv_wx"
-      _.bassert(1,!Gene.register(22),"should register '22', as it is no 'String' and return true")
-      _.bassert(2,Gene.register(name),"should register and return true")
-      _.bassert(3,!Gene.register(name),"should not register 2nd time and return false")
-      Gene.unRegister(name)
-      _.bassert(4,Gene.register(name),"after unregistration registration should succeed")
-      Gene.registerAs(alias,name)
-      _.bassert(5,!Gene.register(alias), "registering a gene under an existing alias name should not work")
-      Gene.unRegister(name)
+    function constructorTest() {
+      function cbk() {return false}
+      _.shouldAssert(1,_tryConstruct,22,cbk,"arg1 has to be a String")
+      _.shouldAssert(2,_tryConstruct,"number",22,"arg2 has to be a Function")
+      _.assert(3,_tryConstruct,"number",undefined,"arg2 may be undefined")
+      _.assert(4,_tryConstruct,"number",cbk,"all args are ok")
     }
-    function registerAsTest() {
-      let name0 = "abc"
-      let name = "xyz"
-      let name2 = "SSS_xyz"
-      let alias = "uv_wx"
-      Gene.register(name)
-      Gene.register(name2)
-      _.bassert(1,!Gene.registerAs(22,name0),"should not register as '22' is not of type 'String'.")
-      _.bassert(2,!Gene.registerAs(alias,22),"should not register as '22' is not of type 'String'.")
-      _.bassert(3,!Gene.registerAs(alias,name0),"should not register as gene with this name does not exist.")
-      _.bassert(4,Gene.registerAs(alias,name),"should register as gene with this name exists.")
-      _.bassert(5,!Gene.registerAs(alias,name),"Second registration of same alias should not work")
-      _.bassert(6,!Gene.registerAs(alias,name2),"Second registration of same alias should not work even with other gene")
-      _.bassert(7,!Gene.registerAs(name,name),"Registration with alias which is a gene should not work")
-      _.bassert(8,!Gene.registerAs(name,name2),"Registration with alias which is a gene should not work")
-      Gene.unRegister(name2)
-      Gene.unRegister(name)
+    function isTest() {
+      function cbk(v,gene) {return typeof v == gene.name.toLowerCase()}
+      function ACbk(v,gene) {return gene.name == "Array" && typeof v == "object" && Array.isArray(v)}
+      function aCbk(v) {return typeof v == "object" && Array.isArray(v)}
+      let g = new Gene("number")
+      let G = new Gene("Number")
+      let gG = new Gene("Number",cbk)
+      let A = new Gene("Array",ACbk)
+      let a = new Gene("array",aCbk)
+      _.bassert(1,g.is(22),"22 is a number")
+      _.bassert(2,!G.is(22),"22 is not a Number")
+      _.bassert(3,gG.is(22),"22 is a Number to lowercase")
+      _.bassert(4,A.is([]),"'[]' is an Array")
+      _.bassert(5,!A.is({}),"'{}' is not an Array")
+      _.bassert(6,a.is([]),"'[]' is an Array")
+      _.bassert(7,!a.is({}),"'{}' is not an Array")
     }
-    function unRegisterTest() {
-      let name = "abc"
-      let aName = "xAbc"
-      let alias = "Xyz"
-      Gene.register(name)
-      Gene.register(aName)
-      Gene.registerAs(alias,aName)
-      _.bassert(1,!Gene.unRegister(22),"should not unregister as '22' is no 'String'")
-      _.bassert(2,Gene.unRegister(name),"should unregister and return true")
-      _.bassert(3,!Gene.unRegister(name),"should not unregister 2nd time and return false")
-      _.bassert(4,Gene.unRegister(aName),"should unregister and return true")
-      _.bassert(5,!Gene.unRegister(aName),"should not unregister 2nd time and return false")
-    }
-    function isRegisteredTest() {
-      let name0 = "abc_xyz"
-      let name = "abc"
-      Gene.register(name)
-      _.bassert(1,!Gene.isRegistered(22),"'22' should be no gene")
-      _.bassert(2,!Gene.isRegistered(name0),"should be no gene")
-      _.bassert(3,Gene.isRegistered(name),"should be gene as registered")
-      Gene.unRegister(name)
-    }
-    function geneTest() {
-      let name0 = "abc_xyz"
-      let name = "abc"
-      let alias = "xyz"
-      Gene.register(name)
-      Gene.registerAs(alias, name)
-      _.bassert(2,Gene.gene(22) == Gene.NO_GENE,"'22'should be no gene")
-      _.bassert(2,Gene.gene(name0) == Gene.NO_GENE,"should be no gene")
-      _.bassert(3,Gene.gene(name) == name,"should be a gene and return same name")
-      _.bassert(4,Gene.gene(alias) == name, "should return bound gene")
-      Gene.unRegister(name)
-    }
-    function GTest() {
-      let name0 = "abc_xyz"
-      let name = "abc"
-      let alias = "xyz"
-      Gene.registerAs(alias, name)
-      Gene.register(name)
-      _.bassert(1,G(name0) == Gene.gene(name0),"G should be short form of Gene.gene")
-      _.bassert(2,G(name) == Gene.gene(name),"G should be short form of Gene.gene")
-      _.bassert(3,G(alias) == Gene.gene(alias),"G should be short form of Gene.gene")
-      Gene.unRegister(name)
-    }
-    function NOTest() {
-      let name0 = "abc_xyz"
-      _.bassert(1,Gene.NO_GENE == NO,"NO should be short form of Gene.NO_GENE")
-      _.bassert(2,Gene.gene(name0) == NO,"NO should be short form of Gene.NO_GENE")
-    }
-    function isATest() {
-      let gene = "number"     
-      let genE = "Number"     
-      _.shouldAssert(1,_tryIsA,22,22,`'22' is not a 'String'`)
-      _.shouldAssert(2,_tryIsA,22,gene,`'$(gene)' is not registered as Gene`)
-      Gene.register(gene)
-      _.assert(3,_tryIsA,22,gene,`'$(gene)' is registered`)
-      _.bassert(4,Gene.isA(22,gene),`22 should be '$(gene)'`)
-      Gene.register(genE)
-      _.bassert(5,!Gene.isA(22,genE),`22 should not be '${genE}'`)     
-      Gene.unRegister(genE)
-      Gene.registerAs(genE,gene)
-      _.bassert(6,Gene.isA(22,genE),`22 should now be '${genE}', as it is registered as alias`)     
-      Gene.unRegister(gene)
-
-      function typeOf(v, gene) {
-        return typeof v == gene.toLowerCase()
-      }
-      Gene.register(genE, typeOf)
-      _.bassert(7,Gene.isA(22,genE),`22 should now be '${genE}', as callback function allows uppercase`)     
-      Gene.unRegister(genE)   
-    }
-    function _tryIsA(arg1, arg2) {
-      Gene.isA(arg1, arg2)
+    function _tryConstruct(arg1, arg2) {
+      new Gene(arg1,arg2)
     }
   }
 }
 registeredTests.push(Gene.test)
-/** Shorthand for {@link Gene.gene} */
-let G = Gene.gene
-/** Shorthand for {@link Gene.NO_GENE} */
-let NO = Gene.NO_GENE
 
 // UserType: String, Number, Boolean, Function
 // Gene: string,number,boolean,function
 // UserType: String, Boolean, Number, Array, Date, Frontmatter,
 //            (ut|ut),Array.<ut>,(ut|Array.<ut>)
-class Genes {}
+class XGenes {
+  constructor() {}
+}
+
+class Genes {
+  static #typeOf(v, gene) {
+    return typeof v == gene.name.toLowerCase()
+  }
+  #genes = {}
+  constructor(...params) {
+    while (params.length > 0) {
+      let name = params.shift()
+      if (typeof name != "string")
+        throw new TypeError(
+          `function 'Genes.constructor'${NL}parameter '${name}' is not of type 'String'`
+        )
+      this.#genes[name] = new Gene(name, Genes.#typeOf)
+    }
+  }
+  allowed(type) {
+    if (typeof type != "string")
+      throw new TypeError(
+        `function 'Genes.allowed'${NL}parameter '${type}' is not of type 'String'`
+      )
+    return this.#genes[type] != undefined
+  }
+  is(v, type) {
+    if (!this.allowed(type))
+      throw new TypeError(
+        `function 'Genes.is'${NL}parameter '${type}' is no allowed type.\
+      ${NL} allowed types are: ${Object.keys(this.#genes)}`
+      )
+    return this.#genes[type].is(v)
+  }
+  //prettier-ignore
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("Genes", outputObj)) {
+      _.run(constructorTest)
+      _.run(allowedTest)
+      _.run(isTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      _.assert(1,_tryConstruct0,"should construct")
+      _.assert(2,_tryConstruct1,"String","should construct")
+      _.assert(3,_tryConstruct2,"String","Number","should construct")
+      _.assert(4,_tryConstruct3,"String","Number","Boolean","should construct")
+      _.assert(5,_tryConstruct4,"String","Number","Boolean","Function","should construct")
+      _.shouldAssert(12,_tryConstruct1,{},"should not construct")
+      _.shouldAssert(13,_tryConstruct2,"String",{},"should not construct")
+      _.shouldAssert(14,_tryConstruct3,"String","Number",{},"should not construct")
+      _.shouldAssert(15,_tryConstruct4,{},"Number","Boolean","Function","should not construct")
+    }
+    function allowedTest() {
+      let ess1 = new Genes("Number")
+      _.bassert(1,ess1.allowed("Number"),"'Number' was given to constructor")
+      _.bassert(2,!ess1.allowed("number"),"'number' was not given to constructor")
+      _.bassert(3,!ess1.allowed("string"),"'string' was not given to constructor")
+      _.shouldAssert(4,_tryAllowed0,ess1,"undefined argument not accepted")
+      _.shouldAssert(5,_tryAllowed1,ess1,{},"'{}' is no string argument")
+    }
+    function isTest() {
+      let ess1 = new Genes("Number")
+      _.bassert(1,ess1.is(22,"Number"),"22 is Number")
+      _.bassert(2,!ess1.is({},"Number"),"'{}' is no Number")
+      _.shouldAssert(3,_tryIs0,ess1,"no arguments given")
+      _.shouldAssert(4,_tryIs1,ess1,{},"2nd argument not given")
+      _.shouldAssert(5,_tryIs2,ess1,{},{},"2nd argument no string")
+      _.shouldAssert(6,_tryIs2,ess1,22,"String","2nd argument no allowed type")
+    }
+    function _tryConstruct0() { new Genes() }
+    function _tryConstruct1(a) { new Genes(a) }
+    function _tryConstruct2(a,b) { new Genes(a,b) }
+    function _tryConstruct3(a,b,c) { new Genes(a,b,c) }
+    function _tryConstruct4(a,b,c,d) { new Genes(a,b,c,d) }
+    function _tryAllowed0(ess,) {ess.allowed()}
+    function _tryAllowed1(ess,arg1) {ess.allowed(arg1)}
+    function _tryIs0(ess) {ess.is()}
+    function _tryIs1(ess,arg1) {ess.is(arg1)}
+    function _tryIs2(ess,arg1,arg2) {ess.is(arg1,arg2)}
+  }
+}
+registeredTests.push(Genes.test)
 
 class Essence extends Genes {
   get ROOT() {
@@ -1525,7 +1401,6 @@ async function main(tp, app) {
   let frontmatterYAML = {}
   let renderYAML = {____: ""}
   let dbgYAML = {}
-
   if (CHECK_ERROR_OUTPUT) {
     letAllThrow(checkErrorOutputYAML)
     return checkErrorOutputYAML
