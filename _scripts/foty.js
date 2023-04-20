@@ -332,57 +332,6 @@ const green = "lightgreen"
 /** Color, to be used without quotation marks during development. */
 const gray = "silver"
 
-/** Adds error message to {@link YAML}.
- *<p>
- * Frontmatter output to current note works with 'key: value'.
- *<p>
- * In production mode a short key for e.name and another for e.message is
- * created. They are added to YAML. In every call always the same keys are used.
- *<p>
- * In testing mode short key pair in dependance of cnt is created and appended
- * to YAML.
- *
- * @param {Error} e
- * @param {Object} YAML
- * @param {(undefined|Number)} cnt
- */
-function errOut(e, YAML, cnt) {
-  let prevPad = Number.prototype.pad
-  Number.prototype.pad = function (size = 3) {
-    var s = String(this)
-    while (s.length < size) s = "0" + s
-    return s
-  }
-  let nameKey
-  let msgKey
-  if (CHECK_ERROR_OUTPUT) {
-    if (cnt == undefined) cnt = 0
-    if (e instanceof SettingError) nameKey = cnt.pad(4)
-    else if (e instanceof CodingError) nameKey = cnt.pad() + "!"
-    else nameKey = cnt.pad() + "?"
-    msgKey = cnt.pad() + "\u00A8"
-  } else {
-    if (e instanceof SettingError) nameKey = "_ERR"
-    else if (e instanceof CodingError) nameKey = "!!!!"
-    else nameKey = "????"
-    msgKey = "\u00A8\u00A8\u00A8\u00A8"
-  }
-  let msg = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
-  if (e.usrMsg != undefined && e.usrMsg.length > 0)
-    msg += "\n" + e.usrMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
-
-  if (CHECK_ERROR_OUTPUT)
-    YAML[cnt.pad()] = "---------------------------------------------------"
-  if (e instanceof FotyError) {
-    YAML[nameKey] = e.name + " in " + e.caller
-  } else {
-    YAML[nameKey] = e.name
-  }
-  YAML[msgKey] = msg
-
-  Number.prototype.pad = prevPad
-}
-
 /** Returns string of {@link inp} attribute key value pairs, one level.
  * @param {Object} inp
  * @returns {String}
@@ -468,7 +417,8 @@ function letAllThrow(YAML) {
     try {
       eval(exp)
     } catch (e) {
-      errOut(e, YAML, ++cnt)
+      if (e instanceof FotyError) e.errOut(YAML, ++cnt)
+      else FotyError.errOut(e, YAML, ++cnt)
     }
   })
 }
@@ -564,7 +514,6 @@ function vaut(vn, v, b = "yellow", c = "red") {
  * @extends external:Error
  */
 class FotyError extends Error {
-  //#region member variables
   /** Newline for multi line error messages
    * <p>
    * As shorthand {@link NL} can be used.<br>
@@ -573,7 +522,6 @@ class FotyError extends Error {
   static nl = "\n     " // for multiLine messages
 
   caller = ""
-  //#endregion member variables
   /** Constructs a FotyError instance,
    * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name}</code>
    * set to "Foty Error"
@@ -588,6 +536,67 @@ class FotyError extends Error {
     this.name = "Foty Error"
     this.caller = caller
   }
+  errOut(YAML, cnt) {
+    let prevPad = FotyError.#changePad()
+    let nameKey = this.getNameKey(cnt)
+    let msgKey = FotyError.getMsgKey(cnt)
+    let sepKey = FotyError.getSepKey(cnt)
+    if (sepKey != undefined)
+      YAML[sepKey] = "---------------------------------------------------"
+    YAML[nameKey] = this.name + " in " + this.caller
+    YAML[msgKey] = this.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
+
+    FotyError.#changePad(prevPad)
+    return [msgKey]
+  }
+  /** Adds error message to {@link YAML}.
+   *<p>
+   * Frontmatter output to current note works with 'key: value'.
+   *<p>
+   * In production mode a short key for e.name and another for e.message is
+   * created. They are added to YAML. In every call always the same keys are used.
+   *<p>
+   * In testing mode short key pair in dependance of cnt is created and appended
+   * to YAML.
+   *
+   * @param {Error} e
+   * @param {Object} YAML
+   * @param {(undefined|Number)} cnt
+   */
+  static errOut(e, YAML, cnt) {
+    let prevPad = FotyError.#changePad()
+    let nameKey = FotyError.getNameKey(cnt)
+    let msgKey = FotyError.getMsgKey(cnt)
+    let sepKey = FotyError.getSepKey(cnt)
+    FotyError.#changePad(prevPad)
+
+    if (sepKey != undefined)
+      YAML[sepKey] = "---------------------------------------------------"
+    YAML[nameKey] = e.name
+    YAML[msgKey] = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
+  }
+  getNameKey(cnt) {
+    return cnt == undefined ? "????" : cnt.pad() + "?"
+  }
+  static getNameKey(cnt) {
+    return cnt == undefined ? "????" : cnt.pad() + "?"
+  }
+  static getMsgKey(cnt) {
+    return cnt == undefined ? "\u00A8\u00A8\u00A8\u00A8" : cnt.pad() + "\u00A8"
+  }
+  static getSepKey(cnt) {
+    return cnt == undefined ? undefined : cnt.pad()
+  }
+  static #changePad(padIn) {
+    let prevPad = Number.prototype.pad
+    function pad(size = 3) {
+      var s = String(this)
+      while (s.length < size) s = "0" + s
+      return s
+    }
+    Number.prototype.pad = padIn == undefined ? pad : padIn
+    return prevPad
+  }
 }
 /** shorthand for {@link FotyError.nl} */
 let NL = FotyError.nl
@@ -599,9 +608,7 @@ let NL = FotyError.nl
  * @extends FotyError
  */
 class SettingError extends FotyError {
-  //#region member variables
   usrMsg = ""
-  //#endregion member variables
   /** Constructs a SettingError instance,
    * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name}</code>
    * set to "Setting Error"
@@ -617,6 +624,15 @@ class SettingError extends FotyError {
     super(caller, ...params)
     this.name = "Setting Error"
     this.usrMsg = usrMsg
+  }
+  errOut(YAML, cnt) {
+    cnt = cnt == undefined ? 0 : cnt
+    let msgKey = super.errOut(YAML, cnt)
+    if (this.usrMsg.length > 0)
+      YAML[msgKey] += NL + this.usrMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
+  }
+  getNameKey(cnt) {
+    return cnt == undefined ? "_ERR" : cnt.pad(4)
   }
 }
 /** @classdesc Programming error.
@@ -638,6 +654,14 @@ class CodingError extends FotyError {
   constructor(caller, ...params) {
     super(caller, ...params)
     this.name = "Coding Error"
+  }
+  errOut(YAML, cnt) {
+    cnt = cnt == undefined ? 0 : cnt
+    super.errOut(YAML, cnt)
+    YAML[cnt] += this.caller
+  }
+  getNameKey(cnt) {
+    return cnt == undefined ? "!!!!" : cnt.pad(4) + "!"
   }
 }
 
@@ -763,12 +787,12 @@ class TestSuite {
    * }
    * function first_Test() {//second_Test, third_Test
    *   let p = new Promise((resolve, reject) => {
-   *     let funame = "first_Test" //"second_Test", "third_Test"
-   *     let result = asynchronousFunction(funame).then( () => {
+   *     let fuName = "first_Test" //"second_Test", "third_Test"
+   *     let result = asynchronousFunction(fuName).then( () => {
    *       _.assert( 1, _check, result)
    *       _.assert( 2, _check, result)
    *       // destruct result (In use case it might be instance)
-   *       resolve("IN" + funame + ": Result " + result + " destructed")
+   *       resolve("IN" + fuName + ": Result " + result + " destructed")
    *     })
    *   })
    *   return p
@@ -1100,8 +1124,26 @@ registeredTests.push(Dispatcher.test)
  * @param {Gene} gene
  * @returns {Boolean}
  */
-function clsCbk(v, gene) {
+function cbkInstanceOf(v, gene) {
   return v instanceof gene.ident
+}
+/** {@link GeneCallback}, returns  '{@link v}' typeof '{@link gene.ident}'.
+ * @type {GeneCallback}
+ * @param {*} v
+ * @param {Gene} gene
+ * @returns {Boolean}
+ */
+function cbkTypeOf(v, gene) {
+  return typeof v == gene.ident
+}
+/** {@link GeneCallback}, returns whether '{@link v}' typeof '{@link gene.ident}.toLowerCase()'
+ * @type {GeneCallback}
+ * @param {*} v
+ * @param {Gene} gene
+ * @returns {Boolean}
+ */
+function cbkTypeOfLc(v, gene) {
+  return typeof v == gene.ident.toLowerCase()
 }
 
 /** @classdesc Gene is type used in this application.
@@ -1130,19 +1172,9 @@ class Gene {
     return this.#ident
   }
 
-  /** {@link GeneCallback}, returns whether typeof '{@link v}' is equal to '{@link gene.ident}'.
-   * @type {GeneCallback}
-   * @param {*} v
-   * @param {Gene} gene
-   * @returns {Boolean}
-   */
-  static #typeOf(v, gene) {
-    return typeof v == gene.ident
-  }
-
   /** Constructs a Gene instance. Throws on wrong parameter types.
    * @param {*} ident
-   * @param {GeneCallback} cbk - default is private static function {@link #typeOf},
+   * @param {GeneCallback} cbk - default is function {@link cbkTypeOf},
    *                             which compares typeof its first parameter against
    *                             {@link ident}
    * @throws TypeError
@@ -1153,7 +1185,7 @@ class Gene {
         `function 'Gene.constructor'${NL}2nd parameter '${cbk}' is not of type 'Function'`
       )
     this.#ident = ident
-    this.#cbk = cbk == undefined ? Gene.#typeOf : cbk
+    this.#cbk = cbk == undefined ? cbkTypeOf : cbk
   }
 
   /** Returns result of {@link GeneCallback}( {@link v}, {@link this} ).
@@ -1170,7 +1202,7 @@ class Gene {
     if(_ = new TestSuite("Gene", outputObj)) {
       _.run(getterIdentTest)
       _.run(constructorTest)
-      _.run(isTest)
+      _.run(isATest)
       _.destruct()
       _ = null
     }
@@ -1182,7 +1214,7 @@ class Gene {
       _.assert(3,_tryConstruct,"number",undefined,"arg2 may be undefined")
       _.assert(4,_tryConstruct,"number",cbk,"all args are ok")
     }
-    function isTest() {
+    function isATest() {
       function cbk(v,gene) {return typeof v == gene.ident.toLowerCase()}
       function ACbk(v,gene) {return gene.ident == "Array" && typeof v == "object" && Array.isArray(v)}
       function aCbk(v) {return typeof v == "object" && Array.isArray(v)}
@@ -1218,17 +1250,8 @@ registeredExceptions.push("new Gene('name',3)")
  * variable == {@link Gene#ident|Gene.ident}'.
  */
 class GenePool {
-  /** {@link GeneCallback}, returns whether typeof '{@link v}' is equal to '{@link gene.ident}.toLowerCase()'
-   * @type {GeneCallback}
-   * @param {*} v
-   * @param {Gene} gene
-   * @returns {Boolean}
-   */
-  static #typeOf(v, gene) {
-    return typeof v == gene.ident.toLowerCase()
-  }
   #genes = {}
-  #defaultCallback = GenePool.#typeOf
+  #defaultCallback = cbkInstanceOf
 
   /** Creates new instance of {@link GenePool}.
    * <p>
@@ -1240,6 +1263,9 @@ class GenePool {
    * @param  {...any} params
    */
   constructor(...params) {
+    this.addAsGene(Object, cbkInstanceOf)
+    this.addAsGene(Gene, cbkInstanceOf)
+    this.addAsGene(GenePool, cbkInstanceOf)
     if (params.length > 0 && typeof params[0] == "function")
       this.#defaultCallback = params.shift()
     while (params.length > 0)
@@ -1337,7 +1363,7 @@ class GenePool {
       _.assert(15,_tryConstruct4,{},"Number","Boolean","Function","should construct")
     }
     function addTest() {
-      let gns = new GenePool("Number")
+      let gns = new GenePool(cbkTypeOfLc,"Number")
       let gn = gns.addAsGene("Number")
       let gn2
       function cbk() { return false}
@@ -1349,7 +1375,7 @@ class GenePool {
       _.shouldAssert(6,_tryAddAsGene,gns,"abc",22,"Adding Gene with no function as callback should throw")
     }
     function hasTest() {
-      let gns = new GenePool("Number")
+      let gns = new GenePool(cbkTypeOfLc,"Number")
       _.bassert(1,gns.has("Number"),"'Number' was given to constructor")
       _.bassert(2,!gns.has("number"),"'number' was not given to constructor")
       _.bassert(3,!gns.has("string"),"'string' was not given to constructor")
@@ -1357,7 +1383,7 @@ class GenePool {
       _.bassert(5,!gns.has({}),"'{}' as no string argument is no allowed type")
     }
     function isTest() {
-      let gns = new GenePool("Number")
+      let gns = new GenePool(cbkTypeOfLc,"Number")
       _.bassert(1,gns.is(22,"Number"),"22 is Number")
       _.bassert(2,!gns.is({},"Number"),"'{}' is no Number")
       _.bassert(3,!gns.is(),"no arguments given should return false")
@@ -1365,7 +1391,7 @@ class GenePool {
       _.bassert(5,!gns.is({},{}),"2nd argument not a string should return false")
       _.bassert(6,!gns.is({},"String"),"2nd argument not allowed type should return false")
 
-      let gns2 = new GenePool("Number","Boolean","String")
+      let gns2 = new GenePool(cbkTypeOfLc,"Number","Boolean","String")
       _.bassert(11,gns2.is(["a","b","c"],"Array.<String>"),"array of strings should be recognized")
       _.bassert(12,!gns2.is(["a","b",3],"Array.<String>"),"array of strings with number should be rejected")
       _.bassert(13,gns2.is(3,"(String|Number)"),"Number should be recognized for String or Number")
@@ -1384,15 +1410,15 @@ class GenePool {
   }
 }
 registeredTests.push(GenePool.test)
-registeredExceptions.push("new GenePool().addGene('noGene')")
+registeredExceptions.push("new GenePool().addAsGene('noGene','noCbk')")
 
 /** @classdesc Essence is unrecognizable except through me.
  * Reads and stores specification attributes and removes them from literal.
  * So __SPEC becomes essence and nobody will no longer be bothered by it.
  * Essence is always there. Either as found in __SPEC or as given from parent (if one)
  * or hardcoded default. If some __SPEC entry has wrong  {@link Gene} it will be
- * {@link Essence#skipped|Essence.skipped} and parent essence or (if no parent)
- * hardcoded essence will be chosen.
+ * {@link Essence#skipped|skipped} and parent essence or (if no parent)
+ * hardcoded essence will be used.
  */
 class Essence extends GenePool {
   get ROOT() {
@@ -1448,7 +1474,13 @@ class Essence extends GenePool {
     return this.#skipped
   }
   static #pre = "__"
-  #userPool = new GenePool("String", "Number", "Boolean", "Function")
+  #userPool = new GenePool(
+    cbkTypeOfLc,
+    "String",
+    "Number",
+    "Boolean",
+    "Function"
+  )
   static #SPEC_KEY = "__SPEC"
   static #RENDER_DEFT = false
   static #TYPE_DEFT = "String"
@@ -1459,13 +1491,13 @@ class Essence extends GenePool {
   static #REPEAT_DEFT = false
   #skipped = [] //[{.name,.value,.expectedType}]
 
-  /** Creates instance, removes {@link ESSENCE.#SPEC_KEY} attribute from {@link literal}
+  /** Creates instance, removes {@link ESSENCE.#SPEC_KEY|ESSENCE.__SPEC} attribute from {@link literal}
    * @param {String} literal
    * @param {GenePool} parent
    * @throws TypeError if {@link parent} is no {@link GenePool}
    */
   constructor(literal, parent) {
-    super(clsCbk, Gene, GenePool)
+    super()
     if (parent != undefined && !this.is(parent, GenePool))
       throw new TypeError(
         `function 'Essence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
@@ -1573,6 +1605,7 @@ class Essence extends GenePool {
     if(_ = new TestSuite("Essence", outputObj)) {
       _.run(constructorTest)
       _.run(getterEssences)
+      _.run(isTest)
       _.destruct()
       _ = null
     }
@@ -1613,7 +1646,7 @@ class Essence extends GenePool {
       _.bassert(34,lit.myValue != undefined,"just to show it is still defined")
 
       _.shouldAssert(41,_tryConstruct2,{__SPEC: {RENDER:true}},new Error(),"Should not be constructed")
-      _.assert(42,_tryConstruct2,{__SPEC: {RENDER:true}},ess1,"Should be constructed")
+      _.assert(42,_tryConstruct2,{__SPEC: {RENDER:true}},ess1,"Should be constructed")    
     }
     function getterEssences() {
       let ess0 = new Essence()
@@ -1645,7 +1678,12 @@ class Essence extends GenePool {
       _.bassert(17,ess2.TYPE=="Boolean","Should be set to parent value")
       _.bassert(18,ess2.DEFAULT==false,"Should be set to parent value")
     }
-
+    function isTest() {
+      let ess1 = new Essence()
+      _.bassert(1,ess1.is(ess1,Essence),"Essence should be Essence")
+      _.bassert(2,ess1.is(ess1,GenePool),"Essence should be GenePool")
+      _.bassert(3,ess1.is(ess1,Object),"Essence should be Object")
+    }
     function _tryConstruct1(arg1) { 
       new Essence(arg1) 
     }
@@ -1657,10 +1695,189 @@ class Essence extends GenePool {
 registeredTests.push(Essence.test)
 registeredExceptions.push("new Essence({}, new Error())")
 
-class BreadCrumbs extends Essence {}
+class BreadCrumbs extends Essence {
+  static sep = " \u00BB " // breadcrumbs separator \u2192
+  #ident
+  #caller
+  #literal
+  constructor(literal, key, parent) {
+    let un
+    super(literal, parent)
+    this.addAsGene(BreadCrumbs)
+    this.#literal = literal
+    this.#ident = key
+    this.#caller = parent
+    this.throwIfNotOfType(literal, ["undefined", "Object"], un, "'literal'")
+    this.throwIfUndefined(key, "key")
+    this.throwIfNotOfType(key, ["string", "symbol"], un, "'key'")
+    //this.throwIfNotOfType(parent, ["undefined", "BreadCrumbs"], un, "'parent'")
+    if (typeof key == "symbol") this.#ident = "Symbol"
+    if (this.skipped.length) {
+      //prettier-ignore
+      let str = `Breadcrumbs: ${this.toBreadcrumbs()}
+Not all specification values had been correct. Wrong values 
+are skipped and parents setting or hardcoded default is used.
+Skipped values are: `
+      this.skipped.forEach((skip) => {
+        str += "\nName: " + skip.name
+        str += ", value: " + skip.value
+        str += ", expected type: " + skip.expectedType
+      })
+      console.log(str)
+    }
+  }
+  /** Returns line of ancestors with keys given in BreadCrumbs constructor
+   *
+   * For this instance and its ancestors keys are returned, separated by
+   * punctuation marks
+   * @returns {String}
+   */
+  toBreadcrumbs() {
+    let breadcrumbs = ""
+    let sep = ""
+    if (BC.isDefined(this.#caller)) {
+      if (typeof this.#caller.toBreadcrumbs == "function")
+        breadcrumbs += this.#caller.toBreadcrumbs()
+      else breadcrumbs += "(" + this.#caller + ")"
+      sep = BC.sep
+    }
+    breadcrumbs += sep + this.#ident
+    return breadcrumbs
+  }
+
+  /** Throws if val is strictly undefined (null is defined)
+   *
+   * Does not throw on parameter type errors
+   * @param {*} val
+   * @param {String} vName - becomes part of Error message
+   * @param {String} [fuName="constructor"] - becomes part of Error message
+   * @param {String} [msg] - becomes part of Error message
+   * @throws {SettingError}
+   */
+  throwIfUndefined(
+    val,
+    vName,
+    fuName = "constructor",
+    msg = "is undefined",
+    lastMsg = ""
+  ) {
+    if (typeof vName != "string") vName = ""
+    if (typeof fuName != "string") fuName = ""
+    if (typeof msg != "string") msg = "is undefined"
+    if (!BC.isDefined(val))
+      throw new SettingError(
+        `${this.constructor.name}.${fuName}`,
+        lastMsg,
+        `Path: ${this.toBreadcrumbs()}${NL}'${vName}' ${msg}`
+      )
+  }
+
+  /** Throws if val is not of type or of one of the entries in type array
+   *
+   * Does not throw on other parameters type errors
+   * @param {*} val
+   * @param {(Array.<String>|String)} type
+   * @param {String} [fuName="constructor"] - becomes part of Error message
+   * @param {String} [msg] - becomes part of Error message
+   * @throws {SettingError}
+   */
+  throwIfNotOfType(val, type, fuName = "constructor", msg = "", lastMsg = "") {
+    if (typeof fuName != "string") fuName = ""
+    if (typeof msg != "string") msg = "is not of type"
+    else msg += " is not of type"
+    if (Array.isArray(type)) {
+      if (
+        !type.some((t) => {
+          return BC.isOfType(val, t)
+        })
+      )
+        throw new SettingError(
+          `${this.constructor.name}.${fuName}`,
+          lastMsg,
+          `Path: ${this.toBreadcrumbs()}${BC.nl}${msg} '${type.join(" or ")}'`
+        )
+    } else if (!BC.isOfType(val, type))
+      throw new SettingError(
+        `${this.constructor.name}.${fuName}`,
+        lastMsg,
+        `Path: ${this.toBreadcrumbs()}${BC.nl}${msg} '${type}'`
+      )
+  }
+
+  /** static Returns whether val is not strictly undefined (null is defined)
+   * @param {*} val
+   * @returns {Boolean}
+   */
+  static isDefined(val) {
+    return typeof val != "undefined"
+  }
+
+  /** static Returns whether val is of js type or BreadCrumbs (+ sub) instance
+   * Returns whether val is of type, if type is js type (written in lowercase)
+   * or "Array" or "BreadCrumbs" or class name of class derived from BreadCrumbs
+   * @param {*} val
+   * @param {String} type - js types have to be written lowercase
+   *                        "Date" - Dateformat as String
+   *                        "Frontmatter" - object (with attributes)
+   *                        "Null" accepts Null
+   *                        "Array" accepts Arrays
+   *                        "Object" accepts js Object besides Null and Array
+   *                        "BreadCrumbs" accepts BreadCrumb instance
+   *                                      and subclass instance
+   *                        "Setting" accepts Setting instance
+   *                        "TypesManager" accepts TypesManager
+   *                                           instance
+   * @returns {Boolean} - true, if val is of type
+   *                      false, if val is not of type
+   *                      false, if type is not a String or no known String
+   */
+  static isOfType(val, type) {
+    if (typeof type != "string" || type.length < 1) return false
+    let answer = false
+    if (type[0].toLowerCase() == type[0]) {
+      answer = typeof val == type
+    } else if (type == "Date") {
+      if (typeof val == "string") {
+        answer = true
+      }
+    } else if (type == "Frontmatter") {
+      if (typeof val == "object") {
+        answer = true
+      }
+    } else if (typeof val == "object") {
+      //let fu = BC.#objTypes[type]
+      //if (typeof fu == "function") answer = fu(val)
+      answer = true
+    }
+    return answer
+  }
+  //prettier-ignore
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("BreadCrumbs", outputObj)) {
+      _.run(constructorTest)
+      _.run(isATest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+    }
+    function isATest() {}
+    function _tryConstruct(arg1, arg2,arg3) {
+      new BreadCrumbs(arg1,arg2,arg3)
+    }
+  }
+}
+registeredTests.push(Essence.test)
+registeredExceptions.push("new BreadCrumbs({}, undefined, undefined)")
+
+var BC = BreadCrumbs // shorthand
+new BreadCrumbs({__SPEC: {DEFAULT: true, RENDER: "WAHR"}}, "key")
 //#endregion code
 
 /** exported function
+ * <p>
+ * name does not matter for templater, but if named 'main' interferes with jsdoc
  * @param {Object} tp - templater object
  * @param {Object} app - obsidian api object
  * @returns {Object}
@@ -1679,7 +1896,7 @@ async function foty(tp, app) {
   try {
   } catch (e) {
     if (e instanceof FotyError) {
-      errOut(e, YAML)
+      e.errOut(errYAML)
       return errYAML
     } else {
       aut("RETHROWING")
