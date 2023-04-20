@@ -356,7 +356,21 @@ tr > th:last-child { border-right: 1px solid #ddd; }
 .disabled {
     color: #454545;
 }
-h4{display: table;background-color: #a9cce3;color:black;     line-height: 100%;}
+h4{display: table;background-color: #a9cce3;color:black;line-height: 100%; margin-top: 1em;margin-bottom: 0;}
 h4>span.type-signature, h5>span.signature {color: grey}
-code{background-color: #E4E4E4;}
+code{background-color: #EEEEEE;}
+article>.description {margin-left: 1em;margin-bottom:0.2em;margin-top:0;}
+article>.details {margin-left: 1em}
+article>h5 {margin-left: 1em}
+article>dl {margin-left: 1em}
+article>ul {margin-left: 1em}
+article>table {margin-left: 1em}
+/*dl {border-right: 1em solid blue;}*/
+dl:not([class]) {width: 100%; background:greenyellow;} /* Type */
+dl:not([class])>dt {float: left; width: 2em; }
+dl:not([class])>dd {float: left;}
+h5{font-size:1.1em;text-decoration: underline;}
+.details {margin-bottom:0;}
+h3 {margin-bottom:0;margin-top:2em;border-top:1px dashed black;}
+p {margin-top:0.4em; margin-bottom:0;}
 

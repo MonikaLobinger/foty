@@ -15,6 +15,7 @@
 !/_scripts
 !/_scripts/foty.js
 !/_scripts/jsdocconf.json
+!/jsdocconf.js
 !/_scripts/onne.js
 !/_scripts/static
 !/_scripts/static/styles
