@@ -1816,7 +1816,10 @@ registeredExceptions.push("new GenePool().add('noGene','noFunction')")
  * <p>
  * All known keys in the literals __SPEC object are changed to invisible and unremovable
  * properties of this instance, which represents the literal for subclass instances.
- * //@todo what does really happen? What should happen?
+ * They also are added to the literal containing the __SPEC object as invisible
+ * and unremovable properties. Those can be questioned using static get functions
+ * ({@link Essence.getDEFAULT} - {@link Essence.getTYPE})
+ * of {@link Essence}
  * <p>
  * <b>For clarity</b>
  * In fact, this is not Essence but a Essence, as it is specialized. It could be
@@ -1827,6 +1830,9 @@ registeredExceptions.push("new GenePool().add('noGene','noFunction')")
  * members used in the special essence, e.g. for this UserEssence ROOT or RENDER.
  */
 class Essence extends GenePool {
+  /** ROOT essence, set automatically
+   * @type {Boolean}
+   */
   get ROOT() {
     return this[Essence.#pre + "ROOT"]
   }
@@ -1842,7 +1848,7 @@ class Essence extends GenePool {
   get TYPE() {
     return this[Essence.#pre + "TYPE"]
   }
-  /** DEFAULT essence, individual
+  /** DEFAULT essence, individual<br>
    *  is of type given in {@link Essence#TYPE|Essence.TYPE}
    * @type {*}
    */
@@ -1898,11 +1904,14 @@ class Essence extends GenePool {
   static #REPEAT_DEFT = false
   #skipped = [] //[{.name,.value,.expectedType}]
 
-  /** Creates instance, removes {@link ESSENCE.SPEC_KEY|__SPEC} property from {@link literal}.
+  /** Creates instance, removes {@link Essence.SPEC_KEY|__SPEC} property from {@link literal}.
    * <p>
    * Adds <code>Object</code>, {@link Object},{@link Gene},{@link GenePool} and {@link Essence} as Genes with {@link cbkInstanceOf} to its pool.
    * <p>
-   * Adds {@link Essence.SPEC_KEY|__SPEC properties} from literal to this instance.
+   * Adds {@link Essence.SPEC_KEY|__SPEC properties} from {@link literal} as hidden properties
+   * to this instance and {@link literal}.
+   * Adds hidden properties with parent value (if inherited) or hardcoded default value
+   * if not given in {@link Essence.SPEC_KEY|__SPEC properties}
    * Recognized {@link Essence.SPEC_KEY|__SPEC properties} are:
    * {@link Essence#RENDER|RENDER} (inherited),
    * {@link Essence#TYPE|TYPE},
@@ -1933,89 +1942,51 @@ class Essence extends GenePool {
       )
     this.add(Essence)
 
-    let u
+    let un
     let p = parent
     let specLit = {}
-    if (literal != u) specLit = literal[Essence.#SPEC_KEY]
-    if (specLit === u) specLit = {}
-    let litREN = specLit.RENDER
-    let litTYP = specLit.TYPE
-    let litIGN = specLit.IGNORE
-    let litFLT = specLit.FLAT
-    let litONC = specLit.ONCE
-    let litREP = specLit.REPEAT
-    delete specLit.RENDER
-    delete specLit.TYPE
-    delete specLit.IGNORE
-    delete specLit.FLAT
-    delete specLit.ONCE
-    delete specLit.REPEAT
-    if (!this.#validateOrInform(litREN, "Boolean", "RENDER")) litREN = u
-    if (!this.#validateOrInform(litTYP, "String", "TYPE")) litTYP = u
-    if (!this.#validateOrInform(litIGN, "Boolean", "IGNORE")) litIGN = u
-    if (!this.#validateOrInform(litFLT, "Boolean", "FLAT")) litFLT = u
-    if (!this.#validateOrInform(litONC, "Boolean", "ONCE")) litONC = u
-    if (!this.#validateOrInform(litREP, "Boolean", "REPEAT")) litREP = u
-    let ROOT = parent != u ? false : true
-    let RENDER = litREN != u ? litREN : p != u ? p.RENDER : Essence.#RENDER_DEFT
-    let TYPE = litTYP != u ? litTYP : Essence.#TYPE_DEFT
-    let IGNORE = litIGN != u ? litIGN : p != u ? p.IGNORE : Essence.#IGNORE_DEFT
-    let FLAT = litFLT != u ? litFLT : Essence.#FLAT_DEFT
-    let ONCE = litONC != u ? litONC : Essence.#ONCE_DEFT
-    let REPEAT = litREP != u ? litREP : Essence.#REPEAT_DEFT
-    Object.defineProperty(this, Essence.#pre + "ROOT", {
-      value: ROOT,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    Object.defineProperty(this, Essence.#pre + "RENDER", {
-      value: RENDER,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    Object.defineProperty(this, Essence.#pre + "TYPE", {
-      value: TYPE,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    Object.defineProperty(this, Essence.#pre + "IGNORE", {
-      value: IGNORE,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    Object.defineProperty(this, Essence.#pre + "FLAT", {
-      value: FLAT,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    Object.defineProperty(this, Essence.#pre + "ONCE", {
-      value: ONCE,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    Object.defineProperty(this, Essence.#pre + "REPEAT", {
-      value: REPEAT,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    let litDEF = specLit.DEFAULT
-    delete specLit.DEFAULT
-    if (!this.#validateOrInform(litDEF, this.TYPE, "DEFAULT")) litDEF = u
-    let DEFT = litDEF != u ? litDEF : Essence.#DEFAULT_DEFT
-    Object.defineProperty(this, Essence.#pre + "DEFAULT", {
-      value: DEFT,
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    })
-    if (literal != u) delete literal[Essence.#SPEC_KEY]
+    if (literal != un) specLit = literal[Essence.#SPEC_KEY]
+    if (specLit === un) specLit = {}
+
+    function changeToHiddenProp(me, lit, specLit, key, type, p, def, val) {
+      let v
+      if (val != undefined) v = val
+      else {
+        let given = specLit[key]
+        // Remove it, even if at time of writing containing object will be
+        // removed, as that can change later.
+        delete specLit[key]
+        if (!me.#validateOrInform(given, type, key)) given = undefined
+        v = given != undefined ? given : p != undefined ? p[key] : def
+      }
+      // Add hidden property to me
+      Object.defineProperty(me, Essence.#pre + key, {
+        value: v,
+        writable: false,
+        configurable: false,
+        enumerable: false,
+      })
+      if (lit !== undefined)
+        // Add hidden property to containing literal
+        Object.defineProperty(lit, Essence.#pre + key, {
+          value: v,
+          writable: false,
+          configurable: false,
+          enumerable: false,
+        })
+    }
+    let hide = changeToHiddenProp
+    let lit = literal
+    hide(this, lit, specLit, "ROOT", "Boolean", p, un, parent == un)
+    hide(this, lit, specLit, "RENDER", "Boolean", p, Essence.#RENDER_DEFT)
+    hide(this, lit, specLit, "TYPE", "String", un, Essence.#TYPE_DEFT)
+    hide(this, lit, specLit, "IGNORE", "Boolean", p, Essence.#IGNORE_DEFT)
+    hide(this, lit, specLit, "FLAT", "Boolean", un, Essence.#FLAT_DEFT)
+    hide(this, lit, specLit, "ONCE", "Boolean", un, Essence.#ONCE_DEFT)
+    hide(this, lit, specLit, "REPEAT", "Boolean", un, Essence.#REPEAT_DEFT)
+    hide(this, lit, specLit, "DEFAULT", this.TYPE, un, Essence.#DEFAULT_DEFT)
+
+    if (literal != un) delete literal[Essence.#SPEC_KEY]
   }
   #validateOrInform(value, type, name) {
     let ok = value === undefined || this.#userPool.isA(value, type)
@@ -2028,6 +1999,65 @@ class Essence extends GenePool {
     }
     return ok
   }
+
+  /** ROOT essence, set automatically
+   * @param {Object} lit
+   * @type {Boolean}
+   */
+  static getROOT(lit) {
+    return lit[Essence.#pre + "ROOT"]
+  }
+  /** RENDER essence, inherited
+   * @param {Object} lit
+   * @type {Boolean}
+   */
+  static getRENDER(lit) {
+    return lit[Essence.#pre + "RENDER"]
+  }
+  /** TYPE essence, individual
+   * @param {Object} lit
+   * @type {String}
+   */
+  static getTYPE(lit) {
+    return lit[Essence.#pre + "TYPE"]
+  }
+  /** DEFAULT essence, individual<br>
+   *  is of type given in {@link Essence#TYPE|Essence.TYPE}
+   * @param {Object} lit
+   * @type {*}
+   */
+  static getDEFAULT(lit) {
+    return lit[Essence.#pre + "DEFAULT"]
+  }
+  /** IGNORE essence, inherited
+   * @param {Object} lit
+   * @type {Boolean}
+   */
+  static getIGNORE(lit) {
+    return lit[Essence.#pre + "IGNORE"]
+  }
+  /** FLAT essence, individual
+   * @param {Object} lit
+   * @type {Boolean}
+   */
+  static getFLAT(lit) {
+    return lit[Essence.#pre + "FLAT"]
+  }
+  /** ONCE essence, individual
+   * @param {Object} lit
+   * @type {Boolean}
+   */
+  static getONCE(lit) {
+    return lit[Essence.#pre + "ONCE"]
+  }
+  /** REPEAT essence, individual
+   * @param {Object} lit
+   * @type {Boolean}
+   */
+  static getREPEAT(lit) {
+    return lit[Essence.#pre + "REPEAT"]
+  }
+
   //prettier-ignore
   static test(outputObj) {
     let _ = null
@@ -2035,6 +2065,7 @@ class Essence extends GenePool {
       _.run(getterEssences)
       _.run(constructorTest)
       _.run(isATest)
+      _.run(getEssencesTest)
       _.destruct()
       _ = null
     }
@@ -2124,6 +2155,35 @@ class Essence extends GenePool {
       _.bassert(13,!ess1.isA("String","String"),"should return false for string, as not in pool")
       _.bassert(14,!ess1.isA("String","string"),"should return false for string, as not in pool")
       _.bassert(15,!ess1.isA("String",Object),"should return false as string is not an Object")
+    }
+    function getEssencesTest() {
+      let lit1 = {__SPEC: {RENDER:true,
+                           IGNORE:true,
+                           ONCE:true,
+                           FLAT:true,
+                           REPEAT:true,
+                           TYPE:"Number",
+                           DEFAULT:126 }}
+      _.bassert(0,lit1.__SPEC !== undefined, "__SPEC properties not removed")
+      _.bassert(1,Essence.getROOT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(2,Essence.getRENDER(lit1) === undefined, "Hidden properties not added")
+      _.bassert(3,Essence.getIGNORE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(4,Essence.getONCE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(5,Essence.getFLAT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(6,Essence.getREPEAT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(7,Essence.getTYPE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(8,Essence.getDEFAULT(lit1) === undefined, "Hidden properties not added")
+      new Essence(lit1)
+      _.bassert(10,lit1.__SPEC === undefined, "__SPEC properties removed")
+      _.bassert(11,Essence.getROOT(lit1) === true, "Hidden properties added")
+      _.bassert(12,Essence.getRENDER(lit1) === true, "Hidden properties added")
+      _.bassert(13,Essence.getIGNORE(lit1) === true, "Hidden properties added")
+      _.bassert(14,Essence.getONCE(lit1) === true, "Hidden properties added")
+      _.bassert(15,Essence.getFLAT(lit1) === true, "Hidden properties added")
+      _.bassert(16,Essence.getREPEAT(lit1) === true, "Hidden properties added")
+      _.bassert(17,Essence.getTYPE(lit1) === "Number", "Hidden properties added")
+      _.bassert(18,Essence.getDEFAULT(lit1) === 126, "Hidden properties added")
+      _.bassert(19,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
     }
     function _tryConstruct1(arg1) { 
       new Essence(arg1) 
