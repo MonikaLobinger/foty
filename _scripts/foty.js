@@ -347,7 +347,7 @@ var DEBUG = true
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = false
+var TESTING = true
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -719,6 +719,7 @@ class SettingError extends FotyError {
   /** prettier-ignore jsdoc shall not add caller as override
    * @ignore */ caller
 }
+
 /** @classdesc Programming error.
  * <p>
  * Some errors only can occur if code is wrong. If this is for sure,
@@ -731,7 +732,7 @@ class CodingError extends FotyError {
    * set to "Coding Error"
    *
    * @param {String} caller
-   * @param  {...any} params
+   * @param  {...*} params
    */
   constructor(caller, ...params) {
     super(caller, ...params)
@@ -926,28 +927,28 @@ class TestSuite {
   }
 
   /** asserts boolean one case in a test, shows message on failure
-   * @param {Number} errcase
+   * @param {Number} errCase
    * @param {Boolean} isTrue
    * @param {String} message
    */
-  bassert(errcase, isTrue, message) {
+  bassert(errCase, isTrue, message) {
     TestSuite.#totalCases++
     this.#cases++
     if (!isTrue) {
       this.#asserts++
       console.log(
-        `%c   ${this.#name}/${this.#fname}:case ${errcase} - ${message}`,
+        `%c   ${this.#name}/${this.#fname}:case ${errCase} - ${message}`,
         "background: rgba(255, 99, 71, 0.5)"
       )
     }
   }
 
   /** asserts catching exceptions one case in a test, shows message on failure
-   * @param {Number} errcase
+   * @param {Number} errCase
    * @param {Function} fn
-   * @param {...any} params
+   * @param {...*} params
    */
-  assert(errcase, fn, ...params) {
+  assert(errCase, fn, ...params) {
     TestSuite.#totalCases++
     this.#cases++
     try {
@@ -955,18 +956,18 @@ class TestSuite {
     } catch (err) {
       this.#asserts++
       console.log(
-        `%c   ${this.#name}/${this.#fname}:case ${errcase} - ${err.message}`,
+        `%c   ${this.#name}/${this.#fname}:case ${errCase} - ${err.message}`,
         "background: rgba(255, 99, 71, 0.5)"
       )
     }
   }
 
   /** silents exception of one testcase, asserts & shows message if no exception
-   * @param {Number} errcase
+   * @param {Number} errCase
    * @param {Function} fn
-   * @param {...any} ...params
+   * @param {...*} ...params
    */
-  shouldAssert(errcase, fn, ...params) {
+  shouldAssert(errCase, fn, ...params) {
     TestSuite.#totalCases++
     this.#cases++
     let hasAsserted = false
@@ -981,7 +982,7 @@ class TestSuite {
       console.log(
         `%c   ${this.#name}/${
           this.#fname
-        }:case ${errcase} should assert - ${message}`,
+        }:case ${errCase} should assert - ${message}`,
         "background: rgba(255, 99, 71, 0.5)"
       )
     }
@@ -1372,6 +1373,15 @@ function cbkTypeOfLc(v, gene) {
  * 'very basic' and it should reasonable not be used further in the code, so
  * that name is replaceable throughout whole file, if another one would be
  * chosen.
+ * <p>
+ * The name has a flaw though: A real gene is something, a gene here is a
+ * something definition. In other words: A real gene can be compared to another
+ * real gene, e.g whether they are equal or which of them is longer. If you want
+ * to decide (still in real world) whether those somethings to be compared are
+ * genes at all, you need a gene definition. Here in this code {@link Gene}
+ * instance fulfills the job of a gene definition in real world.
+ * In {@link Gene#is|Gene.is} you give it a something and it decides,
+ * whether it is as defined in this instance.
  */
 class Gene {
   #cbk
@@ -1414,22 +1424,68 @@ class Gene {
     if(_ = new TestSuite("Gene", outputObj)) {
       _.run(getterIdentTest)
       _.run(constructorTest)
-      _.run(isATest)
+      _.run(isTest)
       _.destruct()
       _ = null
     }
-    function getterIdentTest() {}
-    function constructorTest() {
-      function cbk() {return false}
-      _.assert(1,_tryConstruct,22,cbk,"arg1 can be of any type")
-      _.shouldAssert(2,_tryConstruct,"number",22,"arg2 has to be a Function")
-      _.assert(3,_tryConstruct,"number",undefined,"arg2 may be undefined")
-      _.assert(4,_tryConstruct,"number",cbk,"all args are ok")
+    function getterIdentTest() {
+      let idNull = null
+      let idUndE = undefined
+      let idBool = false
+      let idNumb = 22
+      let idBigI = 22n
+      let idStrI = "stringIdent"
+      let idSymB = Symbol("desc")
+      function idFunc() {return false}
+      let idObjE = new Error("df")
+
+      let gNull = new Gene(idNull)
+      let gUndE = new Gene(idUndE)
+      let gBool = new Gene(idBool)
+      let gNumb = new Gene(idNumb)
+      let gBigI = new Gene(idBigI)
+      let gStrI = new Gene(idStrI)
+      let gSymB = new Gene(idSymB)
+      let gFunc = new Gene(idFunc)
+      let gObjE = new Gene(idObjE)
+      _.bassert(1,gNull.ident == idNull,"should return what was given as ident")
+      _.bassert(2,gUndE.ident == idUndE,"should return what was given as ident")
+      _.bassert(3,gBool.ident == idBool,"should return what was given as ident")
+      _.bassert(4,gNumb.ident == idNumb,"should return what was given as ident")
+      _.bassert(5,gBigI.ident == idBigI,"should return what was given as ident")
+      _.bassert(6,gStrI.ident == idStrI,"should return what was given as ident")
+      _.bassert(7,gSymB.ident == idSymB,"should return what was given as ident")
+      _.bassert(8,gFunc.ident == idFunc,"should return what was given as ident")
+      _.bassert(8,gObjE.ident == idObjE,"should return what was given as ident")     
     }
-    function isATest() {
+    function constructorTest() {
+      let un
+      _.shouldAssert(1,_tryConstruct,"number",22,"arg2 has to be a Function")
+      _.assert(2,_tryConstruct,"number",undefined,"arg2 may be undefined")
+
+      let idNull = null
+      let idUndE = undefined
+      let idBool = false
+      let idNumb = 22
+      let idBigI = 22n
+      let idStrI = "stringIdent"
+      let idSymB = Symbol("desc")
+      function idFunc() {return false}
+      let idObjE = new Error("df")
+      _.assert(11,_tryConstruct,idNull,un,"arg1 can be null")
+      _.assert(12,_tryConstruct,idUndE,un,"arg1 can be undefined")
+      _.assert(13,_tryConstruct,idBool,un,"arg1 can be boolean")
+      _.assert(14,_tryConstruct,idNumb,un,"arg1 can be number")
+      _.assert(15,_tryConstruct,idBigI,un,"arg1 can be bigint")
+      _.assert(16,_tryConstruct,idStrI,un,"arg1 can be string")
+      _.assert(17,_tryConstruct,idSymB,un,"arg1 can be symbol")
+      _.assert(18,_tryConstruct,idFunc,un,"arg1 can be function")
+      _.assert(19,_tryConstruct,idObjE,un,"arg1 can be object")
+    }
+    function isTest() {
       function cbk(v,gene) {return typeof v == gene.ident.toLowerCase()}
-      function ACbk(v,gene) {return gene.ident == "Array" && typeof v == "object" && Array.isArray(v)}
-      function aCbk(v) {return typeof v == "object" && Array.isArray(v)}
+      function ACbk(v,gene) {return typeof v == "object" && Array.isArray(v)}
+      function aCbk(v,gene) {return gene.ident == "Array" && typeof v == "object" && Array.isArray(v)}
       let g = new Gene("number")
       let G = new Gene("Number")
       let gG = new Gene("Number",cbk)
@@ -1440,8 +1496,8 @@ class Gene {
       _.bassert(3,gG.is(22),"22 is a Number to lowercase")
       _.bassert(4,A.is([]),"'[]' is an Array")
       _.bassert(5,!A.is({}),"'{}' is not an Array")
-      _.bassert(6,a.is([]),"'[]' is an Array")
-      _.bassert(7,!a.is({}),"'{}' is not an Array")
+      _.bassert(6,!a.is([]),"'[]' nothing can be an array")
+      _.bassert(7,!a.is({}),"'{}' nothing can be an array")
     }
     function _tryConstruct(arg1, arg2) {
       new Gene(arg1,arg2)
@@ -1464,23 +1520,19 @@ class GenePool {
 
   /** Creates new instance of {@link GenePool}.
    * <p>
+   * If not set to an other value, the default {@link GeneCallback|callback} function is {@link cbkInstanceOf}.
+   * <p>
    * If first parameter is a function, it becomes the default {@link GeneCallback|callback} function.
    * All other parameters (including the first, if not a function) are registered as {@link Gene}s
    * with the default {@link GeneCallback|callback} function set as {@link GeneCallback|callback} function .
    * <p>
-   * Adds <code>Object</code>, {@link Gene} and {@link GenePool} as Genes with {@link cbkInstanceOf} to its pool.
-   * <p>
    * should never throw
-   * @param  {...any} params
+   * @param  {...*} params
    */
   constructor(...params) {
-    this.addAsGene(Object, cbkInstanceOf)
-    this.addAsGene(Gene, cbkInstanceOf)
-    this.addAsGene(GenePool, cbkInstanceOf)
     if (params.length > 0 && typeof params[0] == "function")
       this.#defaultCallback = params.shift()
-    while (params.length > 0)
-      this.addAsGene(params.shift(), this.#defaultCallback)
+    while (params.length > 0) this.add(params.shift(), this.#defaultCallback)
   }
 
   /** Adds {@link ident} as new Gene with {@link cbk} as {@link GeneCallback|callback} function.
@@ -1496,7 +1548,7 @@ class GenePool {
    * throws if given {@link cbk} is no function
    * @returns {Gene}
    */
-  addAsGene(ident, cbk) {
+  add(ident, cbk) {
     if (this.#genes[ident] == undefined)
       this.#genes[ident] = new Gene(
         ident,
@@ -1514,6 +1566,8 @@ class GenePool {
   }
 
   /** Returns whether {@link v} fulfills {@link ident}s requirements as {@link Gene}.
+   * <p>
+   * Returns false, if {@link ident} is no {@link Gene} of this pool.
    * <p>
    * {@link ident}s, which are strings, compounds {@link ident}s are possible:<br>
    * - ({@link ident1}|{@link ident2}|{@link ident3})<br>
@@ -1563,35 +1617,117 @@ class GenePool {
       _ = null
     }
     function constructorTest() {
-      _.assert(1,_tryConstruct0,"should construct")
-      _.assert(2,_tryConstruct1,"String","should construct")
-      _.assert(3,_tryConstruct2,"String","Number","should construct")
-      _.assert(4,_tryConstruct3,"String","Number","Boolean","should construct")
-      _.assert(5,_tryConstruct4,"String","Number","Boolean","Function","should construct")
-      _.assert(12,_tryConstruct1,{},"should construct")
-      _.assert(13,_tryConstruct2,"String",{},"should construct")
-      _.assert(14,_tryConstruct3,"String","Number",{},"should construct")
-      _.assert(15,_tryConstruct4,{},"Number","Boolean","Function","should construct")
+      let idNull = null
+      let idUndE = undefined
+      let idBool = false
+      let idNumb = 22
+      let idBigI = 22n
+      let idStrI = "stringIdent"
+      let idSymB = Symbol("desc")
+      function idFunc() {return false}
+      let idObjE = new Error("df")
+      _.assert(1,_tryConstruct1,idNull,"should construct, any id allowed")
+      _.assert(2,_tryConstruct1,idUndE,"should construct, any id allowed")
+      _.assert(3,_tryConstruct1,idBool,"should construct, any id allowed")
+      _.assert(4,_tryConstruct1,idNumb,"should construct, any id allowed")
+      _.assert(5,_tryConstruct1,idBigI,"should construct, any id allowed")
+      _.assert(6,_tryConstruct1,idStrI,"should construct, any id allowed")
+      _.assert(7,_tryConstruct1,idSymB,"should construct, any id allowed")
+      _.assert(8,_tryConstruct2,"abc",idFunc,"should construct, any id allowed")
+      _.assert(9,_tryConstruct1,idObjE,"should construct, any id allowed")
+
+      _.assert(21,_tryConstruct0,"should construct")
+      _.assert(22,_tryConstruct2,"String","Number","should construct")
+      _.assert(23,_tryConstruct3,"String","Number","Boolean","should construct")
+      _.assert(24,_tryConstruct4,"String","Number","Boolean","Function","should construct")
+      _.assert(25,_tryConstruct1,{},"should construct")
+      _.assert(26,_tryConstruct2,"String",{},"should construct")
+      _.assert(27,_tryConstruct3,"String","Number",{},"should construct")
+      _.assert(28,_tryConstruct4,{},"Number","Boolean","Function","should construct")
     }
     function addTest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
-      let gn = gns.addAsGene("Number")
+      let gn = gns.add("Number")
       let gn2
-      function cbk() { return false}
-      _.bassert(1, gn = gns.addAsGene("Number"),"Trying to add existing Gene should return it")
-      _.bassert(2, gn.ident == "Number", "The added Gene should be returned")
-      _.bassert(3, gn2 = gns.addAsGene("String"),"Adding new Gene should return it")
-      _.bassert(4, gn2.ident == "String", "The added Gene should be returned")
-      _.assert(5,_tryAddAsGene,gns,22,cbk,"Adding Gene with no string as ident should work")
-      _.shouldAssert(6,_tryAddAsGene,gns,"abc",22,"Adding Gene with no function as callback should throw")
+      _.bassert(1, gn = gns.add("Number"),"Trying to add existing Gene should return it")
+      _.bassert(2, gn.ident == "Number", "The existing Gene should be returned")
+      _.shouldAssert(3,_tryAdd,gns,"abc",22,"Adding Gene with no function as callback should throw")
+
+      let idNull = null
+      let idUndE = undefined
+      let idBool = false
+      let idNumb = 22
+      let idBigI = 22n
+      let idStrI = "stringIdent"
+      let idSymB = Symbol("desc")
+      function idFunc() {return false}
+      let idObjE = new Error("df")
+      let gnNull
+      let gnUndE
+      let gnBool
+      let gnNumb
+      let gnBigI
+      let gnStrI
+      let gnSymB
+      let gnFunc
+      let gnObjE
+      _.bassert(11, gnNull = gns.add(idNull),"null should be added")
+      _.bassert(12, gnUndE = gns.add(idUndE),"null should be added")
+      _.bassert(13, gnBool = gns.add(idBool),"null should be added")
+      _.bassert(14, gnNumb = gns.add(idNumb),"null should be added")
+      _.bassert(15, gnBigI = gns.add(idBigI),"null should be added")
+      _.bassert(16, gnStrI = gns.add(idStrI),"null should be added")
+      _.bassert(17, gnSymB = gns.add(idSymB),"null should be added")
+      _.bassert(18, gnFunc = gns.add(idFunc),"null should be added")
+      _.bassert(19, gnObjE = gns.add(idObjE),"null should be added")
+
+
+      _.bassert(21, gnNull.ident == idNull,"The added Gene should be added")
+      _.bassert(22, gnUndE.ident == idUndE,"The added Gene should be added")
+      _.bassert(23, gnBool.ident == idBool,"The added Gene should be added")
+      _.bassert(24, gnNumb.ident == idNumb,"The added Gene should be added")
+      _.bassert(25, gnBigI.ident == idBigI,"The added Gene should be added")
+      _.bassert(26, gnStrI.ident == idStrI,"The added Gene should be added")
+      _.bassert(27, gnSymB.ident == idSymB,"The added Gene should be added")
+      _.bassert(28, gnFunc.ident == idFunc,"The added Gene should be added")
+      _.bassert(29, gnObjE.ident == idObjE,"The added Gene should be added")
     }
     function hasTest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
       _.bassert(1,gns.has("Number"),"'Number' was given to constructor")
       _.bassert(2,!gns.has("number"),"'number' was not given to constructor")
       _.bassert(3,!gns.has("string"),"'string' was not given to constructor")
-      _.bassert(4,!gns.has(),"undefined argument is no allowed type")
-      _.bassert(5,!gns.has({}),"'{}' as no string argument is no allowed type")
+      _.bassert(4,!gns.has(),"undefined is not given to constructor")
+      _.bassert(5,!gns.has({}),"'{}' is not given to constructor")
+
+      let idNull = null
+      let idUndE = undefined
+      let idBool = false
+      let idNumb = 22
+      let idBigI = 22n
+      let idStrI = "stringIdent"
+      let idSymB = Symbol("desc")
+      function idFunc() {return false}
+      let idObjE = new Error("df")
+      let gns2 = new GenePool()
+      gns2.add(idNull)
+      gns2.add(idUndE)
+      gns2.add(idBool)
+      gns2.add(idNumb)
+      gns2.add(idBigI)
+      gns2.add(idStrI)
+      gns2.add(idSymB)
+      gns2.add(idFunc)
+      gns2.add(idObjE)
+      _.bassert(11,gns2.has(idNull), "id had been added")
+      _.bassert(12,gns2.has(idUndE), "id had been added")
+      _.bassert(13,gns2.has(idBool), "id had been added")
+      _.bassert(14,gns2.has(idNumb), "id had been added")
+      _.bassert(15,gns2.has(idBigI), "id had been added")
+      _.bassert(16,gns2.has(idStrI), "id had been added")
+      _.bassert(17,gns2.has(idSymB), "id had been added")
+      _.bassert(18,gns2.has(idFunc), "id had been added")
+      _.bassert(19,gns2.has(idObjE), "id had been added")
     }
     function isATest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
@@ -1611,17 +1747,56 @@ class GenePool {
       _.bassert(16,gns2.isA(["a","b","c"],"(String|Array.<String>)"),"array of strings should be recognized for String or Array of Strings")
       _.bassert(17,gns2.isA("a","(String|Array.<String>)"),"String should be recognized for String or Array of Strings")
       _.bassert(18,gns2.isA(2,"(Number|Array.<String>)"),"Number should be recognized for Number or Array of Strings")      
+
+      let idNull = null
+      let idUndE = undefined
+      let idBool = false
+      let idNumb = 22
+      let idBigI = 22n
+      let idStrI = "stringIdent"
+      let idSymB = Symbol("desc")
+      function idFunc() {return false}
+      let idObjE = new Error("df")
+      let gns3 = new GenePool()
+      function cbkNull(v, gene) {return typeof(v == "object" && v == undefined)}
+      function cbkUndE(v, gene) {return typeof(v == "undefined")}
+      function cbkBool(v, gene) {return typeof(v == "boolean")}
+      function cbkNumb(v, gene) {return typeof(v == "number")}
+      function cbkBigI(v, gene) {return typeof(v == "bigint")}
+      function cbkStrI(v, gene) {return typeof(v == "string")}
+      function cbkSymB(v, gene) {return typeof(v == "symbol")}
+      function cbkFunc(v, gene) {return typeof(v == "function")}
+      function cbkObjE(v, gene) {return typeof(v == "object")}
+      gns3.add(idNull,cbkNull)
+      gns3.add(idUndE,cbkUndE)
+      gns3.add(idBool,cbkBool)
+      gns3.add(idNumb,cbkNumb)
+      gns3.add(idBigI,cbkBigI)
+      gns3.add(idStrI,cbkStrI)
+      gns3.add(idSymB,cbkSymB)
+      gns3.add(idFunc,cbkFunc)
+      gns3.add(idObjE,cbkObjE)
+      
+      _.bassert(21,gns3.isA(idNull,idNull), "should be a, see cbk")
+      _.bassert(22,gns3.isA(idUndE,idUndE), "should be a, see cbk")
+      _.bassert(23,gns3.isA(idBool,idBool), "should be a, see cbk")
+      _.bassert(24,gns3.isA(idNumb,idNumb), "should be a, see cbk")
+      _.bassert(25,gns3.isA(idBigI,idBigI), "should be a, see cbk")
+      _.bassert(26,gns3.isA(idStrI,idStrI), "should be a, see cbk")
+      _.bassert(27,gns3.isA(idSymB,idSymB), "should be a, see cbk")
+      _.bassert(28,gns3.isA(idFunc,idFunc), "should be a, see cbk")
+      _.bassert(29,gns3.isA(idObjE,idObjE), "should be a, see cbk")      
     }
     function _tryConstruct0() { new GenePool() }
     function _tryConstruct1(a) { new GenePool(a) }
     function _tryConstruct2(a,b) { new GenePool(a,b) }
     function _tryConstruct3(a,b,c) { new GenePool(a,b,c) }
     function _tryConstruct4(a,b,c,d) { new GenePool(a,b,c,d) }
-    function _tryAddAsGene(genes, arg1, arg2) {genes.addAsGene(arg1, arg2)}
+    function _tryAdd(genes, arg1, arg2) {genes.add(arg1, arg2)}
   }
 }
 registeredTests.push(GenePool.test)
-registeredExceptions.push("new GenePool().addAsGene('noGene','noFunction')")
+registeredExceptions.push("new GenePool().add('noGene','noFunction')")
 
 /** @classdesc Essence is unrecognizable except through me.
  * Reads and stores specification properties and removes them from literal.
@@ -1637,7 +1812,7 @@ registeredExceptions.push("new GenePool().addAsGene('noGene','noFunction')")
  * <p>
  * All known keys in the literals __SPEC object are changed to invisible and unremovable
  * properties of this instance, which represents the literal for subclass instances.
- * @todo what does really happen? What should happen?
+ * //@todo what does really happen? What should happen?
  * <p>
  * <b>For clarity</b>
  * In fact, this is not Essence but a Essence, as it is specialized. It could be
@@ -1718,22 +1893,40 @@ class Essence extends GenePool {
   static #REPEAT_DEFT = false
   #skipped = [] //[{.name,.value,.expectedType}]
 
-  /** Creates instance, removes {@link ESSENCE.SPEC_KEY|__SPEC} property from {@link literal}
+  /** Creates instance, removes {@link ESSENCE.SPEC_KEY|__SPEC} property from {@link literal}.
    * <p>
-   * Adds {@link Essence} with {@link cbkInstanceOf} to its pool.
+   * Adds <code>Object</code>, {@link Object},{@link Gene},{@link GenePool} and {@link Essence} as Genes with {@link cbkInstanceOf} to its pool.
    * <p>
-   * Wrong values in literal will be skipped and added to {@link skipped}
+   * Adds {@link Essence.SPEC_KEY|__SPEC properties} from literal to this instance.
+   * Recognized {@link Essence.SPEC_KEY|__SPEC properties} are:
+   * {@link Essence#RENDER|RENDER},
+   * {@link Essence#TYPE|TYPE},
+   * {@link Essence#DEFAULT|DEFAULT},
+   * {@link Essence#IGNORE|IGNORE},
+   * {@link Essence#FLAT|FLAT},
+   * {@link Essence#ONCE|ONCE} and
+   * {@link Essence#REPEAT|REPEAT}.
+   * Additionally {@link Essence#ROOT|ROOT} is added, dependent whether {@link parent}
+   * is defined. Other entries in {@link ESSENCE.SPEC_KEY|__SPEC} are ignored.
+   * <p>
+   * Values in literal with wrong type will be skipped and added to {@link skipped}.
+   * <p>
+   * If a {@link Essence.SPEC_KEY|__SPEC property} is not set in {@link Essence.SPEC_KEY|__SPEC}
+   * {@link parent} value is set, if {@link parent} is defined, hardcoded value otherwise.
    * @param {String} literal
    * @param {GenePool} parent
    * @throws TypeError if {@link parent} is no {@link GenePool}
    */
   constructor(literal, parent) {
     super()
+    this.add(Object, cbkInstanceOf)
+    this.add(Gene, cbkInstanceOf)
+    this.add(GenePool, cbkInstanceOf)
     if (parent != undefined && !this.isA(parent, GenePool))
       throw new TypeError(
         `function 'Essence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
       )
-    this.addAsGene(Essence)
+    this.add(Essence)
 
     let u
     let p = parent
@@ -1848,6 +2041,7 @@ class Essence extends GenePool {
       _.assert(5,_tryConstruct1,{__SPEC: {REPEAT:true}},"Should construct")
       _.assert(6,_tryConstruct1,{__SPEC: {TYPE:"Boolean"}},"Should construct")
       _.assert(7,_tryConstruct1,{__SPEC: {DEFAULT:""}},"Should construct")
+      _.assert(8,_tryConstruct1,{__SPEC: {NO_SPEC_KEY:""}},"Should construct")
       _.assert(11,_tryConstruct1,{__SPEC: {RENDER:"abc"}},"Should construct")
       _.assert(12,_tryConstruct1,{__SPEC: {IGNORE:"abc"}},"Should construct")
       _.assert(13,_tryConstruct1,{__SPEC: {ONCE:"abc"}},"Should construct")
@@ -1862,6 +2056,7 @@ class Essence extends GenePool {
       let wrong5 = new Essence({__SPEC: {REPEAT:"abc"}})
       let wrong6 = new Essence({__SPEC: {TYPE:false}})
       let wrong7 = new Essence({__SPEC: {DEFAULT:false}})
+      let wrong8 = new Essence({__SPEC: {NO_SPEC_KEY:false}})
       _.bassert(21,wrong1.skipped[0]["name"]=="RENDER","RENDER should be skipped")
       _.bassert(22,wrong2.skipped[0]["name"]=="IGNORE","IGNORE should be skipped")
       _.bassert(23,wrong3.skipped[0]["name"]=="ONCE","ONCE should be skipped")
@@ -1869,6 +2064,7 @@ class Essence extends GenePool {
       _.bassert(25,wrong5.skipped[0]["name"]=="REPEAT","REPEAT should be skipped")
       _.bassert(26,wrong6.skipped[0]["name"]=="TYPE","TYPE should be skipped")
       _.bassert(27,wrong7.skipped[0]["name"]=="DEFAULT","DEFAULT should be skipped")
+      _.bassert(28,wrong8.skipped.length ==0,"unknown SPEC entries should be skipped silently")
       let lit = {__SPEC: {RENDER:true},myValue:"22"}
       _.bassert(31,lit.__SPEC != undefined,"just to show it is defined")
       _.bassert(32,lit.myValue != undefined,"just to show it is defined")
@@ -1911,9 +2107,18 @@ class Essence extends GenePool {
     }
     function isATest() {
       let ess1 = new Essence()
+      let gn1 = new Gene("abc")
       _.bassert(1,ess1.isA(ess1,Essence),"Essence should be Essence")
       _.bassert(2,ess1.isA(ess1,GenePool),"Essence should be GenePool")
       _.bassert(3,ess1.isA(ess1,Object),"Essence should be Object")
+      _.bassert(4,ess1.isA(gn1,Object),"Gene should be Object")
+      _.bassert(5,ess1.isA(gn1,Gene),"Gene should be Gene")
+
+      _.bassert(11,!ess1.isA(new Error(),Error),"should return false for Error, as not in pool")
+      _.bassert(12,!ess1.isA("String",String),"should return false for string, as not in pool")
+      _.bassert(13,!ess1.isA("String","String"),"should return false for string, as not in pool")
+      _.bassert(14,!ess1.isA("String","string"),"should return false for string, as not in pool")
+      _.bassert(15,!ess1.isA("String",Object),"should return false as string is not an Object")
     }
     function _tryConstruct1(arg1) { 
       new Essence(arg1) 
@@ -1925,8 +2130,10 @@ class Essence extends GenePool {
 }
 registeredTests.push(Essence.test)
 registeredExceptions.push("new Essence({}, new Error())")
+
 //#endregion Gene, Pool and Essence
 //#region code
+
 /**@classdesc Parsing tree superclass.
  * <p>
  * As shorthand {@link BC} can be used.
@@ -1936,7 +2143,7 @@ class BreadCrumbs extends Essence {
   #ident
   #caller
   #literal
-  /** Returns literal given in BreadCrumbs constructor, __SPEC property removed
+  /** Returns literal given in BreadCrumbs constructor, __SPEC property removed.
    * @returns {Object}
    */
   get literal() {
@@ -1956,17 +2163,17 @@ class BreadCrumbs extends Essence {
   constructor(literal, key, parent) {
     let un
     super(literal, parent)
-    this.addAsGene(BreadCrumbs)
-    this.addAsGene("undefined", cbkTypeOf)
-    this.addAsGene("null", cbkIsNull)
-    this.addAsGene("boolean", cbkTypeOf)
-    this.addAsGene("number", cbkTypeOf)
-    this.addAsGene("bigint", cbkTypeOf)
-    this.addAsGene("string", cbkTypeOf)
-    this.addAsGene("symbol", cbkTypeOf)
-    this.addAsGene("function", cbkTypeOf)
-    this.addAsGene("object", cbkIsObjectNotNullNotArray)
-    this.addAsGene("array", cbkIsArray)
+    this.add(BreadCrumbs)
+    this.add("undefined", cbkTypeOf)
+    this.add("null", cbkIsNull)
+    this.add("boolean", cbkTypeOf)
+    this.add("number", cbkTypeOf)
+    this.add("bigint", cbkTypeOf)
+    this.add("string", cbkTypeOf)
+    this.add("symbol", cbkTypeOf)
+    this.add("function", cbkTypeOf)
+    this.add("object", cbkIsObjectNotNullNotArray)
+    this.add("array", cbkIsArray)
     if (!this.isA(parent, "undefined"))
       this.throwIfNotOfType(parent, "parent", BreadCrumbs)
     this.#caller = parent
@@ -1993,9 +2200,9 @@ Skipped values are: `
     }
   }
 
-  /** Returns string representing class instance for superclass and subclasses
+  /** Returns string representing class instance for BreadCrumbs and derived instances .
    * @returns {String} string containing class name of deepest subclass and key
-   *          as given in BreadCrumbs constructor
+   *          as given in BreadCrumbs constructor.
    */
   toString() {
     if (typeof this.#ident == "string")
@@ -2004,10 +2211,10 @@ Skipped values are: `
       return "°°°" + this.constructor.name + " " + "Symbol"
   }
 
-  /** Returns line of ancestors with keys given in BreadCrumbs constructor
+  /** Returns line of ancestors with keys given in BreadCrumbs constructor.
    *
    * For this instance and its ancestors keys are returned, separated by
-   * punctuation marks
+   * {@link BreadCrumbs.sep}.
    * @returns {String}
    */
   toBreadcrumbs() {
@@ -2023,9 +2230,9 @@ Skipped values are: `
     return breadcrumbs
   }
 
-  /** Throws if {@link val} is strictly undefined (null is defined)
+  /** Throws if {@link val} is strictly undefined (null is defined).
    *<p>
-   * Does not throw on parameter type errors
+   * Does not throw on parameter type errors.
    * @param {*} val
    * @param {String} vName - becomes part of Error message
    * @param {String} fuName - becomes part of Error message
@@ -2052,9 +2259,9 @@ Skipped values are: `
       )
   }
 
-  /** Throws if val is not of type or compound type, if type is defined with string
+  /** Throws if val is not of type or compound type, if type is defined with string.
    * <p>
-   * Does not throw on parameters type errors
+   * Does not throw on parameters type errors.
    * @param {*} val
    * @param {String} vName
    * @param {String} type - compound type string possible for types defined
@@ -2197,11 +2404,314 @@ Skipped values are: `
 /** shorthand for {@link BreadCrumbs} */
 var BC = BreadCrumbs
 registeredTests.push(BreadCrumbs.test)
-
 registeredExceptions.push("new BreadCrumbs({},'goodName', new GenePool())")
 registeredExceptions.push("new BreadCrumbs({}, undefined, undefined)")
 registeredExceptions.push("new BreadCrumbs({}, 22, undefined)")
 registeredExceptions.push("new BreadCrumbs(22,'goodName', undefined)")
+
+/** setting parser; traverses deep literal to flat output
+ * @classdesc
+ * Setting is the only subclass which should be constructed from outside, with
+ * only literal given as argument.
+ *
+ * It calls the managers and traverses given literal to flat output; thereby
+ * respecting manager configuration rules and removing manager literals from
+ * output.
+ *
+ */
+class Setting extends BreadCrumbs {
+  static #ROOT_KEY = "/"
+  #children = {}
+  #frontmatterYAML = {}
+  #renderYAML = {}
+  /** Returns all frontmatter entries of this instance (not filtered by type)
+   * @returns {Object.<String.any>}
+   */
+  get frontmatterYAML() {
+    return this.#frontmatterYAML
+  }
+  /** Returns all render entries of this instance (not filtered by type)
+   * @returns {Object.<String.any>}
+   */
+  get renderYAML() {
+    return this.#renderYAML
+  }
+
+  /** Constructs a new Setting and registers its type once
+   * @constructor
+   * @param {Object} literal
+   * @param {(Undefined|String|Symbol)} key
+   * @param {(Undefined|Setting)} parent
+   * @throws {SettingError} on wrong parameter types
+   */
+  constructor(literal, key = undefined, parent = undefined) {
+    let un
+    super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
+    this.add(Setting)
+    this.throwIfUndefined(literal, "literal")
+    // literal {(Undefined|Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    // parent {(Undefined|BreadCrumbs)} checked by superclass
+    if (!this.isA(parent, "undefined"))
+      this.throwIfNotOfType(parent, "parent", Setting)
+
+    for (const [key, value] of Object.entries(this.literal)) {
+      if (this.isA(value, Object)) {
+        if (!Setting.#isHandlersKey(key)) {
+          this.#children[key] = new Setting(value, key, this)
+        }
+      } else {
+        if (this.RENDER) this.#renderYAML[key] = value
+        else this.#frontmatterYAML[key] = value
+      }
+    }
+  }
+
+  /** Returns all frontmatter entries of this instance and descendants
+   * @returns  {Object.<String.any>}
+   */
+  getFrontmatterYAML() {
+    let frontmatterYAML = {}
+    Object.assign(frontmatterYAML, this.#frontmatterYAML)
+    for (const [key, value] of Object.entries(this.#children)) {
+      Object.assign(frontmatterYAML, value.getFrontmatterYAML())
+    }
+    return frontmatterYAML
+  }
+
+  /** Returns all render entries of this instance and descendants
+   * @returns  {Object.<String.any>}
+   */
+  getRenderYAML() {
+    let renderYAML = {}
+    Object.assign(renderYAML, this.#renderYAML)
+    for (const [key, value] of Object.entries(this.#children)) {
+      Object.assign(renderYAML, value.getRenderYAML())
+    }
+    return renderYAML
+  }
+
+  /** Returns whether key is main key of known handlers
+   * @param {*} key
+   * @returns {Boolean}
+   */
+  static #isHandlersKey(key) {
+    return false
+  }
+
+  // prettier-ignore
+  static test(outputObj) { // Setting
+    BC.test(outputObj)
+    let _ = null
+    if(_ = new TestSuite("Setting", outputObj)) {
+      _.run(getterLiteralTest)
+      DEBUG = false
+      _.run(getterFrontmatterYAMLTest)
+      _.run(getterRenderYAMLTest)
+      _.run(constructorTest)
+      _.run(isATest)
+      _.run(toStringTest)
+      _.run(getFrontmatterYAMLTest)
+      _.run(getRenderYAMLTest)
+      _.destruct()
+    _ = null
+    }
+    function getterLiteralTest() {
+      let un
+      let sym = Symbol("a")
+      let setting1 = new Setting({},"getterLiteralTest02",un)
+      let setting2 = new Setting({sym: {}},"getterLiteralTest03",un)
+      let setting3 = new Setting({"__NOTETYPES": {}},"getterLiteralTest04",un)
+      let setting4 = new Setting({"a": {"MARKER":"2"}},"getterLiteralTest05",un)
+      let setting5 = new Setting({"a": {"MARKER":"2","DATE":true,}},"getterLiteralTest06",un)
+      let setting6 = new Setting({"a": {MARKER:"2",DATE:false,},"d": {TITLE_BEFORE_DATE:"abc"}},"getterLiteralTest07",un)
+      let lit1 = setting1.literal
+      let lit2 = setting2.literal
+      let lit3 = setting3.literal
+      let lit4 = setting4.literal
+      let lit5 = setting5.literal
+      let lit6 = setting6.literal
+      _.bassert(1,Object.keys(lit1).length == 0,"literal should be empty as given")
+      _.bassert(2,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(3,Object.keys(lit2.sym).length == 0,"object assigned to symbol key should be empty as given")
+      _.bassert(4,Object.keys(lit3).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(5,Object.keys(lit3.__NOTETYPES).length == 0,"object assigned to '__NOTETYPES' key should be empty as given")
+      _.bassert(6,Object.keys(lit4).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(7,Object.keys(lit4.a).length == 1,"object assigned to 'a' should only contain one entry as only one given")
+      _.bassert(8,lit4.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(9,Object.keys(lit5).length == 1,"only 1 value should be contained, as only one given")
+      _.bassert(10,Object.keys(lit5.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(11,lit5.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(12,lit5.a.DATE === true,"value of a.DATE should be 'true' as given")
+      _.bassert(13,Object.keys(lit6).length == 2,"2 values should be contained, as two given")
+      _.bassert(14,Object.keys(lit6.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(15,Object.keys(lit6.d).length == 1,"object assigned to 'd' should only contain one entry as only one given")
+      _.bassert(16,lit6.a.MARKER === "2","value of a.MARKER should be '2' as given")
+      _.bassert(17,lit6.a.DATE === false,"value of a.DATE should be 'false' as given")
+      _.bassert(18,lit6.d.TITLE_BEFORE_DATE === "abc","value of d.TITLE_BEFORE_DATE should be 'abc' as given")
+    }    
+    function getterFrontmatterYAMLTest() {
+      const lit1 = {a: 23}
+      const lit2 = {a: 23, b: "ja"}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit5 = {__SPEC: {RENDER: true}, a: 23, pict: "ja"}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let setting5 = new Setting(lit5)
+      let answ1f = setting1.frontmatterYAML
+      let answ2f = setting2.frontmatterYAML
+      let answ3f = setting3.frontmatterYAML
+      let answ4f = setting4.frontmatterYAML
+      let answ5f = setting5.frontmatterYAML
+      let expAnsw1f = '{"a":23}'
+      let expAnsw2f = '{"a":23,"b":"ja"}'
+      let expAnsw3f = '{"a":23,"d":"ja"}'
+      let expAnsw4f = '{"a":23,"d":"ja"}'
+      let expAnsw5f = '{}'
+      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
+      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
+      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
+      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
+      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
+
+    }
+    function getterRenderYAMLTest() {
+      const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit2 = {a: 23, c: {__SPEC: {RENDER: true}, pict: "ja"}}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {__SPEC: {RENDER: true}, pict: "ja", d: {__SPEC: {RENDER: false}, private: true},}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let answ1 = setting1.renderYAML
+      let answ2 = setting2.renderYAML
+      let answ3 = setting3.renderYAML
+      let answ4 = setting4.renderYAML
+      let expAnsw1 = "{}"
+      let expAnsw2 = '{}'
+      let expAnsw3 = "{}"
+      let expAnsw4 = '{"pict":"ja"}'
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+    }
+    function constructorTest() {
+      let un
+      let b = new BreadCrumbs(un, "constructorTest", un)
+      let st = new Setting({}, "constructorTest1", un, un)
+      _.assert(1,_tryConstruct,{},"cTest1",un,un,"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",un,un,"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",un,un,"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",un,un,"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",un,un,"should not be created, literal is null")
+      _.assert(6,_tryConstruct,{},un,un,un,"should be created, undefined key is ok")
+      _.shouldAssert(7,_tryConstruct,{},22,un,un,"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},un,un,"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},b,un,un,"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),un,un,"should be created, key is Symbol")
+      _.assert(11,_tryConstruct,{},"cTest11",un,un,"should  be created, undefined parent is ok")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),un,"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},un,"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring",un,"should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,un,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,un,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",b,un,"should not be be created, parent is BreadCrumbs")
+      let setting = new Setting({},"constructorTest101")
+      _.bassert(101,setting instanceof Object,"'Setting' has to be an instance of 'Object'")
+      _.bassert(102,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,setting instanceof Setting,"'Setting' has to be an instance of 'Setting'")
+      _.bassert(104,setting.constructor == Setting,"the constructor property is not 'Setting'")
+    }
+    function isATest() {
+      let un
+      let setting1 = new Setting({},"isATest",un)
+      _.bassert(1,setting1.isA(setting1,"object"), "'" + setting1 + "' should be a " + "object")
+      _.bassert(2,setting1.isA(setting1,Object), "'" + setting1 + "' should be a " + "Object")
+      _.bassert(3,setting1.isA(setting1,BreadCrumbs), "'" + setting1 + "' should be a " + "BreadCrumbs")
+      _.bassert(4,setting1.isA(setting1,Setting), "'" + setting1 + "' should be a " + "Setting")
+      _.bassert(5,!setting1.isA(setting1,Error), "'" + setting1 + "' should not be a " + "Error")
+      _.bassert(7,!setting1.isA(setting1,Gene), "'" + setting1 + "' should not be a " + "Gene")
+    }
+    function toStringTest() {
+      let un
+      let setting1 = new Setting({},"toStringTest1",un)
+      _.bassert(1,setting1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,setting1.toString().includes("Setting"),"result does not contain class string"    )
+    }
+    function getFrontmatterYAMLTest() {
+      const lit1 = {a: 23}
+      const lit2 = {a: 23, b: "ja"}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit5 = {a: 23, c: {__SPEC: {RENDER: true}, pict: "ja", d: {__SPEC: {RENDER: false}, x: "y"}}}
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let setting5 = new Setting(lit5)
+      let answ1f = setting1.getFrontmatterYAML()
+      let answ2f = setting2.getFrontmatterYAML()
+      let answ3f = setting3.getFrontmatterYAML()
+      let answ4f = setting4.getFrontmatterYAML()
+      let answ5f = setting5.getFrontmatterYAML()
+      let expAnsw1f = '{"a":23}'
+      let expAnsw2f = '{"a":23,"b":"ja"}'
+      let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
+      let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
+      let expAnsw5f = '{"a":23,"x":"y"}'
+      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
+      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
+      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
+      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
+      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
+    }
+    function getRenderYAMLTest() {
+      const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit2 = {a: 23, c: {__SPEC: {RENDER: true}, pict: "ja"}}
+      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {
+        c: {
+          __SPEC: {RENDER: true},
+          pict: "ja",
+          d: {__SPEC: {RENDER: false}, 
+             private: true,
+             x: {
+              __SPEC: {RENDER: true}, 
+              y:"z"
+             }
+          },
+        },
+      }
+      let setting1 = new Setting(lit1)
+      let setting2 = new Setting(lit2)
+      let setting3 = new Setting(lit3)
+      let setting4 = new Setting(lit4)
+      let answ1 = setting1.getRenderYAML()
+      let answ2 = setting2.getRenderYAML()
+      let answ3 = setting3.getRenderYAML()
+      let answ4 = setting4.getRenderYAML()
+      let expAnsw1 = "{}"
+      let expAnsw2 = '{"pict":"ja"}'
+      let expAnsw3 = "{}"
+      let expAnsw4 = '{"pict":"ja","y":"z"}'
+      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+    }
+    function _tryConstruct(arg1, arg2, arg3, arg4) {
+      new Setting(arg1, arg2, arg3, arg4)
+    }
+  }
+}
+registeredTests.push(Setting.test)
+registeredExceptions.push("new Setting({},'goodN', new BreadCrumbs({},'root'))")
+registeredExceptions.push("new Setting()")
 
 //#endregion code
 
