@@ -308,38 +308,59 @@ const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
  * __DIALOG_SETTINGS: ONCE: true,
  * __NOTE_TYPES: ONCE: true, REPEAT: true
  * __FOLDER2TYPE: ONCE: true, REPEAT: true
- *
  * __SPEC:
- * ESSENCE  |forwhat|type   |default |inherited |remark|
- * -------------------------------------------------------
- *  ROOT    |       |Boolean|false   |automatic ||
- *  RENDER  |       |Boolean|false   |inherited ||
- *  TYPE    |       |String |"String"|individual||
- *  DEFAULT |       |TYPE   |""      |individual||
- *  VALUE   |       |TYPE   |""      |individual||
- *  IGNORE  |       |Boolean|false   |inherited |It is possible to IGNORE ancestors, but not descendants|
- *  FLAT    |       |Boolean|false   |individual|values are not parsed, even if they are objects|
- *  ONCE    |       |Boolean|false   |individual|if true, has to be the outermost possible|
- *  REPEAT  |       |Boolean|false   |individual|same entryType can be added several times under diff. keys|
- *  LOCAL   |       |Boolean|false   |inhereted |should be/can be localized (translated)|
- *  //@todo DEFAULTS|       |Object |object  |individual|makes only sense for REPEAT: sections|
+ * - __SPEC explicit for atoms is anything but an Object
+ *   - generalType: (Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)
+ *   - true means: use generalType
+ *   - if true generalType is added as TYPE
+ *   - else (anything but not true) TYPE is the inherited or default TYPE
+ *   - has to contain value as VALUE property
+ * - __SPEC implicit for atoms (is created always for atoms or FLAT values)
+ *   - generalType is added as TYPE
+ *   - value is added as VALUE
+ * - __SPEC for nodes is an Object
+ * ESSENCE  |forwhat  |type   |default |inherited |remark|
+ * ---------------------------------------------------------
+ *  ROOT    |Node     |Boolean|false   |automatic ||
+ *  RENDER  |Node Atom|Boolean|false   |inherited ||
+ *  TYPE    |         |String |"String"|inherited ||
+ *  DEFAULT |         |TYPE   |""      |individual||
+ *  VALUE   |     Atom|TYPE   |""      |individual||
+ *  IGNORE  |Node Atom|Boolean|false   |inherited |It is possible to IGNORE ancestors, but not descendants|
+ *  FLAT    |Node     |Boolean|false   |individual|values are not parsed, even if they are objects|
+ *  ONCE    |Node     |Boolean|false   |individual|if true, has to be the outermost possible|
+ *  REPEAT  |         |Boolean|false   |individual|same entryType can be added several times under diff. keys|
+ *  LOCAL   |Node Atom|Boolean|false   |inhereted |should be/can be localized (translated)|
+ *  //@todo DEFAULTS  |       |Object |object  |individual|makes only sense for REPEAT: sections|
  * @ignore
  */
 //prettier-ignore
 let onne = {
-  __TRANSLATE: 
-  { //ONCE LOCAL
-       /* String */
-    TYPE_PROMPT: "Typ wählen",
-       /* String or Array of Strings */
-    TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
-       /* String */
-    DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
-  },
-  __DIALOGSETTINGS: {
-       /* Number */
-    TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
-  },
+  // __TRANSLATE: 
+  // { //ONCE LOCAL
+  //      /* String */
+  //   TYPE_PROMPT: "Typ wählen",
+  //      /* String or Array of Strings */
+  //   TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
+  //      /* String */
+  //   DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
+  // },
+  // __DIALOGSETTINGS: {
+  //      /* Number */
+  //   TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
+  // },
+  Name: "Wert",
+  Name2: "Wert2",
+  c: {__SPEC: {RENDER: true},
+  pict: "Russian-Matroshka2.jpg"
+  }
+}
+//prettier-ignore
+let FoTy = { __SPEC: {TYPE: "Number"},
+  pict: {VALUE: "Russian-Matroshka2.jpg", 
+         __SPEC: true, RENDER: true},
+  zahl: {VALUE: 127, __SPEC: false, },
+  soso: [128,127]
 }
 //  #endregion  onne => foty
 //  #region test configurations
@@ -399,7 +420,7 @@ var DEBUG = true
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = false
+var TESTING = true
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -538,9 +559,11 @@ function aut(str, b = "yellow", c = "red") {
     if (entries.length === 0) {
       console.log(`%c${str}`, css)
     } else {
-      entries.forEach(([key, value], idx) => {
-        let indent = idx === 0 ? "OBJ " : "    "
-        console.log(`%c${indent}${key}: ${value}`, css)
+      entries.forEach(([key, value], idx, arr) => {
+        let indent = idx === 0 ? "OBJ{" : "    "
+        if (idx + 1 < arr.length)
+          console.log(`%c${indent}${key}: ${value}`, css)
+        else console.log(`%c${indent}${key}: ${value}}`, css)
       })
     }
   } else {
@@ -2015,6 +2038,7 @@ class Essence extends GenePool {
     let p = parent
     let specLit = {}
     if (literal != un) specLit = literal[Essence.#SPEC_KEY]
+    if (typeof specLit == "boolean") specLit = literal
     if (specLit === un) specLit = {}
 
     function changeToHiddenProp(me, lit, specLit, key, type, p, def, val) {
@@ -2022,8 +2046,6 @@ class Essence extends GenePool {
       if (val != undefined) v = val
       else {
         let given = specLit[key]
-        // Remove it, even if at time of writing containing object will be
-        // removed, as that can change later.
         delete specLit[key]
         if (!me.#validateOrInform(given, type, key)) given = undefined
         v = given != undefined ? given : p != undefined ? p[key] : def
@@ -2048,7 +2070,7 @@ class Essence extends GenePool {
     let lit = literal
     hide(this, lit, specLit, "ROOT", "Boolean", p, un, parent == un)
     hide(this, lit, specLit, "RENDER", "Boolean", p, Essence.#RENDER_DEFT)
-    hide(this, lit, specLit, "TYPE", "String", un, Essence.#TYPE_DEFT)
+    hide(this, lit, specLit, "TYPE", "String", p, Essence.#TYPE_DEFT)
     hide(this, lit, specLit, "IGNORE", "Boolean", p, Essence.#IGNORE_DEFT)
     hide(this, lit, specLit, "FLAT", "Boolean", un, Essence.#FLAT_DEFT)
     hide(this, lit, specLit, "LOCAL", "Boolean", p, Essence.#LOCAL_DEFT)
@@ -2058,6 +2080,17 @@ class Essence extends GenePool {
     hide(this, lit, specLit, "VALUE", this.TYPE, un, Essence.#VALUE_DEFT)
 
     if (literal != un) delete literal[Essence.#SPEC_KEY]
+  }
+  essenceOfAtom(literal, key, type) {
+    let un
+    let aEss = undefined
+    let specLit = literal[key][Essence.#SPEC_KEY]
+    if (specLit != un && (specLit === null || typeof specLit != "object")) {
+      if (specLit == true && type != un) literal[key]["TYPE"] = type
+      aEss = new Essence(literal[key], this)
+      literal[key] = aEss.VALUE
+    }
+    return aEss
   }
   #validateOrInform(value, type, name) {
     let ok = value === undefined || this.#userPool.isA(value, type)
@@ -2148,7 +2181,7 @@ class Essence extends GenePool {
   static test(outputObj) {
     let _ = null
     if(_ = new TestSuite("Essence", outputObj)) {
-      _.run(getterEssences)
+      _.run(getterEssencesTest)
       _.run(constructorTest)
       _.run(isATest)
       _.run(getEssencesTest)
@@ -2205,7 +2238,7 @@ class Essence extends GenePool {
       _.shouldAssert(41,_tryConstruct2,{__SPEC: {RENDER:true}},new Error(),"Should not be constructed")
       _.assert(42,_tryConstruct2,{__SPEC: {RENDER:true}},ess1,"Should be constructed")    
     }
-    function getterEssences() {
+    function getterEssencesTest() {
       let ess0 = new Essence()
       _.bassert(1,ess0.ROOT===true,"Should always be defined")
       _.bassert(2,ess0.RENDER===false,"Should always be defined")
@@ -2245,7 +2278,7 @@ class Essence extends GenePool {
       _.bassert(25,ess2.FLAT===false,"Should be set to default value")
       _.bassert(26,ess2.LOCAL===true,"Should be set to parent value")
       _.bassert(27,ess2.REPEAT===false,"Should be set to default value")
-      _.bassert(28,ess2.TYPE==="String","Should be set to default value")
+      _.bassert(28,ess2.TYPE==="Boolean","Should be set to parent value")
       _.bassert(29,ess2.DEFAULT==="","Should be set to default value")
       _.bassert(30,ess2.VALUE==="","Should be set to default value")
     }
@@ -2629,8 +2662,11 @@ registeredExceptions.push("new BreadCrumbs(22,'goodName', undefined)")
 class Setting extends BreadCrumbs {
   static #ROOT_KEY = "/"
   #children = {}
+  #atoms = {}
   #frontmatterYAML = {}
   #renderYAML = {}
+  static #generalType =
+    "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<String>)"
   /** Returns all frontmatter entries of this instance (not filtered by type)
    * @returns {Object.<String.any>}
    */
@@ -2663,13 +2699,20 @@ class Setting extends BreadCrumbs {
       this.throwIfNotOfType(parent, "parent", Setting)
 
     for (const [key, value] of Object.entries(this.literal)) {
+      let type = Setting.#generalType
+      if (Setting.#isHandlersKey(key)) continue
       if (this.isA(value, "object")) {
-        if (!Setting.#isHandlersKey(key)) {
-          this.#children[key] = new Setting(value, key, this)
-        }
+        let aEss = this.essenceOfAtom(this.literal, key, type)
+        if (aEss != un) this.#atoms[key] = aEss
+        else this.#children[key] = new Setting(value, key, this)
       } else {
-        if (this.RENDER) this.#renderYAML[key] = value
-        else this.#frontmatterYAML[key] = value
+        let litAtom = {VALUE: this.literal[key], __SPEC: true}
+        this.literal[key] = litAtom
+        this.#atoms[key] = this.essenceOfAtom(this.literal, key, type)
+      }
+      if (this.#atoms[key] != undefined) {
+        if (this.#atoms[key].RENDER) this.#renderYAML[key] = this.literal[key]
+        else this.#frontmatterYAML[key] = this.literal[key]
       }
     }
   }
@@ -2944,7 +2987,8 @@ async function foty(tp, app) {
   }
   test(testYAML)
   try {
-    let setting = new Setting(onne)
+    let lit = FoTy
+    let setting = new Setting(lit)
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(renderYAML, setting.getRenderYAML())
   } catch (e) {
