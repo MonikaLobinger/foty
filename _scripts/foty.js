@@ -122,13 +122,13 @@ function cssClassCbk(tp, noteName, type) {
 //  #region USER CONFIGURATION
 //  #endregion USER CONFIGURATION
 //  #region onne configuration data
-function creat(tp, notename, type) {
+/*@convert*/ function creat(tp, notename, type) {
   return tp.date.now()
 }
-function autag(tp, notename, type) {
+/*@convert*/ function autag(tp, notename, type) {
   return "0/" + type
 }
-function alias(tp, notename, type) {
+/*@convert*/ function alias(tp, notename, type) {
   let alias = notename
   if (type != "ort" && type != "person") {
     alias = notename.replace(/,/g, ` `).replace(/  /g, ` `)
@@ -146,92 +146,110 @@ function alias(tp, notename, type) {
   }
   return alias
 }
-function cscls(tp, notename, type) {
+/*@convert*/ function cscls(tp, notename, type) {
   return type
 }
 
 const ONNE_FRONTMATTER_ENTRIES = {
-  aliases: {isList: true, defaut: alias},
-  date_created: {isList: false, defaut: creat},
-  tags: {isList: true, defaut: autag},
-  publish: {isList: false, defaut: false},
-  cssclass: {isList: true, defaut: cscls},
-  private: {isList: false, defaut: false},
-  position: {ignore: true},
+  /*@convert*/ aliases: {isList: true, defaut: alias},
+  /*@convert*/ date_created: {isList: false, defaut: creat},
+  /*@convert*/ tags: {isList: true, defaut: autag},
+  /*@convert*/ publish: {isList: false, defaut: false},
+  /*@convert*/ cssclass: {isList: true, defaut: cscls},
+  /*@convert*/ private: {isList: false, defaut: false},
+  /*@convert*/ position: {ignore: true},
 }
 const TYPES = {
-  audio: {
+  /*@convert*/ audio: {
     marker: "{a}",
     isDiary: false,
     foto: "pexels-foteros-352505_200.jpg",
     name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
   },
-  buch: {
+  /*@convert*/ buch: {
     marker: "{b}",
     isDiary: false,
     foto: "pexels-gül-işık-2203051_200.jpg",
     name_prompt: "Autornachname - Buchtitel",
   },
-  ort: {
+  /*@convert*/ ort: {
     marker: "",
     isDiary: false,
     foto: "pexels-dzenina-lukac-1563005_200.jpg",
     name_prompt: "Ortsname, Land",
   },
-  person: {
+  /*@convert*/ person: {
     marker: "",
     isDiary: false,
     foto: "pexels-lucas-andrade-14097235_200.jpg",
     name_prompt: "Personnachname, Personvorname ?Geburtsdatum",
   },
-  video: {
+  /*@convert*/ video: {
     marker: "{v}",
     isDiary: false,
     foto: "pexels-vlad-vasnetsov-2363675_200.jpg",
     name_prompt: "?Reihe - ?Autornachname - Videotitel",
   },
-  web: {
+  /*@convert*/ web: {
     marker: "{w}",
     isDiary: false,
     foto: "pexels-sururi-ballıdağ-_200.jpeg",
     name_prompt: "?Autor - Webseitentitel - ?Datum",
   },
-  zitat: {marker: "°", isDiary: false, name_prompt: "Titel Autornachname"},
-  zitate: {marker: "°°", isDiary: false, name_prompt: "Titel Autornachname"},
-  exzerpt: {
+  /*@convert*/ zitat: {
+    marker: "°",
+    isDiary: false,
+    name_prompt: "Titel Autornachname",
+  },
+  /*@convert*/ zitate: {
+    marker: "°°",
+    isDiary: false,
+    name_prompt: "Titel Autornachname",
+  },
+  /*@convert*/ exzerpt: {
     marker: "$",
     isDiary: false,
     name_prompt: "Autornachname - Buchtitel",
   },
-  garten: {marker: "", isDiary: false, name_prompt: "Gartenthema"},
-  gartentagebuch: {
+  /*@convert*/ garten: {marker: "", isDiary: false, name_prompt: "Gartenthema"},
+  /*@convert*/ gartentagebuch: {
     marker: "",
     isDiary: true,
     dateformat: "YY-MM-DD",
     before_date: "Garten ",
   },
-  lesetagebuch: {
+  /*@convert*/ lesetagebuch: {
     marker: "",
     isDiary: true,
     firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
     dateformat: "YY-MM-DD",
     before_date: "Lesetagebucheintrag ",
   },
-  pflanze: {marker: "", isDiary: false, name_prompt: "Pflanzenname"},
-  unbedacht: {
+  /*@convert*/ pflanze: {
+    marker: "",
+    isDiary: false,
+    name_prompt: "Pflanzenname",
+  },
+  /*@convert*/ unbedacht: {
     marker: "",
     isDiary: true,
     dateformat: "YY-MM-DD",
     before_date: "Unbedacht ",
   },
-  verwaltung: {marker: "", isDiary: false, name_prompt: "Verwaltungsthema"},
-  diary: {marker: "", isDiary: true, dateformat: "YYYY-MM-DD"},
-  note: {marker: "", isDiary: false, name_prompt: "Notizthema"},
+  /*@convert*/ verwaltung: {
+    marker: "",
+    isDiary: false,
+    name_prompt: "Verwaltungsthema",
+  },
+  /*@convert*/ diary: {marker: "", isDiary: true, dateformat: "YYYY-MM-DD"},
+  /*@convert*/ note: {marker: "", isDiary: false, name_prompt: "Notizthema"},
 }
-TYPES["diary"].frontmatter = {private: true}
-TYPES["verwaltung"].frontmatter = {private: true}
-TYPES["gartentagebuch"].frontmatter = {cssclass: "garten, tagebuch"}
-TYPES["pflanze"].frontmatter = {
+/*@convert*/ TYPES["diary"].frontmatter = {private: true}
+/*@convert*/ TYPES["verwaltung"].frontmatter = {private: true}
+/*@convert*/ TYPES["gartentagebuch"].frontmatter = {
+  cssclass: "garten, tagebuch",
+}
+/*@convert*/ TYPES["pflanze"].frontmatter = {
   cssclass: "garten",
   Name: "",
   Sorte: "",
@@ -251,9 +269,9 @@ TYPES["pflanze"].frontmatter = {
   Abstand_x_cm: "",
   Abstand_y_cm: "",
 }
-TYPES["lesetagebuch"].frontmatter = {cssclass: "tagebuch"}
-TYPES["unbedacht"].frontmatter = {cssclass: "tagebuch"}
-const FOLDER2TYPES = {
+/*@convert*/ TYPES["lesetagebuch"].frontmatter = {cssclass: "tagebuch"}
+/*@convert*/ TYPES["unbedacht"].frontmatter = {cssclass: "tagebuch"}
+/*@convert*/ const FOLDER2TYPES = {
   exzerpte: ["exzerpt"],
   garten: ["garten"],
   gartentagebuch: ["gartentagebuch"],
@@ -275,18 +293,16 @@ const FOLDER2TYPES = {
   vaultroot: ["note"],
   temp: ["diary", "garten"],
 }
-const DEFAULTTYPE = "note"
-const ROOTKEY = "vaultroot"
-const RESOURCE_FOLDER = "_resources/"
-const RESOURCE_TYPES = ["jpg", "jpeg", "png", "mp3", "midi"]
+/*@convert*/ const DEFAULTTYPE = "note"
+/*@convert*/ const ROOTKEY = "vaultroot"
+/*@convert*/ const RESOURCE_FOLDER = "_resources/"
+/*@convert*/ const RESOURCE_TYPES = ["jpg", "jpeg", "png", "mp3", "midi"]
 const NEWTITLES_ARRAY = ["Unbenannt", "Untitled"]
 const DEFAULT_NAME_PROMPT = "Name der Notiz (ohne Kenner/Marker)"
 const TYPE_PROMPT = "Typ wählen"
 const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
 //  #endregion onne configuration data
 //  #region onne => foty
-//  #endregion  onne => foty
-//  #region test configurations
 /**
  * Defaults
  * __DIALOG_SETTINGS: ONCE: true,
@@ -294,20 +310,40 @@ const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
  * __FOLDER2TYPE: ONCE: true, REPEAT: true
  *
  * __SPEC:
- * ESSENCE:   |type   |default |inherited |remark|
- * -----------------------------------------------
- *  ROOT:     |Boolean|false   |automatic ||
- *  RENDER:   |Boolean|false   |inherited ||
- *  TYPE:     |String |"String"|individual||
- *  DEFAULT:  |TYPE   |""      |individual||
- *  IGNORE:   |Boolean|false   |inherited |It is possible to IGNORE ancestors, but not descendants|
- *  FLAT :    |Boolean|false   |individual|values are not parsed, even if they are objects|
- *  ONCE:     |Boolean|false   |individual|if true, has to be the outermost possible|
- *  REPEAT:   |Boolean|false   |individual|same entryType can be added several times under diff. keys|
- *  LOCAL:    |Boolean|false   |inhereted |should be/can be localized (translated)|
- * //@todo DEFAULTS: |Object |object  |individual|makes only sense for REPEAT: sections|
+ * ESSENCE  |forwhat|type   |default |inherited |remark|
+ * -------------------------------------------------------
+ *  ROOT    |       |Boolean|false   |automatic ||
+ *  RENDER  |       |Boolean|false   |inherited ||
+ *  TYPE    |       |String |"String"|individual||
+ *  DEFAULT |       |TYPE   |""      |individual||
+ *  VALUE   |       |TYPE   |""      |individual||
+ *  IGNORE  |       |Boolean|false   |inherited |It is possible to IGNORE ancestors, but not descendants|
+ *  FLAT    |       |Boolean|false   |individual|values are not parsed, even if they are objects|
+ *  ONCE    |       |Boolean|false   |individual|if true, has to be the outermost possible|
+ *  REPEAT  |       |Boolean|false   |individual|same entryType can be added several times under diff. keys|
+ *  LOCAL   |       |Boolean|false   |inhereted |should be/can be localized (translated)|
+ *  //@todo DEFAULTS|       |Object |object  |individual|makes only sense for REPEAT: sections|
  * @ignore
  */
+//prettier-ignore
+let onne = {
+  __TRANSLATE: 
+  { //ONCE LOCAL
+       /* String */
+    TYPE_PROMPT: "Typ wählen",
+       /* String or Array of Strings */
+    TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
+       /* String */
+    DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
+  },
+  __DIALOGSETTINGS: {
+       /* Number */
+    TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
+  },
+}
+//  #endregion  onne => foty
+//  #region test configurations
+
 //prettier-ignore
 
 //  #endregion test configurations
@@ -363,7 +399,7 @@ var DEBUG = true
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -1340,7 +1376,7 @@ function cbkIsObjectNotNullNotArray(v, gene) {
  * @returns {Boolean}
  */
 function cbkIsNull(v, gene) {
-  return typeof v === "object" && v === undefined && v !== undefined
+  return typeof v === "object" && v == undefined && v !== undefined
 }
 /** {@link GeneCallback}, returns whether {@link v} is an Array
  * @type {GeneCallback}
@@ -1834,7 +1870,7 @@ registeredExceptions.push("new GenePool().add('noGene','noFunction')")
  * properties of this instance, which represents the literal for subclass instances.
  * They also are added to the literal containing the __SPEC object as invisible
  * and unremovable properties. Those can be questioned using static get functions
- * ({@link Essence.getDEFAULT} - {@link Essence.getTYPE})
+ * ({@link Essence.getDEFAULT} - {@link Essence.getVALUE})
  * of {@link Essence}
  * <p>
  * <b>For clarity</b>
@@ -1870,6 +1906,13 @@ class Essence extends GenePool {
    */
   get DEFAULT() {
     return this[Essence.#pre + "DEFAULT"]
+  }
+  /** VALUE essence, individual<br>
+   *  is of type given in {@link Essence#TYPE|Essence.TYPE}
+   * @type {*}
+   */
+  get VALUE() {
+    return this[Essence.#pre + "VALUE"]
   }
   /** IGNORE essence, inherited
    * @type {Boolean}
@@ -1920,6 +1963,7 @@ class Essence extends GenePool {
   static #RENDER_DEFT = false
   static #TYPE_DEFT = "String"
   static #DEFAULT_DEFT = ""
+  static #VALUE_DEFT = ""
   static #IGNORE_DEFT = false
   static #FLAT_DEFT = false
   static #LOCAL_DEFT = false
@@ -1939,6 +1983,7 @@ class Essence extends GenePool {
    * {@link Essence#RENDER|RENDER} (inherited),
    * {@link Essence#TYPE|TYPE},
    * {@link Essence#DEFAULT|DEFAULT},
+   * {@link Essence#VALUE|VALUE},
    * {@link Essence#IGNORE|IGNORE} (inherited),
    * {@link Essence#FLAT|FLAT},
    * {@link Essence#LOCAL|LOCAL},
@@ -1957,9 +2002,9 @@ class Essence extends GenePool {
    */
   constructor(literal, parent) {
     super()
-    this.add(Object, cbkInstanceOf)
-    this.add(Gene, cbkInstanceOf)
-    this.add(GenePool, cbkInstanceOf)
+    this.add(Object)
+    this.add(Gene)
+    this.add(GenePool)
     if (parent != undefined && !this.isA(parent, GenePool))
       throw new TypeError(
         `function 'Essence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
@@ -2010,6 +2055,7 @@ class Essence extends GenePool {
     hide(this, lit, specLit, "ONCE", "Boolean", un, Essence.#ONCE_DEFT)
     hide(this, lit, specLit, "REPEAT", "Boolean", un, Essence.#REPEAT_DEFT)
     hide(this, lit, specLit, "DEFAULT", this.TYPE, un, Essence.#DEFAULT_DEFT)
+    hide(this, lit, specLit, "VALUE", this.TYPE, un, Essence.#VALUE_DEFT)
 
     if (literal != un) delete literal[Essence.#SPEC_KEY]
   }
@@ -2053,6 +2099,14 @@ class Essence extends GenePool {
    */
   static getDEFAULT(lit) {
     return lit[Essence.#pre + "DEFAULT"]
+  }
+  /** VALUE essence, individual<br>
+   *  is of type given in {@link Essence#TYPE|Essence.TYPE}
+   * @param {Object} lit
+   * @type {*}
+   */
+  static getVALUE(lit) {
+    return lit[Essence.#pre + "VALUE"]
   }
   /** IGNORE essence, inherited
    * @param {Object} lit
@@ -2110,7 +2164,8 @@ class Essence extends GenePool {
       _.assert(6,_tryConstruct1,{__SPEC: {REPEAT:true}},"Should construct")
       _.assert(7,_tryConstruct1,{__SPEC: {TYPE:"Boolean"}},"Should construct")
       _.assert(8,_tryConstruct1,{__SPEC: {DEFAULT:""}},"Should construct")
-      _.assert(9,_tryConstruct1,{__SPEC: {NO_SPEC_KEY:""}},"Should construct")
+      _.assert(9,_tryConstruct1,{__SPEC: {VALUE:""}},"Should construct")
+      _.assert(10,_tryConstruct1,{__SPEC: {NO_SPEC_KEY:""}},"Should construct")
       _.assert(11,_tryConstruct1,{__SPEC: {RENDER:"abc"}},"Should construct")
       _.assert(12,_tryConstruct1,{__SPEC: {IGNORE:"abc"}},"Should construct")
       _.assert(13,_tryConstruct1,{__SPEC: {ONCE:"abc"}},"Should construct")
@@ -2119,6 +2174,7 @@ class Essence extends GenePool {
       _.assert(16,_tryConstruct1,{__SPEC: {REPEAT:"abc"}},"Should construct")
       _.assert(17,_tryConstruct1,{__SPEC: {TYPE:false}},"Should construct")
       _.assert(18,_tryConstruct1,{__SPEC: {DEFAULT:false}},"Should construct")
+      _.assert(19,_tryConstruct1,{__SPEC: {VALUE:false}},"Should construct")
       let wrong1 = new Essence({__SPEC: {RENDER:"abc"}})
       let wrong2 = new Essence({__SPEC: {IGNORE:"abc"}})
       let wrong3 = new Essence({__SPEC: {ONCE:"abc"}})
@@ -2127,7 +2183,8 @@ class Essence extends GenePool {
       let wrong6 = new Essence({__SPEC: {REPEAT:"abc"}})
       let wrong7 = new Essence({__SPEC: {TYPE:false}})
       let wrong8 = new Essence({__SPEC: {DEFAULT:false}})
-      let wrong9 = new Essence({__SPEC: {NO_SPEC_KEY:false}})
+      let wrong9 = new Essence({__SPEC: {VALUE:false}})
+      let wrong10 = new Essence({__SPEC: {NO_SPEC_KEY:false}})
       _.bassert(21,wrong1.skipped[0]["name"]==="RENDER","RENDER should be skipped")
       _.bassert(22,wrong2.skipped[0]["name"]==="IGNORE","IGNORE should be skipped")
       _.bassert(23,wrong3.skipped[0]["name"]==="ONCE","ONCE should be skipped")
@@ -2136,7 +2193,8 @@ class Essence extends GenePool {
       _.bassert(26,wrong6.skipped[0]["name"]==="REPEAT","REPEAT should be skipped")
       _.bassert(27,wrong7.skipped[0]["name"]==="TYPE","TYPE should be skipped")
       _.bassert(28,wrong8.skipped[0]["name"]==="DEFAULT","DEFAULT should be skipped")
-      _.bassert(29,wrong9.skipped.length ===0,"unknown SPEC entries should be skipped silently")
+      _.bassert(29,wrong9.skipped[0]["name"]==="VALUE","VALUE should be skipped")
+      _.bassert(30,wrong10.skipped.length ===0,"unknown SPEC entries should be skipped silently")
       let lit = {__SPEC: {RENDER:true},myValue:"22"}
       _.bassert(31,lit.__SPEC != undefined,"just to show it is defined")
       _.bassert(32,lit.myValue != undefined,"just to show it is defined")
@@ -2158,6 +2216,7 @@ class Essence extends GenePool {
       _.bassert(7,ess0.REPEAT===false,"Should always be defined")
       _.bassert(8,ess0.TYPE==="String","Should always be defined")
       _.bassert(9,ess0.DEFAULT==="","Should always be defined")
+      _.bassert(10,ess0.VALUE==="","Should always be defined")
       let lit1 = {__SPEC: {RENDER:true,
                            IGNORE:true,
                            ONCE:true,
@@ -2165,7 +2224,8 @@ class Essence extends GenePool {
                            LOCAL:true,
                            REPEAT:true,
                            TYPE:"Boolean",
-                           DEFAULT:false}}
+                           DEFAULT:false,
+                           VALUE:false}}
       let ess1 = new Essence(lit1)
       _.bassert(11,ess1.ROOT===true,"Should always be defined")
       _.bassert(12,ess1.RENDER===true,"Should be set to literal value")
@@ -2176,6 +2236,7 @@ class Essence extends GenePool {
       _.bassert(17,ess1.REPEAT===true,"Should be set to literal value")
       _.bassert(18,ess1.TYPE==="Boolean","Should be set to literal value")
       _.bassert(19,ess1.DEFAULT===false,"Should be set to literal value")
+      _.bassert(20,ess1.VALUE===false,"Should be set to literal value")
       let ess2 = new Essence(undefined,ess1)
       _.bassert(21,ess2.ROOT===false,"Should always be defined")
       _.bassert(22,ess2.RENDER===true,"Should be set to parent value")
@@ -2186,10 +2247,12 @@ class Essence extends GenePool {
       _.bassert(27,ess2.REPEAT===false,"Should be set to default value")
       _.bassert(28,ess2.TYPE==="String","Should be set to default value")
       _.bassert(29,ess2.DEFAULT==="","Should be set to default value")
+      _.bassert(30,ess2.VALUE==="","Should be set to default value")
     }
     function isATest() {
       let ess1 = new Essence()
       let gn1 = new Gene("abc")
+      // Object, Gene, GenePool, Essence added for each Essence instance
       _.bassert(1,ess1.isA(ess1,Essence),"Essence should be Essence")
       _.bassert(2,ess1.isA(ess1,GenePool),"Essence should be GenePool")
       _.bassert(3,ess1.isA(ess1,Object),"Essence should be Object")
@@ -2210,7 +2273,8 @@ class Essence extends GenePool {
                            LOCAL:true,
                            REPEAT:true,
                            TYPE:"Number",
-                           DEFAULT:126 }}
+                           DEFAULT:126,
+                           VALUE:127 }}
       _.bassert(0,lit1.__SPEC !== undefined, "__SPEC properties not removed")
       _.bassert(1,Essence.getROOT(lit1) === undefined, "Hidden properties not added")
       _.bassert(2,Essence.getRENDER(lit1) === undefined, "Hidden properties not added")
@@ -2221,18 +2285,20 @@ class Essence extends GenePool {
       _.bassert(7,Essence.getREPEAT(lit1) === undefined, "Hidden properties not added")
       _.bassert(8,Essence.getTYPE(lit1) === undefined, "Hidden properties not added")
       _.bassert(9,Essence.getDEFAULT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(10,Essence.getVALUE(lit1) === undefined, "Hidden properties not added")
       new Essence(lit1)
-      _.bassert(10,lit1.__SPEC === undefined, "__SPEC properties removed")
-      _.bassert(11,Essence.getROOT(lit1) === true, "Hidden properties added")
-      _.bassert(12,Essence.getRENDER(lit1) === true, "Hidden properties added")
-      _.bassert(13,Essence.getIGNORE(lit1) === true, "Hidden properties added")
-      _.bassert(14,Essence.getONCE(lit1) === true, "Hidden properties added")
-      _.bassert(15,Essence.getFLAT(lit1) === true, "Hidden properties added")
-      _.bassert(16,Essence.getLOCAL(lit1) === true, "Hidden properties added")
-      _.bassert(17,Essence.getREPEAT(lit1) === true, "Hidden properties added")
-      _.bassert(18,Essence.getTYPE(lit1) === "Number", "Hidden properties added")
-      _.bassert(19,Essence.getDEFAULT(lit1) === 126, "Hidden properties added")
-      _.bassert(20,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
+      _.bassert(20,lit1.__SPEC === undefined, "__SPEC properties removed")
+      _.bassert(21,Essence.getROOT(lit1) === true, "Hidden properties added")
+      _.bassert(22,Essence.getRENDER(lit1) === true, "Hidden properties added")
+      _.bassert(23,Essence.getIGNORE(lit1) === true, "Hidden properties added")
+      _.bassert(24,Essence.getONCE(lit1) === true, "Hidden properties added")
+      _.bassert(25,Essence.getFLAT(lit1) === true, "Hidden properties added")
+      _.bassert(26,Essence.getLOCAL(lit1) === true, "Hidden properties added")
+      _.bassert(27,Essence.getREPEAT(lit1) === true, "Hidden properties added")
+      _.bassert(28,Essence.getTYPE(lit1) === "Number", "Hidden properties added")
+      _.bassert(29,Essence.getDEFAULT(lit1) === 126, "Hidden properties added")
+      _.bassert(30,Essence.getVALUE(lit1) === 127, "Hidden properties added")
+      _.bassert(30,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
     }
     function _tryConstruct1(arg1) { 
       new Essence(arg1) 
@@ -2460,12 +2526,39 @@ Skipped values are: `
       _.bassert(103,breadcrumbs.constructor === BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
     }
     function isATest() {
+      // Object, Gene, GenePool, Essence added for each Essence instance
+      // BreadCrumbs added for each BreadCrumbs instance
+      // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
+      // "function", "object", "array" added for each BreadCrumbs instance
       let un
-      let bc = new BreadCrumbs(un, "isATest")
-      _.bassert(1,bc.isA(new BreadCrumbs(un, "isATest"),BreadCrumbs),"BreadCrumbs instance should be a BreadCrumbs")
+      let bc = new BreadCrumbs(un, "NameisATest")
+      _.bassert(1,bc.isA(new BreadCrumbs(un, "NameisATest"),BreadCrumbs),"BreadCrumbs instance should be a BreadCrumbs")
       _.bassert(2,!bc.isA(new Error(),BreadCrumbs),"Error instance should not be a BreadCrumbs")
       _.bassert(3,!bc.isA("BreadCrumbs",BreadCrumbs),"String should not be a BreadCrumbs")
       _.bassert(4,!bc.isA(22,BreadCrumbs),"number should not be a BreadCrumbs")
+
+      _.bassert(11,bc.isA(un,"undefined"),"should be registered and succeed")
+      _.bassert(12,bc.isA(null,"null"),"should be registered and succeed")
+      _.bassert(13,bc.isA(false,"boolean"),"should be registered and succeed")
+      _.bassert(14,bc.isA(12,"number"),"should be registered and succeed")
+      _.bassert(15,bc.isA(12n,"bigint"),"should be registered and succeed")
+      _.bassert(16,bc.isA("good","string"),"should be registered and succeed")
+      _.bassert(17,bc.isA(Symbol(),"symbol"),"should be registered and succeed")
+      _.bassert(18,bc.isA(cbkTypeOf,"function"),"should be registered and succeed")
+      _.bassert(19,bc.isA({},"object"),"should be registered and succeed")
+      _.bassert(20,bc.isA([],"array"),"should be registered and succeed")
+
+      _.bassert(21,!bc.isA(null,"undefined"),"should be registered and fail")
+      _.bassert(22,!bc.isA(undefined,"null"),"should be registered and fail")
+      _.bassert(23,!bc.isA(null,"boolean"),"should be registered and fail")
+      _.bassert(24,!bc.isA(12n,"number"),"should be registered and fail")
+      _.bassert(25,!bc.isA(12,"bigint"),"should be registered and fail")
+      _.bassert(26,!bc.isA(String,"string"),"should be registered and fail")
+      _.bassert(27,!bc.isA({},"symbol"),"should be registered and fail")
+      _.bassert(28,!bc.isA({},"function"),"should be registered and fail")
+      _.bassert(29,!bc.isA([],"object"),"should be registered and fail")
+      _.bassert(30,!bc.isA({},"array"),"should be registered and fail")
+      _.bassert(31,!bc.isA(null,"object"),"should be registered and fail")
     }
     function toStringTest() {
       let str = new BreadCrumbs(undefined, "my name11").toString()
@@ -2570,7 +2663,7 @@ class Setting extends BreadCrumbs {
       this.throwIfNotOfType(parent, "parent", Setting)
 
     for (const [key, value] of Object.entries(this.literal)) {
-      if (this.isA(value, Object)) {
+      if (this.isA(value, "object")) {
         if (!Setting.#isHandlersKey(key)) {
           this.#children[key] = new Setting(value, key, this)
         }
@@ -2615,11 +2708,9 @@ class Setting extends BreadCrumbs {
 
   // prettier-ignore
   static test(outputObj) { // Setting
-    BC.test(outputObj)
     let _ = null
     if(_ = new TestSuite("Setting", outputObj)) {
       _.run(getterLiteralTest)
-      DEBUG = false
       _.run(getterFrontmatterYAMLTest)
       _.run(getterRenderYAMLTest)
       _.run(constructorTest)
@@ -2742,8 +2833,13 @@ class Setting extends BreadCrumbs {
       _.bassert(104,setting.constructor === Setting,"the constructor property is not 'Setting'")
     }
     function isATest() {
+      // Object, Gene, GenePool, Essence added for each Essence instance
+      // BreadCrumbs added for each BreadCrumbs instance
+      // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
+      // "function", "object", "array" added for each BreadCrumbs instance
+      // Setting added for each Setting instance
       let un
-      let setting1 = new Setting({},"isATest",un)
+      let setting1 = new Setting({},"NameisATest",un)
       _.bassert(1,setting1.isA(setting1,"object"), "'" + setting1 + "' should be a " + "object")
       _.bassert(2,setting1.isA(setting1,Object), "'" + setting1 + "' should be a " + "Object")
       _.bassert(3,setting1.isA(setting1,BreadCrumbs), "'" + setting1 + "' should be a " + "BreadCrumbs")
@@ -2848,8 +2944,12 @@ async function foty(tp, app) {
   }
   test(testYAML)
   try {
+    let setting = new Setting(onne)
+    frontmatterYAML = setting.getFrontmatterYAML()
+    Object.assign(renderYAML, setting.getRenderYAML())
   } catch (e) {
     if (e instanceof FotyError) {
+      let errYAML = {}
       e.errOut(errYAML)
       return errYAML
     } else {
