@@ -121,6 +121,171 @@ function cssClassCbk(tp, noteName, type) {
 //  #endregion DO_NOT_TOUCH
 //  #region USER CONFIGURATION
 //  #endregion USER CONFIGURATION
+//  #region onne configuration data
+function creat(tp, notename, type) {
+  return tp.date.now()
+}
+function autag(tp, notename, type) {
+  return "0/" + type
+}
+function alias(tp, notename, type) {
+  let alias = notename
+  if (type != "ort" && type != "person") {
+    alias = notename.replace(/,/g, ` `).replace(/  /g, ` `)
+  } else {
+    // ort, person
+    alias = notename.replace(/, /g, `,`)
+    let strArr = alias.split(",")
+    alias = strArr[0]
+    strArr.shift()
+    if (type == "ort") {
+      alias += "(" + strArr.join(" ") + ")"
+    } else if (type == "person") {
+      alias = strArr.join(" ") + " " + alias
+    }
+  }
+  return alias
+}
+function cscls(tp, notename, type) {
+  return type
+}
+
+const ONNE_FRONTMATTER_ENTRIES = {
+  aliases: {isList: true, defaut: alias},
+  date_created: {isList: false, defaut: creat},
+  tags: {isList: true, defaut: autag},
+  publish: {isList: false, defaut: false},
+  cssclass: {isList: true, defaut: cscls},
+  private: {isList: false, defaut: false},
+  position: {ignore: true},
+}
+const TYPES = {
+  audio: {
+    marker: "{a}",
+    isDiary: false,
+    foto: "pexels-foteros-352505_200.jpg",
+    name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
+  },
+  buch: {
+    marker: "{b}",
+    isDiary: false,
+    foto: "pexels-gül-işık-2203051_200.jpg",
+    name_prompt: "Autornachname - Buchtitel",
+  },
+  ort: {
+    marker: "",
+    isDiary: false,
+    foto: "pexels-dzenina-lukac-1563005_200.jpg",
+    name_prompt: "Ortsname, Land",
+  },
+  person: {
+    marker: "",
+    isDiary: false,
+    foto: "pexels-lucas-andrade-14097235_200.jpg",
+    name_prompt: "Personnachname, Personvorname ?Geburtsdatum",
+  },
+  video: {
+    marker: "{v}",
+    isDiary: false,
+    foto: "pexels-vlad-vasnetsov-2363675_200.jpg",
+    name_prompt: "?Reihe - ?Autornachname - Videotitel",
+  },
+  web: {
+    marker: "{w}",
+    isDiary: false,
+    foto: "pexels-sururi-ballıdağ-_200.jpeg",
+    name_prompt: "?Autor - Webseitentitel - ?Datum",
+  },
+  zitat: {marker: "°", isDiary: false, name_prompt: "Titel Autornachname"},
+  zitate: {marker: "°°", isDiary: false, name_prompt: "Titel Autornachname"},
+  exzerpt: {
+    marker: "$",
+    isDiary: false,
+    name_prompt: "Autornachname - Buchtitel",
+  },
+  garten: {marker: "", isDiary: false, name_prompt: "Gartenthema"},
+  gartentagebuch: {
+    marker: "",
+    isDiary: true,
+    dateformat: "YY-MM-DD",
+    before_date: "Garten ",
+  },
+  lesetagebuch: {
+    marker: "",
+    isDiary: true,
+    firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
+    dateformat: "YY-MM-DD",
+    before_date: "Lesetagebucheintrag ",
+  },
+  pflanze: {marker: "", isDiary: false, name_prompt: "Pflanzenname"},
+  unbedacht: {
+    marker: "",
+    isDiary: true,
+    dateformat: "YY-MM-DD",
+    before_date: "Unbedacht ",
+  },
+  verwaltung: {marker: "", isDiary: false, name_prompt: "Verwaltungsthema"},
+  diary: {marker: "", isDiary: true, dateformat: "YYYY-MM-DD"},
+  note: {marker: "", isDiary: false, name_prompt: "Notizthema"},
+}
+TYPES["diary"].frontmatter = {private: true}
+TYPES["verwaltung"].frontmatter = {private: true}
+TYPES["gartentagebuch"].frontmatter = {cssclass: "garten, tagebuch"}
+TYPES["pflanze"].frontmatter = {
+  cssclass: "garten",
+  Name: "",
+  Sorte: "",
+  Firma: "",
+  vorhanden: "",
+  Aussaat_geschützt: "-FM---------",
+  Aussaat_Freiland: "",
+  Auspflanzen: "",
+  Ernte_geschützt: "",
+  Ernte_Freiland: "",
+  Keimtemperatur_Grad: "",
+  Keimdauer_Tage: "",
+  Standort: "",
+  Boden: "",
+  Dauer: "",
+  Saattiefe_cm: "",
+  Abstand_x_cm: "",
+  Abstand_y_cm: "",
+}
+TYPES["lesetagebuch"].frontmatter = {cssclass: "tagebuch"}
+TYPES["unbedacht"].frontmatter = {cssclass: "tagebuch"}
+const FOLDER2TYPES = {
+  exzerpte: ["exzerpt"],
+  garten: ["garten"],
+  gartentagebuch: ["gartentagebuch"],
+  lesetagebuch: ["lesetagebuch"],
+  pflanzen: ["pflanze"],
+  unbedacht: ["unbedacht"],
+  verwaltung: ["verwaltung"],
+  zwischenreich: [
+    "audio",
+    "buch",
+    "ort",
+    "person",
+    "video",
+    "web",
+    "zitat",
+    "zitate",
+  ],
+  diary: ["diary"],
+  vaultroot: ["note"],
+  temp: ["diary", "garten"],
+}
+const DEFAULTTYPE = "note"
+const ROOTKEY = "vaultroot"
+const RESOURCE_FOLDER = "_resources/"
+const RESOURCE_TYPES = ["jpg", "jpeg", "png", "mp3", "midi"]
+const NEWTITLES_ARRAY = ["Unbenannt", "Untitled"]
+const DEFAULT_NAME_PROMPT = "Name der Notiz (ohne Kenner/Marker)"
+const TYPE_PROMPT = "Typ wählen"
+const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
+//  #endregion onne configuration data
+//  #region onne => foty
+//  #endregion  onne => foty
 //  #region test configurations
 /**
  * Defaults
@@ -129,171 +294,22 @@ function cssClassCbk(tp, noteName, type) {
  * __FOLDER2TYPE: ONCE: true, REPEAT: true
  *
  * __SPEC:
- *  ROOT: -- false | (set automatically correct)
- *  RENDER: -- false | (inherited)
- *  TYPE: -- "String" | (individual)
- *  DEFAULT: -- "" | (individual)
- *  IGNORE: -- false | (inherited)(It is possible to IGNORE ancestors, but not descendants)
- *  FLAT : -- false | (individual)(values are not parsed, even if they are objects)
- *  ONCE: -- false | (individual)(if true, has to be the outermost possible)
- *  REPEAT: -- false | (individual) (same entryType can be added several times under diff. keys)
- *  DEFAULTS: -- object | (individual)(makes only sense for REPEAT: sections)
+ * ESSENCE:   |type   |default |inherited |remark|
+ * -----------------------------------------------
+ *  ROOT:     |Boolean|false   |automatic ||
+ *  RENDER:   |Boolean|false   |inherited ||
+ *  TYPE:     |String |"String"|individual||
+ *  DEFAULT:  |TYPE   |""      |individual||
+ *  IGNORE:   |Boolean|false   |inherited |It is possible to IGNORE ancestors, but not descendants|
+ *  FLAT :    |Boolean|false   |individual|values are not parsed, even if they are objects|
+ *  ONCE:     |Boolean|false   |individual|if true, has to be the outermost possible|
+ *  REPEAT:   |Boolean|false   |individual|same entryType can be added several times under diff. keys|
+ *  LOCAL:    |Boolean|false   |inhereted |should be/can be localized (translated)|
+ * //@todo DEFAULTS: |Object |object  |individual|makes only sense for REPEAT: sections|
  * @ignore
  */
 //prettier-ignore
-const vTest = {ROOT:true, __:"...",
-  __DIALOG_SETTINGS: {ONCE:true, __:"...",
-    TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
-    TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
-    TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
-  },
-  __NOTE_TYPES: {ONCE:true,REPEAT:true, __:"...",
-    DEFAULTS: {
-      MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
-      DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
-      TITLE_BEFORE_DATE: {TYPE:"String",DEFAULT:"", __:"...",},
-      DATEFORMAT: {TYPE:"Date",DEFAULT:"YY-MM-DD", __:"...",},
-      FRONTMATTER: {
-        aliases: {TYPE: "Array", DEFAULT: aliasCbk},
-        date_created: {TYPE: "Date", DEFAULT: createdCbk},
-        tags: {TYPE: "Array", DEFAULT: tagsCbk},
-        publish: {TYPE: "Boolean", DEFAULT: false},
-        cssclass: {TYPE: "Array", DEFAULT: cssClassCbk},
-        private: {TYPE: "Boolean", DEFAULT: false},
-        position: {IGNORE: true},
-      },
-      language: {IGNORE:true, __:"...",},
-    },
-    diary: {
-      DATE: true,
-      DATEFORMAT: "YYYY-MM-DD",
-      FRONTMATTER: {private: true},
-      language: "Portuguese", /* will be ignored */
-    },
-    citation: {
-      MARKER: "°",
-      FRONTMATTER: {cssclass: "garten, tagebuch"},
-    },
-  },
-__FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
-    DEFAULTS: {TYPE:"(String|Array.<String>)", __:"...",
-    },
-    test: "diary",
-    "/": ["citation", "diary"],
-  },
-  c: {RENDER: true,TYPE:"", __: "...",
-    pict: "ja",
-    d: {RENDER: false, __: "...",
-      d: {RENDER: false/*inherited*/, __: "...", 
-        gloria: "halleluja",
-      },
-    },
-  },
-}
-//prettier-ignore
-const wTest = {
-  __DIALOG_SETTINGS: {__SPEC: {__ONCE:true},
-    TYPE_PROMPT: {TYPE:"String",DEFAULT:"Typ wählen", __:"...",},
-    TYPE_MAX_ENTRIES: {TYPE:"Number",DEFAULT:10, __:"...",},
-    TITLE_NEW_FILE: {TYPE:"(String|Array.<String>)",DEFAULT:["Unbenannt", "Untitled"], __:"...",},
-  },
-  __NOTE_TYPES: {ONCE:true,REPEAT:true, __:"...",
-    DEFAULTS: {
-      MARKER: {TYPE:"String",DEFAULT:"", __:"...",},
-      DATE: {TYPE:"Boolean",DEFAULT:false, __:"...",},
-      TITLE_BEFORE_DATE: {TYPE:"String",DEFAULT:"", __:"...",},
-      DATEFORMAT: {TYPE:"Date",DEFAULT:"YY-MM-DD", __:"...",},
-      FRONTMATTER: {
-        aliases: {TYPE: "Array", DEFAULT: aliasCbk},
-        date_created: {TYPE: "Date", DEFAULT: createdCbk},
-        tags: {TYPE: "Array", DEFAULT: tagsCbk},
-        publish: {TYPE: "Boolean", DEFAULT: false},
-        cssclass: {TYPE: "Array", DEFAULT: cssClassCbk},
-        private: {TYPE: "Boolean", DEFAULT: false},
-        position: {IGNORE: true},
-      },
-      language: {IGNORE:true, __:"...",},
-    },
-    diary: {
-      DATE: true,
-      DATEFORMAT: "YYYY-MM-DD",
-      FRONTMATTER: {private: true},
-      language: "Portuguese", /* will be ignored */
-    },
-    citation: {
-      MARKER: "°",
-      FRONTMATTER: {cssclass: "garten, tagebuch"},
-    },
-  },
-__FOLDER2TYPE: {ONCE:true,REPEAT:true, __:"...",
-    DEFAULTS: {TYPE:"(String|Array.<String>)", __:"...",
-    },
-    test: "diary",
-    "/": ["citation", "diary"],
-  },
-  c: {RENDER: true,TYPE:"", __: "...",
-    pict: "ja",
-    d: {RENDER: false, __: "...",
-      d: {RENDER: false/*inherited*/, __: "...", 
-        gloria: "halleluja",
-      },
-    },
-  },
-}
-const xTest = {
-  __DIALOG_SETTINGS: {
-    TYPE_PROMPT: "Typ wählen" /* String */,
-    TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
-    TITLE_NEW_FILE: ["Unbenannt", "Untitled"] /* String or Array of Strings */,
-  },
-  __FOLDER2TYPE: {
-    /* Values are  String or Array of Strings */ test: "diary",
-    "/": ["citation", "diary"],
-  },
-  __NOTE_TYPES: {
-    __DEFAULTS: {
-      // Overwrites the hardcoded defaults
-      /* String */ MARKER: "",
-      /* Boolean */ DATE: false,
-      /* String */ TITLE_BEFORE_DATE: "",
-      /* Date */ DATEFORMAT: "YY-MM-DD",
-      /* @todo */ FRONTMATTER: {
-        aliases: {__SPEC: {TYPE: "Array", DEFAULT: aliasCbk}},
-        date_created: {__SPEC: {TYPE: "Date", DEFAULT: createdCbk}},
-        tags: {__SPEC: {TYPE: "Array", DEFAULT: tagsCbk}},
-        publish: {__SPEC: {TYPE: "Boolean", DEFAULT: false}},
-        cssclass: {__SPEC: {TYPE: "Array", DEFAULT: cssClassCbk}},
-        private: {__SPEC: {TYPE: "Boolean", DEFAULT: false}},
-        position: {__SPEC: {IGNORE: true}},
-      },
-    },
-    diary: {
-      MARKER: "",
-      DATE: true,
-      TITLE_BEFORE_DATE: "",
-      DATEFORMAT: "YYYY-MM-DD",
-      FRONTMATTER: {private: true},
-    },
-    citation: {
-      MARKER: "°",
-      FRONTMATTER: {cssclass: "garten, tagebuch"},
-    },
-  },
-  c: {
-    __SPEC: {RENDER: /* Boolean */ true},
-    pict: "ja",
-    d: {
-      __SPEC: {RENDER: false},
-      d: {
-        gloria: "halleluja",
-      },
-    },
-  },
-}
-const yTest = {
-  audio: {marker: "{a}", pict: "a.jpg", frontmatter: {private: true}},
-  plant: {frontmatter: {kind: "", seed: ""}},
-}
+
 //  #endregion test configurations
 //#endregion CONFIGURATION
 //#region globals and externals
@@ -1867,6 +1883,12 @@ class Essence extends GenePool {
   get FLAT() {
     return this[Essence.#pre + "FLAT"]
   }
+  /** LOCAL essence, inherited
+   * @type {Boolean}
+   */
+  get LOCAL() {
+    return this[Essence.#pre + "LOCAL"]
+  }
   /** ONCE essence, individual
    * @type {Boolean}
    */
@@ -1900,6 +1922,7 @@ class Essence extends GenePool {
   static #DEFAULT_DEFT = ""
   static #IGNORE_DEFT = false
   static #FLAT_DEFT = false
+  static #LOCAL_DEFT = false
   static #ONCE_DEFT = false
   static #REPEAT_DEFT = false
   #skipped = [] //[{.name,.value,.expectedType}]
@@ -1918,6 +1941,7 @@ class Essence extends GenePool {
    * {@link Essence#DEFAULT|DEFAULT},
    * {@link Essence#IGNORE|IGNORE} (inherited),
    * {@link Essence#FLAT|FLAT},
+   * {@link Essence#LOCAL|LOCAL},
    * {@link Essence#ONCE|ONCE} and
    * {@link Essence#REPEAT|REPEAT}.
    * Additionally {@link Essence#ROOT|ROOT} is added, dependent whether {@link parent}
@@ -1982,6 +2006,7 @@ class Essence extends GenePool {
     hide(this, lit, specLit, "TYPE", "String", un, Essence.#TYPE_DEFT)
     hide(this, lit, specLit, "IGNORE", "Boolean", p, Essence.#IGNORE_DEFT)
     hide(this, lit, specLit, "FLAT", "Boolean", un, Essence.#FLAT_DEFT)
+    hide(this, lit, specLit, "LOCAL", "Boolean", p, Essence.#LOCAL_DEFT)
     hide(this, lit, specLit, "ONCE", "Boolean", un, Essence.#ONCE_DEFT)
     hide(this, lit, specLit, "REPEAT", "Boolean", un, Essence.#REPEAT_DEFT)
     hide(this, lit, specLit, "DEFAULT", this.TYPE, un, Essence.#DEFAULT_DEFT)
@@ -2036,12 +2061,19 @@ class Essence extends GenePool {
   static getIGNORE(lit) {
     return lit[Essence.#pre + "IGNORE"]
   }
-  /** FLAT essence, individual
+  /** FLAT essence, inherited
    * @param {Object} lit
    * @type {Boolean}
    */
   static getFLAT(lit) {
     return lit[Essence.#pre + "FLAT"]
+  }
+  /** LOCAL essence, individual
+   * @param {Object} lit
+   * @type {Boolean}
+   */
+  static getLOCAL(lit) {
+    return lit[Essence.#pre + "LOCAL"]
   }
   /** ONCE essence, individual
    * @param {Object} lit
@@ -2074,33 +2106,37 @@ class Essence extends GenePool {
       _.assert(2,_tryConstruct1,{__SPEC: {IGNORE:true}},"Should construct")
       _.assert(3,_tryConstruct1,{__SPEC: {ONCE:true}},"Should construct")
       _.assert(4,_tryConstruct1,{__SPEC: {FLAT:true}},"Should construct")
-      _.assert(5,_tryConstruct1,{__SPEC: {REPEAT:true}},"Should construct")
-      _.assert(6,_tryConstruct1,{__SPEC: {TYPE:"Boolean"}},"Should construct")
-      _.assert(7,_tryConstruct1,{__SPEC: {DEFAULT:""}},"Should construct")
-      _.assert(8,_tryConstruct1,{__SPEC: {NO_SPEC_KEY:""}},"Should construct")
+      _.assert(5,_tryConstruct1,{__SPEC: {LOCAL:true}},"Should construct")
+      _.assert(6,_tryConstruct1,{__SPEC: {REPEAT:true}},"Should construct")
+      _.assert(7,_tryConstruct1,{__SPEC: {TYPE:"Boolean"}},"Should construct")
+      _.assert(8,_tryConstruct1,{__SPEC: {DEFAULT:""}},"Should construct")
+      _.assert(9,_tryConstruct1,{__SPEC: {NO_SPEC_KEY:""}},"Should construct")
       _.assert(11,_tryConstruct1,{__SPEC: {RENDER:"abc"}},"Should construct")
       _.assert(12,_tryConstruct1,{__SPEC: {IGNORE:"abc"}},"Should construct")
       _.assert(13,_tryConstruct1,{__SPEC: {ONCE:"abc"}},"Should construct")
       _.assert(14,_tryConstruct1,{__SPEC: {FLAT:"abc"}},"Should construct")
-      _.assert(15,_tryConstruct1,{__SPEC: {REPEAT:"abc"}},"Should construct")
-      _.assert(16,_tryConstruct1,{__SPEC: {TYPE:false}},"Should construct")
-      _.assert(17,_tryConstruct1,{__SPEC: {DEFAULT:false}},"Should construct")
+      _.assert(15,_tryConstruct1,{__SPEC: {LOCAL:"abc"}},"Should construct")
+      _.assert(16,_tryConstruct1,{__SPEC: {REPEAT:"abc"}},"Should construct")
+      _.assert(17,_tryConstruct1,{__SPEC: {TYPE:false}},"Should construct")
+      _.assert(18,_tryConstruct1,{__SPEC: {DEFAULT:false}},"Should construct")
       let wrong1 = new Essence({__SPEC: {RENDER:"abc"}})
       let wrong2 = new Essence({__SPEC: {IGNORE:"abc"}})
       let wrong3 = new Essence({__SPEC: {ONCE:"abc"}})
       let wrong4 = new Essence({__SPEC: {FLAT:"abc"}})
-      let wrong5 = new Essence({__SPEC: {REPEAT:"abc"}})
-      let wrong6 = new Essence({__SPEC: {TYPE:false}})
-      let wrong7 = new Essence({__SPEC: {DEFAULT:false}})
-      let wrong8 = new Essence({__SPEC: {NO_SPEC_KEY:false}})
+      let wrong5 = new Essence({__SPEC: {LOCAL:"abc"}})
+      let wrong6 = new Essence({__SPEC: {REPEAT:"abc"}})
+      let wrong7 = new Essence({__SPEC: {TYPE:false}})
+      let wrong8 = new Essence({__SPEC: {DEFAULT:false}})
+      let wrong9 = new Essence({__SPEC: {NO_SPEC_KEY:false}})
       _.bassert(21,wrong1.skipped[0]["name"]==="RENDER","RENDER should be skipped")
       _.bassert(22,wrong2.skipped[0]["name"]==="IGNORE","IGNORE should be skipped")
       _.bassert(23,wrong3.skipped[0]["name"]==="ONCE","ONCE should be skipped")
       _.bassert(24,wrong4.skipped[0]["name"]==="FLAT","FLAT should be skipped")
-      _.bassert(25,wrong5.skipped[0]["name"]==="REPEAT","REPEAT should be skipped")
-      _.bassert(26,wrong6.skipped[0]["name"]==="TYPE","TYPE should be skipped")
-      _.bassert(27,wrong7.skipped[0]["name"]==="DEFAULT","DEFAULT should be skipped")
-      _.bassert(28,wrong8.skipped.length ===0,"unknown SPEC entries should be skipped silently")
+      _.bassert(25,wrong5.skipped[0]["name"]==="LOCAL","LOCAL should be skipped")
+      _.bassert(26,wrong6.skipped[0]["name"]==="REPEAT","REPEAT should be skipped")
+      _.bassert(27,wrong7.skipped[0]["name"]==="TYPE","TYPE should be skipped")
+      _.bassert(28,wrong8.skipped[0]["name"]==="DEFAULT","DEFAULT should be skipped")
+      _.bassert(29,wrong9.skipped.length ===0,"unknown SPEC entries should be skipped silently")
       let lit = {__SPEC: {RENDER:true},myValue:"22"}
       _.bassert(31,lit.__SPEC != undefined,"just to show it is defined")
       _.bassert(32,lit.myValue != undefined,"just to show it is defined")
@@ -2118,28 +2154,38 @@ class Essence extends GenePool {
       _.bassert(3,ess0.IGNORE===false,"Should always be defined")
       _.bassert(4,ess0.ONCE===false,"Should always be defined")
       _.bassert(5,ess0.FLAT===false,"Should always be defined")
-      _.bassert(6,ess0.REPEAT===false,"Should always be defined")
-      _.bassert(7,ess0.TYPE==="String","Should always be defined")
-      _.bassert(8,ess0.DEFAULT==="","Should always be defined")
-      let lit1 = {__SPEC: {RENDER:true,IGNORE:true,ONCE:true,FLAT:true,REPEAT:true,TYPE:"Boolean",DEFAULT:false}}
+      _.bassert(6,ess0.LOCAL===false,"Should always be defined")
+      _.bassert(7,ess0.REPEAT===false,"Should always be defined")
+      _.bassert(8,ess0.TYPE==="String","Should always be defined")
+      _.bassert(9,ess0.DEFAULT==="","Should always be defined")
+      let lit1 = {__SPEC: {RENDER:true,
+                           IGNORE:true,
+                           ONCE:true,
+                           FLAT:true,
+                           LOCAL:true,
+                           REPEAT:true,
+                           TYPE:"Boolean",
+                           DEFAULT:false}}
       let ess1 = new Essence(lit1)
       _.bassert(11,ess1.ROOT===true,"Should always be defined")
       _.bassert(12,ess1.RENDER===true,"Should be set to literal value")
       _.bassert(13,ess1.IGNORE===true,"Should be set to literal value")
       _.bassert(14,ess1.ONCE===true,"Should be set to literal value")
       _.bassert(15,ess1.FLAT===true,"Should be set to literal value")
-      _.bassert(16,ess1.REPEAT===true,"Should be set to literal value")
-      _.bassert(17,ess1.TYPE==="Boolean","Should be set to literal value")
-      _.bassert(18,ess1.DEFAULT===false,"Should be set to literal value")
+      _.bassert(16,ess1.LOCAL===true,"Should be set to literal value")
+      _.bassert(17,ess1.REPEAT===true,"Should be set to literal value")
+      _.bassert(18,ess1.TYPE==="Boolean","Should be set to literal value")
+      _.bassert(19,ess1.DEFAULT===false,"Should be set to literal value")
       let ess2 = new Essence(undefined,ess1)
       _.bassert(21,ess2.ROOT===false,"Should always be defined")
       _.bassert(22,ess2.RENDER===true,"Should be set to parent value")
       _.bassert(23,ess2.IGNORE===true,"Should be set to parent value")
       _.bassert(24,ess2.ONCE===false,"Should be set to default value")
       _.bassert(25,ess2.FLAT===false,"Should be set to default value")
-      _.bassert(26,ess2.REPEAT===false,"Should be set to default value")
-      _.bassert(27,ess2.TYPE==="String","Should be set to default value")
-      _.bassert(28,ess2.DEFAULT==="","Should be set to default value")
+      _.bassert(26,ess2.LOCAL===true,"Should be set to parent value")
+      _.bassert(27,ess2.REPEAT===false,"Should be set to default value")
+      _.bassert(28,ess2.TYPE==="String","Should be set to default value")
+      _.bassert(29,ess2.DEFAULT==="","Should be set to default value")
     }
     function isATest() {
       let ess1 = new Essence()
@@ -2161,6 +2207,7 @@ class Essence extends GenePool {
                            IGNORE:true,
                            ONCE:true,
                            FLAT:true,
+                           LOCAL:true,
                            REPEAT:true,
                            TYPE:"Number",
                            DEFAULT:126 }}
@@ -2170,9 +2217,10 @@ class Essence extends GenePool {
       _.bassert(3,Essence.getIGNORE(lit1) === undefined, "Hidden properties not added")
       _.bassert(4,Essence.getONCE(lit1) === undefined, "Hidden properties not added")
       _.bassert(5,Essence.getFLAT(lit1) === undefined, "Hidden properties not added")
-      _.bassert(6,Essence.getREPEAT(lit1) === undefined, "Hidden properties not added")
-      _.bassert(7,Essence.getTYPE(lit1) === undefined, "Hidden properties not added")
-      _.bassert(8,Essence.getDEFAULT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(6,Essence.getLOCAL(lit1) === undefined, "Hidden properties not added")
+      _.bassert(7,Essence.getREPEAT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(8,Essence.getTYPE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(9,Essence.getDEFAULT(lit1) === undefined, "Hidden properties not added")
       new Essence(lit1)
       _.bassert(10,lit1.__SPEC === undefined, "__SPEC properties removed")
       _.bassert(11,Essence.getROOT(lit1) === true, "Hidden properties added")
@@ -2180,10 +2228,11 @@ class Essence extends GenePool {
       _.bassert(13,Essence.getIGNORE(lit1) === true, "Hidden properties added")
       _.bassert(14,Essence.getONCE(lit1) === true, "Hidden properties added")
       _.bassert(15,Essence.getFLAT(lit1) === true, "Hidden properties added")
-      _.bassert(16,Essence.getREPEAT(lit1) === true, "Hidden properties added")
-      _.bassert(17,Essence.getTYPE(lit1) === "Number", "Hidden properties added")
-      _.bassert(18,Essence.getDEFAULT(lit1) === 126, "Hidden properties added")
-      _.bassert(19,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
+      _.bassert(16,Essence.getLOCAL(lit1) === true, "Hidden properties added")
+      _.bassert(17,Essence.getREPEAT(lit1) === true, "Hidden properties added")
+      _.bassert(18,Essence.getTYPE(lit1) === "Number", "Hidden properties added")
+      _.bassert(19,Essence.getDEFAULT(lit1) === 126, "Hidden properties added")
+      _.bassert(20,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
     }
     function _tryConstruct1(arg1) { 
       new Essence(arg1) 
