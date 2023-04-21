@@ -134,8 +134,8 @@ function cssClassCbk(tp, noteName, type) {
  *  TYPE: -- "String" | (individual)
  *  DEFAULT: -- "" | (individual)
  *  IGNORE: -- false | (inherited)(It is possible to IGNORE ancestors, but not descendants)
- *  FLAT : -- false | (values are not parsed, even if they are objects)
- *  ONCE: -- false | (if true, has to be the outermost possible)
+ *  FLAT : -- false | (individual)(values are not parsed, even if they are objects)
+ *  ONCE: -- false | (individual)(if true, has to be the outermost possible)
  *  REPEAT: -- false | (individual) (same entryType can be added several times under diff. keys)
  *  DEFAULTS: -- object | (individual)(makes only sense for REPEAT: sections)
  * @ignore
@@ -1826,49 +1826,50 @@ class Essence extends GenePool {
   get ROOT() {
     return this[Essence.#pre + "ROOT"]
   }
-  /** RENDER essence
+  /** RENDER essence, inherited
    * @type {Boolean}
    */
   get RENDER() {
     return this[Essence.#pre + "RENDER"]
   }
-  /** TYPE essence
+  /** TYPE essence, individual
    * @type {String}
    */
   get TYPE() {
     return this[Essence.#pre + "TYPE"]
   }
-  /** DEFAULT essence
+  /** DEFAULT essence, individual
    *  is of type given in {@link Essence#TYPE|Essence.TYPE}
    * @type {*}
    */
   get DEFAULT() {
     return this[Essence.#pre + "DEFAULT"]
   }
-  /** IGNORE essence
+  /** IGNORE essence, inherited
    * @type {Boolean}
    */
   get IGNORE() {
     return this[Essence.#pre + "IGNORE"]
   }
-  /** FLAT essence
+  /** FLAT essence, individual
    * @type {Boolean}
    */
   get FLAT() {
     return this[Essence.#pre + "FLAT"]
   }
-  /** ONCE essence
+  /** ONCE essence, individual
    * @type {Boolean}
    */
   get ONCE() {
     return this[Essence.#pre + "ONCE"]
   }
-  /** REPEAT essence
+  /** REPEAT essence, individual
    * @type {Boolean}
    */
   get REPEAT() {
     return this[Essence.#pre + "REPEAT"]
   }
+  //@todo DEFAULTS, individual
   /** skipped essences
    * @type {Array.<Object>}
    */
@@ -1899,10 +1900,10 @@ class Essence extends GenePool {
    * <p>
    * Adds {@link Essence.SPEC_KEY|__SPEC properties} from literal to this instance.
    * Recognized {@link Essence.SPEC_KEY|__SPEC properties} are:
-   * {@link Essence#RENDER|RENDER},
+   * {@link Essence#RENDER|RENDER} (inherited),
    * {@link Essence#TYPE|TYPE},
    * {@link Essence#DEFAULT|DEFAULT},
-   * {@link Essence#IGNORE|IGNORE},
+   * {@link Essence#IGNORE|IGNORE} (inherited),
    * {@link Essence#FLAT|FLAT},
    * {@link Essence#ONCE|ONCE} and
    * {@link Essence#REPEAT|REPEAT}.
@@ -1911,8 +1912,8 @@ class Essence extends GenePool {
    * <p>
    * Values in literal with wrong type will be skipped and added to {@link skipped}.
    * <p>
-   * If a {@link Essence.SPEC_KEY|__SPEC property} is not set in {@link Essence.SPEC_KEY|__SPEC}
-   * {@link parent} value is set, if {@link parent} is defined, hardcoded value otherwise.
+   * If a {@link Essence.SPEC_KEY|__SPEC property} is not set in {@link Essence.SPEC_KEY|__SPEC},
+   * {@link parent} value is set, if it is inherited and {@link parent} is defined. Otherwise hardcoded value is set.
    * @param {String} literal
    * @param {GenePool} parent
    * @throws TypeError if {@link parent} is no {@link GenePool}
@@ -1953,11 +1954,11 @@ class Essence extends GenePool {
     if (!this.#validateOrInform(litREP, "Boolean", "REPEAT")) litREP = u
     let ROOT = parent != u ? false : true
     let RENDER = litREN != u ? litREN : p != u ? p.RENDER : Essence.#RENDER_DEFT
-    let TYPE = litTYP != u ? litTYP : p != u ? p.TYPE : Essence.#TYPE_DEFT
+    let TYPE = litTYP != u ? litTYP : Essence.#TYPE_DEFT
     let IGNORE = litIGN != u ? litIGN : p != u ? p.IGNORE : Essence.#IGNORE_DEFT
-    let FLAT = litFLT != u ? litFLT : p != u ? p.FLAT : Essence.#FLAT_DEFT
-    let ONCE = litONC != u ? litONC : p != u ? p.ONCE : Essence.#ONCE_DEFT
-    let REPEAT = litREP != u ? litREP : p != u ? p.REPEAT : Essence.#REPEAT_DEFT
+    let FLAT = litFLT != u ? litFLT : Essence.#FLAT_DEFT
+    let ONCE = litONC != u ? litONC : Essence.#ONCE_DEFT
+    let REPEAT = litREP != u ? litREP : Essence.#REPEAT_DEFT
     Object.defineProperty(this, Essence.#pre + "ROOT", {
       value: ROOT,
       writable: false,
@@ -2003,7 +2004,7 @@ class Essence extends GenePool {
     let litDEF = specLit.DEFAULT
     delete specLit.DEFAULT
     if (!this.#validateOrInform(litDEF, this.TYPE, "DEFAULT")) litDEF = u
-    let DEFT = litDEF != u ? litDEF : p != u ? p.DEFAULT : Essence.#DEFAULT_DEFT
+    let DEFT = litDEF != u ? litDEF : Essence.#DEFAULT_DEFT
     Object.defineProperty(this, Essence.#pre + "DEFAULT", {
       value: DEFT,
       writable: false,
@@ -2096,14 +2097,14 @@ class Essence extends GenePool {
       _.bassert(17,ess1.TYPE=="Boolean","Should be set to literal value")
       _.bassert(18,ess1.DEFAULT==false,"Should be set to literal value")
       let ess2 = new Essence(undefined,ess1)
-      _.bassert(11,ess2.ROOT==false,"Should always be defined")
-      _.bassert(12,ess2.RENDER==true,"Should be set to parent value")
-      _.bassert(13,ess2.IGNORE==true,"Should be set to parent value")
-      _.bassert(14,ess2.ONCE==true,"Should be set to parent value")
-      _.bassert(15,ess2.FLAT==true,"Should be set to parent value")
-      _.bassert(16,ess2.REPEAT==true,"Should be set to parent value")
-      _.bassert(17,ess2.TYPE=="Boolean","Should be set to parent value")
-      _.bassert(18,ess2.DEFAULT==false,"Should be set to parent value")
+      _.bassert(21,ess2.ROOT==false,"Should always be defined")
+      _.bassert(22,ess2.RENDER==true,"Should be set to parent value")
+      _.bassert(23,ess2.IGNORE==true,"Should be set to parent value")
+      _.bassert(24,ess2.ONCE==false,"Should be set to default value")
+      _.bassert(25,ess2.FLAT==false,"Should be set to default value")
+      _.bassert(26,ess2.REPEAT==false,"Should be set to default value")
+      _.bassert(27,ess2.TYPE=="String","Should be set to default value")
+      _.bassert(28,ess2.DEFAULT==="","Should be set to default value")
     }
     function isATest() {
       let ess1 = new Essence()
