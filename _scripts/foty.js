@@ -18,20 +18,20 @@ module.exports = foty // templater call: "await tp.user.foty(tp, app)"
  * code section.
  *<p>
  * Problem description<br>
- * ===================<br>
+ * ====================<br>
  * For each kind of note another template is needed. If needs change, the
  * template has to be changed. If general needs change, all templates have
  * to be changed. Elaborated Templates are difficult to maintain. Not all
  * users of obsidian can write javascript.
  *<p>
  * Intention of foty<br>
- * =================<br>
+ * ==================<br>
  * Let user needs be configurable and write a full note skeleton from given
  * configuration.
  * For changing needs only configuration should have to be changed.
  *<p>
  * Presumptions<br>
- * ============<br>
+ * =============<br>
  * Note skeleton will contain a frontmatter header and a rendered part.
  * Frontmatter header has frontmatter entries. Rendered part has plain text
  * and text based on variable output, e.g. date or links to resources.
@@ -101,9 +101,9 @@ function aliasCbk(tp, noteName, type) {
     let strArr = alias.split(",")
     alias = strArr[0]
     strArr.shift()
-    if (type == "ort") {
+    if (type === "ort") {
       alias += "(" + strArr.join(" ") + ")"
-    } else if (type == "person") {
+    } else if (type === "person") {
       alias = strArr.join(" ") + " " + alias
     }
   }
@@ -404,12 +404,12 @@ function test(outputObj) {
  */
 function flatten(inp) {
   let res = inp
-  if (typeof inp == "object") {
+  if (typeof inp === "object") {
     let entries = Object.entries(inp)
     if (entries.length != 0) {
       res = ""
       entries.forEach(([key, value], idx) => {
-        let indent = idx == 0 ? "OBJ  " : "\n                        "
+        let indent = idx === 0 ? "OBJ  " : "\n                        "
         res += `${indent}${key}: ${value}`
       })
     }
@@ -481,13 +481,13 @@ function dbg(...strs) {
  */
 function aut(str, b = "yellow", c = "red") {
   let css = `background:${b};color:${c};font-weight:normal`
-  if (typeof str == "object") {
+  if (typeof str === "object") {
     let entries = Object.entries(str)
-    if (entries.length == 0) {
+    if (entries.length === 0) {
       console.log(`%c${str}`, css)
     } else {
       entries.forEach(([key, value], idx) => {
-        let indent = idx == 0 ? "OBJ " : "    "
+        let indent = idx === 0 ? "OBJ " : "    "
         console.log(`%c${indent}${key}: ${value}`, css)
       })
     }
@@ -518,12 +518,12 @@ function auts(str, ...strs) {
  */
 function vaut(vn, v, b = "yellow", c = "red") {
   let str = `${vn}: ${v}`
-  if (typeof v == "object") {
+  if (typeof v === "object") {
     let entries = Object.entries(v)
     if (entries.length != 0) {
       str = `${vn}: `
       entries.forEach(([key, value], idx) => {
-        let indent = idx == 0 ? "" : "    "
+        let indent = idx === 0 ? "" : "    "
         str += `${indent}${key}: ${value}`
       })
     }
@@ -567,7 +567,7 @@ class FotyError extends Error {
   constructor(caller, ...params) {
     super(...params)
     this.name = "Foty Error"
-    this.#caller = typeof caller == "string" ? caller : ""
+    this.#caller = typeof caller === "string" ? caller : ""
   }
   /** Puts error information formatted to {@link YAML} properties.
    * <p>
@@ -638,21 +638,25 @@ class FotyError extends Error {
    * @returns {String}
    */
   getNameKey(cnt) {
-    return cnt == undefined || typeof cnt != "number" ? "????" : cnt.pad() + "?"
+    return cnt === undefined || typeof cnt != "number"
+      ? "????"
+      : cnt.pad() + "?"
   }
   /** Creates and returns key for error name in dependence of value of {@link cnt}.
    * @param {(undefined|Number)} cnt
    * @returns {String}
    */
   static getNameKey(cnt) {
-    return cnt == undefined || typeof cnt != "number" ? "????" : cnt.pad() + "?"
+    return cnt === undefined || typeof cnt != "number"
+      ? "????"
+      : cnt.pad() + "?"
   }
   /** Creates and returns key for error msg in dependence of value of {@link cnt}.
    * @param {(undefined|Number)} cnt
    * @returns {String}
    */
   static getMsgKey(cnt) {
-    return cnt == undefined || typeof cnt != "number"
+    return cnt === undefined || typeof cnt != "number"
       ? "\u00A8\u00A8\u00A8\u00A8"
       : cnt.pad() + "\u00A8"
   }
@@ -661,7 +665,7 @@ class FotyError extends Error {
    * @returns {String}
    */
   static getSepKey(cnt) {
-    return cnt == undefined || typeof cnt != "number" ? undefined : cnt.pad()
+    return cnt === undefined || typeof cnt != "number" ? undefined : cnt.pad()
   }
 
   static #changePad(padIn) {
@@ -671,7 +675,7 @@ class FotyError extends Error {
       while (s.length < size) s = "0" + s
       return s
     }
-    Number.prototype.pad = padIn == undefined ? pad : padIn
+    Number.prototype.pad = padIn === undefined ? pad : padIn
     return prevPad
   }
 }
@@ -697,14 +701,14 @@ class SettingError extends FotyError {
   constructor(caller, usrMsg, ...params) {
     super(caller, ...params)
     this.name = "Setting Error"
-    this.usrMsg = usrMsg == undefined ? "" : usrMsg
+    this.usrMsg = usrMsg === undefined ? "" : usrMsg
   }
   /** Appends user message if given to output object.
    * @param {Object} YAML
    * @param {Undefined|Number} cnt
    */
   errOut(YAML, cnt) {
-    cnt = cnt == undefined ? 0 : cnt
+    cnt = cnt === undefined ? 0 : cnt
     let msgKey = super.errOut(YAML, cnt)
     if (this.usrMsg.length > 0)
       YAML[msgKey] += NL + this.usrMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
@@ -714,7 +718,7 @@ class SettingError extends FotyError {
    * @returns {String}
    */
   getNameKey(cnt) {
-    return cnt == undefined ? "_ERR" : cnt.pad(4)
+    return cnt === undefined ? "_ERR" : cnt.pad(4)
   }
   /** prettier-ignore jsdoc shall not add caller as override
    * @ignore */ caller
@@ -743,7 +747,7 @@ class CodingError extends FotyError {
    * @returns {String}
    */
   getNameKey(cnt) {
-    return cnt == undefined ? "!!!!" : cnt.pad(4) + "!"
+    return cnt === undefined ? "!!!!" : cnt.pad(4) + "!"
   }
   /** prettier-ignore jsdoc shall not add errOut as override
    * @ignore */ errOut(YAML, cnt) {}
@@ -785,10 +789,10 @@ class TestSuite {
     TestSuite.#totalSuites++
     this.#name = name ? name : "Unknown"
     this.o = outputObj
-    if (this.o[this.z] == undefined) this.o[this.z] = this.e
-    if (this.o[this.f] == undefined) this.o[this.f] = this.e
-    if (this.o[this.s] == undefined) this.o[this.s] = this.e
-    if (this.o[this.d] == undefined) this.o[this.d] = this.e
+    if (this.o[this.z] === undefined) this.o[this.z] = this.e
+    if (this.o[this.f] === undefined) this.o[this.f] = this.e
+    if (this.o[this.s] === undefined) this.o[this.s] = this.e
+    if (this.o[this.d] === undefined) this.o[this.d] = this.e
   }
   toString() {
     return " °°" + this.constructor.name + " " + this.name
@@ -797,9 +801,9 @@ class TestSuite {
   /** Shows results resets
    */
   destruct() {
-    let succStr = this.#succeeded == 1 ? "test" : "tests"
-    let failStr = this.#failed == 1 ? "test" : "tests"
-    if (this.#failed == 0) {
+    let succStr = this.#succeeded === 1 ? "test" : "tests"
+    let failStr = this.#failed === 1 ? "test" : "tests"
+    if (this.#failed === 0) {
       this.#praut(
         this.s,
         `Suite "${this.#name}": ${this.#succeeded} ${succStr} succeeded`
@@ -830,8 +834,8 @@ class TestSuite {
     this.#asserts = 0
     try {
       fn()
-      let cases = this.#cases == 1 ? "case" : "cases"
-      if (0 == this.#asserts) {
+      let cases = this.#cases === 1 ? "case" : "cases"
+      if (0 === this.#asserts) {
         this.#succeeded++
         this.#praut(
           this.d,
@@ -895,8 +899,8 @@ class TestSuite {
       this.#asserts = 0
       try {
         fn().then((fnAnswer) => {
-          let cases = this.#cases == 1 ? "case" : "cases"
-          if (0 == this.#asserts) {
+          let cases = this.#cases === 1 ? "case" : "cases"
+          if (0 === this.#asserts) {
             this.#succeeded++
             this.#praut(
               this.d,
@@ -1002,15 +1006,15 @@ class TestSuite {
     if (key != this.s && key != this.f && key != this.d) {
       let errstr = "%c" + key
       console.log(errstr, "background: rgba(255, 99, 71, 0.5)")
-    } else if (this.o[key] == this.e) {
+    } else if (this.o[key] === this.e) {
       this.o[key] = str
-    } else if (str[0] == TestSuite.nok) {
-      if (key == this.d) {
+    } else if (str[0] === TestSuite.nok) {
+      if (key === this.d) {
         //"details"
         let outParts = this.o[key].split(TestSuite.nok)
         let len = outParts.length
         let okPart = outParts[len - 1]
-        if (len == 1) {
+        if (len === 1) {
           let newLastPart = str.substring(1) + nl_indent + okPart
           outParts[outParts.length - 1] = newLastPart
           this.o[key] = outParts.join()
@@ -1177,7 +1181,7 @@ class Event {
     let event = new Event()
     Event._.bassert(
       3,
-      event.constructor == Event,
+      event.constructor === Event,
       "the constructor property is not Event"
     )
   }
@@ -1246,7 +1250,7 @@ class Dispatcher {
     let dispatcher = new Dispatcher()
     Dispatcher._.bassert(
       2,
-      dispatcher.constructor == Dispatcher,
+      dispatcher.constructor === Dispatcher,
       "the constructor property is not Dispatcher"
     )
   }
@@ -1311,7 +1315,7 @@ registeredTests.push(Dispatcher.test)
  * @returns {Boolean}
  */
 function cbkIsObjectNotNullNotArray(v, gene) {
-  return typeof v == "object" && v != undefined && !Array.isArray(v)
+  return typeof v === "object" && v != undefined && !Array.isArray(v)
 }
 /** {@link GeneCallback}, returns whether {@link v} is Null
  * @type {GeneCallback}
@@ -1320,7 +1324,7 @@ function cbkIsObjectNotNullNotArray(v, gene) {
  * @returns {Boolean}
  */
 function cbkIsNull(v, gene) {
-  return typeof v == "object" && v == undefined && v !== undefined
+  return typeof v === "object" && v === undefined && v !== undefined
 }
 /** {@link GeneCallback}, returns whether {@link v} is an Array
  * @type {GeneCallback}
@@ -1329,7 +1333,7 @@ function cbkIsNull(v, gene) {
  * @returns {Boolean}
  */
 function cbkIsArray(v, gene) {
-  return typeof v == "object" && Array.isArray(v)
+  return typeof v === "object" && Array.isArray(v)
 }
 /** {@link GeneCallback}, returns '{@link v} instanceof {@link gene.ident}'.
  * @type {GeneCallback}
@@ -1347,7 +1351,7 @@ function cbkInstanceOf(v, gene) {
  * @returns {Boolean}
  */
 function cbkTypeOf(v, gene) {
-  return typeof v == gene.ident
+  return typeof v === gene.ident
 }
 /** {@link GeneCallback}, returns '{@link v}' typeof '{@link gene.ident}.toLowerCase()'
  * @type {GeneCallback}
@@ -1356,7 +1360,7 @@ function cbkTypeOf(v, gene) {
  * @returns {Boolean}
  */
 function cbkTypeOfLc(v, gene) {
-  return typeof v == gene.ident.toLowerCase()
+  return typeof v === gene.ident.toLowerCase()
 }
 
 /** @classdesc Gene is type used in this application.
@@ -1364,7 +1368,7 @@ function cbkTypeOfLc(v, gene) {
  * Every gene has a {@link GeneCallback} function associated with it. The default callback
  * function is '
  * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof&#x2348;}</code>
- * variable == {@link Gene#ident|Gene.ident}' . {@link Gene#is} calls this callback, comparing
+ * variable === {@link Gene#ident|Gene.ident}' . {@link Gene#is} calls this callback, comparing
  * variable to check against ident of {@link Gene}.
  * <p>
  * <b>Why this name? </b>
@@ -1407,7 +1411,7 @@ class Gene {
         `function 'Gene.constructor'${NL}2nd parameter '${cbk}' is not of type 'Function'`
       )
     this.#ident = ident
-    this.#cbk = cbk == undefined ? cbkTypeOf : cbk
+    this.#cbk = cbk === undefined ? cbkTypeOf : cbk
   }
 
   /** Returns result of Genes registered {@link GeneCallback}( {@link v}, {@link this} ).
@@ -1448,15 +1452,15 @@ class Gene {
       let gSymB = new Gene(idSymB)
       let gFunc = new Gene(idFunc)
       let gObjE = new Gene(idObjE)
-      _.bassert(1,gNull.ident == idNull,"should return what was given as ident")
-      _.bassert(2,gUndE.ident == idUndE,"should return what was given as ident")
-      _.bassert(3,gBool.ident == idBool,"should return what was given as ident")
-      _.bassert(4,gNumb.ident == idNumb,"should return what was given as ident")
-      _.bassert(5,gBigI.ident == idBigI,"should return what was given as ident")
-      _.bassert(6,gStrI.ident == idStrI,"should return what was given as ident")
-      _.bassert(7,gSymB.ident == idSymB,"should return what was given as ident")
-      _.bassert(8,gFunc.ident == idFunc,"should return what was given as ident")
-      _.bassert(8,gObjE.ident == idObjE,"should return what was given as ident")     
+      _.bassert(1,gNull.ident === idNull,"should return what was given as ident")
+      _.bassert(2,gUndE.ident === idUndE,"should return what was given as ident")
+      _.bassert(3,gBool.ident === idBool,"should return what was given as ident")
+      _.bassert(4,gNumb.ident === idNumb,"should return what was given as ident")
+      _.bassert(5,gBigI.ident === idBigI,"should return what was given as ident")
+      _.bassert(6,gStrI.ident === idStrI,"should return what was given as ident")
+      _.bassert(7,gSymB.ident === idSymB,"should return what was given as ident")
+      _.bassert(8,gFunc.ident === idFunc,"should return what was given as ident")
+      _.bassert(8,gObjE.ident === idObjE,"should return what was given as ident")     
     }
     function constructorTest() {
       let un
@@ -1483,9 +1487,9 @@ class Gene {
       _.assert(19,_tryConstruct,idObjE,un,"arg1 can be object")
     }
     function isTest() {
-      function cbk(v,gene) {return typeof v == gene.ident.toLowerCase()}
-      function ACbk(v,gene) {return typeof v == "object" && Array.isArray(v)}
-      function aCbk(v,gene) {return gene.ident == "Array" && typeof v == "object" && Array.isArray(v)}
+      function cbk(v,gene) {return typeof v === gene.ident.toLowerCase()}
+      function ACbk(v,gene) {return typeof v === "object" && Array.isArray(v)}
+      function aCbk(v,gene) {return gene.ident === "Array" && typeof v === "object" && Array.isArray(v)}
       let g = new Gene("number")
       let G = new Gene("Number")
       let gG = new Gene("Number",cbk)
@@ -1530,7 +1534,7 @@ class GenePool {
    * @param  {...*} params
    */
   constructor(...params) {
-    if (params.length > 0 && typeof params[0] == "function")
+    if (params.length > 0 && typeof params[0] === "function")
       this.#defaultCallback = params.shift()
     while (params.length > 0) this.add(params.shift(), this.#defaultCallback)
   }
@@ -1549,10 +1553,10 @@ class GenePool {
    * @returns {Gene}
    */
   add(ident, cbk) {
-    if (this.#genes[ident] == undefined)
+    if (this.#genes[ident] === undefined)
       this.#genes[ident] = new Gene(
         ident,
-        cbk == undefined ? this.#defaultCallback : cbk
+        cbk === undefined ? this.#defaultCallback : cbk
       )
     return this.#genes[ident]
   }
@@ -1592,14 +1596,14 @@ class GenePool {
   }
   static isCompoundOr(id) {
     let answ = false
-    if (typeof id == "string") {
+    if (typeof id === "string") {
       if (id.startsWith("(") && id.endsWith(")")) answ = true
     }
     return answ
   }
   static isCompoundArr(id) {
     let answ = false
-    if (typeof id == "string") {
+    if (typeof id === "string") {
       if (id.startsWith("Array.<") && id.endsWith(">")) answ = true
     }
     return answ
@@ -1650,7 +1654,7 @@ class GenePool {
       let gn = gns.add("Number")
       let gn2
       _.bassert(1, gn = gns.add("Number"),"Trying to add existing Gene should return it")
-      _.bassert(2, gn.ident == "Number", "The existing Gene should be returned")
+      _.bassert(2, gn.ident === "Number", "The existing Gene should be returned")
       _.shouldAssert(3,_tryAdd,gns,"abc",22,"Adding Gene with no function as callback should throw")
 
       let idNull = null
@@ -1682,15 +1686,15 @@ class GenePool {
       _.bassert(19, gnObjE = gns.add(idObjE),"null should be added")
 
 
-      _.bassert(21, gnNull.ident == idNull,"The added Gene should be added")
-      _.bassert(22, gnUndE.ident == idUndE,"The added Gene should be added")
-      _.bassert(23, gnBool.ident == idBool,"The added Gene should be added")
-      _.bassert(24, gnNumb.ident == idNumb,"The added Gene should be added")
+      _.bassert(21, gnNull.ident === idNull,"The added Gene should be added")
+      _.bassert(22, gnUndE.ident === idUndE,"The added Gene should be added")
+      _.bassert(23, gnBool.ident === idBool,"The added Gene should be added")
+      _.bassert(24, gnNumb.ident === idNumb,"The added Gene should be added")
       _.bassert(25, gnBigI.ident == idBigI,"The added Gene should be added")
-      _.bassert(26, gnStrI.ident == idStrI,"The added Gene should be added")
-      _.bassert(27, gnSymB.ident == idSymB,"The added Gene should be added")
-      _.bassert(28, gnFunc.ident == idFunc,"The added Gene should be added")
-      _.bassert(29, gnObjE.ident == idObjE,"The added Gene should be added")
+      _.bassert(26, gnStrI.ident === idStrI,"The added Gene should be added")
+      _.bassert(27, gnSymB.ident === idSymB,"The added Gene should be added")
+      _.bassert(28, gnFunc.ident === idFunc,"The added Gene should be added")
+      _.bassert(29, gnObjE.ident === idObjE,"The added Gene should be added")
     }
     function hasTest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
@@ -1758,15 +1762,15 @@ class GenePool {
       function idFunc() {return false}
       let idObjE = new Error("df")
       let gns3 = new GenePool()
-      function cbkNull(v, gene) {return typeof(v == "object" && v == undefined)}
-      function cbkUndE(v, gene) {return typeof(v == "undefined")}
-      function cbkBool(v, gene) {return typeof(v == "boolean")}
-      function cbkNumb(v, gene) {return typeof(v == "number")}
-      function cbkBigI(v, gene) {return typeof(v == "bigint")}
-      function cbkStrI(v, gene) {return typeof(v == "string")}
-      function cbkSymB(v, gene) {return typeof(v == "symbol")}
-      function cbkFunc(v, gene) {return typeof(v == "function")}
-      function cbkObjE(v, gene) {return typeof(v == "object")}
+      function cbkNull(v, gene) {return typeof(v === "object" && v === undefined)}
+      function cbkUndE(v, gene) {return typeof(v === "undefined")}
+      function cbkBool(v, gene) {return typeof(v === "boolean")}
+      function cbkNumb(v, gene) {return typeof(v === "number")}
+      function cbkBigI(v, gene) {return typeof(v === "bigint")}
+      function cbkStrI(v, gene) {return typeof(v === "string")}
+      function cbkSymB(v, gene) {return typeof(v === "symbol")}
+      function cbkFunc(v, gene) {return typeof(v === "function")}
+      function cbkObjE(v, gene) {return typeof(v === "object")}
       gns3.add(idNull,cbkNull)
       gns3.add(idUndE,cbkUndE)
       gns3.add(idBool,cbkBool)
@@ -1933,7 +1937,7 @@ class Essence extends GenePool {
     let p = parent
     let specLit = {}
     if (literal != u) specLit = literal[Essence.#SPEC_KEY]
-    if (specLit == u) specLit = {}
+    if (specLit === u) specLit = {}
     let litREN = specLit.RENDER
     let litTYP = specLit.TYPE
     let litIGN = specLit.IGNORE
@@ -2014,7 +2018,7 @@ class Essence extends GenePool {
     if (literal != u) delete literal[Essence.#SPEC_KEY]
   }
   #validateOrInform(value, type, name) {
-    let ok = value == undefined || this.#userPool.isA(value, type)
+    let ok = value === undefined || this.#userPool.isA(value, type)
     if (!ok) {
       let errObj = {}
       errObj.name = name
@@ -2058,19 +2062,19 @@ class Essence extends GenePool {
       let wrong6 = new Essence({__SPEC: {TYPE:false}})
       let wrong7 = new Essence({__SPEC: {DEFAULT:false}})
       let wrong8 = new Essence({__SPEC: {NO_SPEC_KEY:false}})
-      _.bassert(21,wrong1.skipped[0]["name"]=="RENDER","RENDER should be skipped")
-      _.bassert(22,wrong2.skipped[0]["name"]=="IGNORE","IGNORE should be skipped")
-      _.bassert(23,wrong3.skipped[0]["name"]=="ONCE","ONCE should be skipped")
-      _.bassert(24,wrong4.skipped[0]["name"]=="FLAT","FLAT should be skipped")
-      _.bassert(25,wrong5.skipped[0]["name"]=="REPEAT","REPEAT should be skipped")
-      _.bassert(26,wrong6.skipped[0]["name"]=="TYPE","TYPE should be skipped")
-      _.bassert(27,wrong7.skipped[0]["name"]=="DEFAULT","DEFAULT should be skipped")
-      _.bassert(28,wrong8.skipped.length ==0,"unknown SPEC entries should be skipped silently")
+      _.bassert(21,wrong1.skipped[0]["name"]==="RENDER","RENDER should be skipped")
+      _.bassert(22,wrong2.skipped[0]["name"]==="IGNORE","IGNORE should be skipped")
+      _.bassert(23,wrong3.skipped[0]["name"]==="ONCE","ONCE should be skipped")
+      _.bassert(24,wrong4.skipped[0]["name"]==="FLAT","FLAT should be skipped")
+      _.bassert(25,wrong5.skipped[0]["name"]==="REPEAT","REPEAT should be skipped")
+      _.bassert(26,wrong6.skipped[0]["name"]==="TYPE","TYPE should be skipped")
+      _.bassert(27,wrong7.skipped[0]["name"]==="DEFAULT","DEFAULT should be skipped")
+      _.bassert(28,wrong8.skipped.length ===0,"unknown SPEC entries should be skipped silently")
       let lit = {__SPEC: {RENDER:true},myValue:"22"}
       _.bassert(31,lit.__SPEC != undefined,"just to show it is defined")
       _.bassert(32,lit.myValue != undefined,"just to show it is defined")
       let ess1 = new Essence(lit)
-      _.bassert(33,lit.__SPEC == undefined,"SPEC should no longer be defined")
+      _.bassert(33,lit.__SPEC === undefined,"SPEC should no longer be defined")
       _.bassert(34,lit.myValue != undefined,"just to show it is still defined")
 
       _.shouldAssert(41,_tryConstruct2,{__SPEC: {RENDER:true}},new Error(),"Should not be constructed")
@@ -2078,32 +2082,32 @@ class Essence extends GenePool {
     }
     function getterEssences() {
       let ess0 = new Essence()
-      _.bassert(1,ess0.ROOT==true,"Should always be defined")
-      _.bassert(2,ess0.RENDER==false,"Should always be defined")
-      _.bassert(3,ess0.IGNORE==false,"Should always be defined")
-      _.bassert(4,ess0.ONCE==false,"Should always be defined")
-      _.bassert(5,ess0.FLAT==false,"Should always be defined")
-      _.bassert(6,ess0.REPEAT==false,"Should always be defined")
-      _.bassert(7,ess0.TYPE=="String","Should always be defined")
-      _.bassert(8,ess0.DEFAULT=="","Should always be defined")
+      _.bassert(1,ess0.ROOT===true,"Should always be defined")
+      _.bassert(2,ess0.RENDER===false,"Should always be defined")
+      _.bassert(3,ess0.IGNORE===false,"Should always be defined")
+      _.bassert(4,ess0.ONCE===false,"Should always be defined")
+      _.bassert(5,ess0.FLAT===false,"Should always be defined")
+      _.bassert(6,ess0.REPEAT===false,"Should always be defined")
+      _.bassert(7,ess0.TYPE==="String","Should always be defined")
+      _.bassert(8,ess0.DEFAULT==="","Should always be defined")
       let lit1 = {__SPEC: {RENDER:true,IGNORE:true,ONCE:true,FLAT:true,REPEAT:true,TYPE:"Boolean",DEFAULT:false}}
       let ess1 = new Essence(lit1)
-      _.bassert(11,ess1.ROOT==true,"Should always be defined")
-      _.bassert(12,ess1.RENDER==true,"Should be set to literal value")
-      _.bassert(13,ess1.IGNORE==true,"Should be set to literal value")
-      _.bassert(14,ess1.ONCE==true,"Should be set to literal value")
-      _.bassert(15,ess1.FLAT==true,"Should be set to literal value")
-      _.bassert(16,ess1.REPEAT==true,"Should be set to literal value")
-      _.bassert(17,ess1.TYPE=="Boolean","Should be set to literal value")
-      _.bassert(18,ess1.DEFAULT==false,"Should be set to literal value")
+      _.bassert(11,ess1.ROOT===true,"Should always be defined")
+      _.bassert(12,ess1.RENDER===true,"Should be set to literal value")
+      _.bassert(13,ess1.IGNORE===true,"Should be set to literal value")
+      _.bassert(14,ess1.ONCE===true,"Should be set to literal value")
+      _.bassert(15,ess1.FLAT===true,"Should be set to literal value")
+      _.bassert(16,ess1.REPEAT===true,"Should be set to literal value")
+      _.bassert(17,ess1.TYPE==="Boolean","Should be set to literal value")
+      _.bassert(18,ess1.DEFAULT===false,"Should be set to literal value")
       let ess2 = new Essence(undefined,ess1)
-      _.bassert(21,ess2.ROOT==false,"Should always be defined")
-      _.bassert(22,ess2.RENDER==true,"Should be set to parent value")
-      _.bassert(23,ess2.IGNORE==true,"Should be set to parent value")
-      _.bassert(24,ess2.ONCE==false,"Should be set to default value")
-      _.bassert(25,ess2.FLAT==false,"Should be set to default value")
-      _.bassert(26,ess2.REPEAT==false,"Should be set to default value")
-      _.bassert(27,ess2.TYPE=="String","Should be set to default value")
+      _.bassert(21,ess2.ROOT===false,"Should always be defined")
+      _.bassert(22,ess2.RENDER===true,"Should be set to parent value")
+      _.bassert(23,ess2.IGNORE===true,"Should be set to parent value")
+      _.bassert(24,ess2.ONCE===false,"Should be set to default value")
+      _.bassert(25,ess2.FLAT===false,"Should be set to default value")
+      _.bassert(26,ess2.REPEAT===false,"Should be set to default value")
+      _.bassert(27,ess2.TYPE==="String","Should be set to default value")
       _.bassert(28,ess2.DEFAULT==="","Should be set to default value")
     }
     function isATest() {
@@ -2180,7 +2184,7 @@ class BreadCrumbs extends Essence {
     this.#caller = parent
     this.throwIfUndefined(key, "key")
     this.throwIfNotOfType(key, "key", "(string|symbol)")
-    if (typeof key == "symbol") this.#ident = "Symbol"
+    if (typeof key === "symbol") this.#ident = "Symbol"
     this.#ident = key
     if (!this.isA(literal, "undefined")) {
       this.throwIfNotOfType(literal, "literal", "object")
@@ -2206,9 +2210,9 @@ Skipped values are: `
    *          as given in BreadCrumbs constructor.
    */
   toString() {
-    if (typeof this.#ident == "string")
+    if (typeof this.#ident === "string")
       return "°°°" + this.constructor.name + " " + this.#ident
-    else if (typeof this.#ident == "symbol")
+    else if (typeof this.#ident === "symbol")
       return "°°°" + this.constructor.name + " " + "Symbol"
   }
 
@@ -2310,7 +2314,7 @@ Skipped values are: `
     function getterLiteralTest() {
       let breadcrumbs0 = new BreadCrumbs({}, "my name1")
       let breadcrumbs1 = new BreadCrumbs({"key1": 87673}, "my name2")
-      _.bassert(1,breadcrumbs1.literal.key1 == 87673, "does not return literal given on construction ")
+      _.bassert(1,breadcrumbs1.literal.key1 === 87673, "does not return literal given on construction ")
       _.bassert(2,breadcrumbs0.literal != undefined, "empty literal given should be defined")
     }
     function constructorTest() {
@@ -2344,7 +2348,7 @@ Skipped values are: `
   
       _.bassert(101,breadcrumbs instanceof Object,"'BreadCrumbs' has to be an instance of 'Object'")
       _.bassert(102,breadcrumbs instanceof BreadCrumbs,"'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
-      _.bassert(103,breadcrumbs.constructor == BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
+      _.bassert(103,breadcrumbs.constructor === BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
     }
     function isATest() {
       let un
@@ -2370,9 +2374,9 @@ Skipped values are: `
       let parentStr = parent.toBreadcrumbs()
       let childStr = child.toBreadcrumbs()
       let grandChildStr = grandChild.toBreadcrumbs()
-      _.bassert(1,parentStr == "parent1","breadCrumbs '" + parentStr + "' are wrong")
-      _.bassert(2,childStr == "parent1"+ sep +"child1","breadCrumbs '" + childStr + "' are wrong")
-      _.bassert(3,grandChildStr == "parent1"+sep+"child1"+sep+"grandChild1","breadCrumbs '" + grandChildStr + "' are wrong")
+      _.bassert(1,parentStr === "parent1","breadCrumbs '" + parentStr + "' are wrong")
+      _.bassert(2,childStr === "parent1"+ sep +"child1","breadCrumbs '" + childStr + "' are wrong")
+      _.bassert(3,grandChildStr === "parent1"+sep+"child1"+sep+"grandChild1","breadCrumbs '" + grandChildStr + "' are wrong")
     }
     function throwIfUndefinedTest() {
       let un
@@ -2532,21 +2536,21 @@ class Setting extends BreadCrumbs {
       let lit4 = setting4.literal
       let lit5 = setting5.literal
       let lit6 = setting6.literal
-      _.bassert(1,Object.keys(lit1).length == 0,"literal should be empty as given")
-      _.bassert(2,Object.keys(lit2).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(3,Object.keys(lit2.sym).length == 0,"object assigned to symbol key should be empty as given")
-      _.bassert(4,Object.keys(lit3).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(5,Object.keys(lit3.__NOTETYPES).length == 0,"object assigned to '__NOTETYPES' key should be empty as given")
-      _.bassert(6,Object.keys(lit4).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(7,Object.keys(lit4.a).length == 1,"object assigned to 'a' should only contain one entry as only one given")
+      _.bassert(1,Object.keys(lit1).length === 0,"literal should be empty as given")
+      _.bassert(2,Object.keys(lit2).length === 1,"only 1 value should be contained, as only one given")
+      _.bassert(3,Object.keys(lit2.sym).length === 0,"object assigned to symbol key should be empty as given")
+      _.bassert(4,Object.keys(lit3).length === 1,"only 1 value should be contained, as only one given")
+      _.bassert(5,Object.keys(lit3.__NOTETYPES).length === 0,"object assigned to '__NOTETYPES' key should be empty as given")
+      _.bassert(6,Object.keys(lit4).length === 1,"only 1 value should be contained, as only one given")
+      _.bassert(7,Object.keys(lit4.a).length === 1,"object assigned to 'a' should only contain one entry as only one given")
       _.bassert(8,lit4.a.MARKER === "2","value of a.MARKER should be '2' as given")
-      _.bassert(9,Object.keys(lit5).length == 1,"only 1 value should be contained, as only one given")
-      _.bassert(10,Object.keys(lit5.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(9,Object.keys(lit5).length === 1,"only 1 value should be contained, as only one given")
+      _.bassert(10,Object.keys(lit5.a).length === 2,"object assigned to 'a' should contain 2 entries as two given")
       _.bassert(11,lit5.a.MARKER === "2","value of a.MARKER should be '2' as given")
       _.bassert(12,lit5.a.DATE === true,"value of a.DATE should be 'true' as given")
-      _.bassert(13,Object.keys(lit6).length == 2,"2 values should be contained, as two given")
-      _.bassert(14,Object.keys(lit6.a).length == 2,"object assigned to 'a' should contain 2 entries as two given")
-      _.bassert(15,Object.keys(lit6.d).length == 1,"object assigned to 'd' should only contain one entry as only one given")
+      _.bassert(13,Object.keys(lit6).length === 2,"2 values should be contained, as two given")
+      _.bassert(14,Object.keys(lit6.a).length === 2,"object assigned to 'a' should contain 2 entries as two given")
+      _.bassert(15,Object.keys(lit6.d).length === 1,"object assigned to 'd' should only contain one entry as only one given")
       _.bassert(16,lit6.a.MARKER === "2","value of a.MARKER should be '2' as given")
       _.bassert(17,lit6.a.DATE === false,"value of a.DATE should be 'false' as given")
       _.bassert(18,lit6.d.TITLE_BEFORE_DATE === "abc","value of d.TITLE_BEFORE_DATE should be 'abc' as given")
@@ -2572,11 +2576,11 @@ class Setting extends BreadCrumbs {
       let expAnsw3f = '{"a":23,"d":"ja"}'
       let expAnsw4f = '{"a":23,"d":"ja"}'
       let expAnsw5f = '{}'
-      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
-      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
-      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
-      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
-      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
+      _.bassert(1,JSON.stringify(answ1f) === expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
+      _.bassert(2,JSON.stringify(answ2f) === expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
+      _.bassert(3,JSON.stringify(answ3f) === expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
+      _.bassert(4,JSON.stringify(answ4f) === expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
+      _.bassert(5,JSON.stringify(answ5f) === expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
 
     }
     function getterRenderYAMLTest() {
@@ -2596,10 +2600,10 @@ class Setting extends BreadCrumbs {
       let expAnsw2 = '{}'
       let expAnsw3 = "{}"
       let expAnsw4 = '{"pict":"ja"}'
-      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
-      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
-      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
-      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+      _.bassert(1,JSON.stringify(answ1) === expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) === expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) === expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) === expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
     }
     function constructorTest() {
       let un
@@ -2626,7 +2630,7 @@ class Setting extends BreadCrumbs {
       _.bassert(101,setting instanceof Object,"'Setting' has to be an instance of 'Object'")
       _.bassert(102,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,setting instanceof Setting,"'Setting' has to be an instance of 'Setting'")
-      _.bassert(104,setting.constructor == Setting,"the constructor property is not 'Setting'")
+      _.bassert(104,setting.constructor === Setting,"the constructor property is not 'Setting'")
     }
     function isATest() {
       let un
@@ -2665,11 +2669,11 @@ class Setting extends BreadCrumbs {
       let expAnsw3f = '{"a":23,"d":"ja","b":"ja"}'
       let expAnsw4f = '{"a":23,"d":"ja","b":"ja","c":25}'
       let expAnsw5f = '{"a":23,"x":"y"}'
-      _.bassert(1,JSON.stringify(answ1f) == expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
-      _.bassert(2,JSON.stringify(answ2f) == expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
-      _.bassert(3,JSON.stringify(answ3f) == expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
-      _.bassert(4,JSON.stringify(answ4f) == expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
-      _.bassert(5,JSON.stringify(answ5f) == expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
+      _.bassert(1,JSON.stringify(answ1f) === expAnsw1f,`output of JSON.stringify(result) is:'${JSON.stringify(answ1f)}',but should be:'${expAnsw1f}'`)
+      _.bassert(2,JSON.stringify(answ2f) === expAnsw2f,`output of JSON.stringify(result) is:'${JSON.stringify(answ2f)}',but should be:'${expAnsw2f}'`)
+      _.bassert(3,JSON.stringify(answ3f) === expAnsw3f,`output of JSON.stringify(result) is:'${JSON.stringify(answ3f)}',but should be:'${expAnsw3f}'`)
+      _.bassert(4,JSON.stringify(answ4f) === expAnsw4f,`output of JSON.stringify(result) is:'${JSON.stringify(answ4f)}',but should be:'${expAnsw4f}'`)
+      _.bassert(5,JSON.stringify(answ5f) === expAnsw5f,`output of JSON.stringify(result) is:'${JSON.stringify(answ5f)}',but should be:'${expAnsw5f}'`)
     }
     function getRenderYAMLTest() {
       const lit1 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
@@ -2700,10 +2704,10 @@ class Setting extends BreadCrumbs {
       let expAnsw2 = '{"pict":"ja"}'
       let expAnsw3 = "{}"
       let expAnsw4 = '{"pict":"ja","y":"z"}'
-      _.bassert(1,JSON.stringify(answ1) == expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
-      _.bassert(2,JSON.stringify(answ2) == expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
-      _.bassert(3,JSON.stringify(answ3) == expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
-      _.bassert(4,JSON.stringify(answ4) == expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+      _.bassert(1,JSON.stringify(answ1) === expAnsw1,`output of JSON.stringify(result) is:'${JSON.stringify(answ1)}',but should be:'${expAnsw1}'`)
+      _.bassert(2,JSON.stringify(answ2) === expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
+      _.bassert(3,JSON.stringify(answ3) === expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
+      _.bassert(4,JSON.stringify(answ4) === expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
     }
     function _tryConstruct(arg1, arg2, arg3, arg4) {
       new Setting(arg1, arg2, arg3, arg4)
