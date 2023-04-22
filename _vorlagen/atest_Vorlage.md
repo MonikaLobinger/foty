@@ -7,6 +7,7 @@
   let nextdate   = "";
   let prevname   = "";
   let nextname   = "";
+  let lastline   = "";
   let results    = await tp.user.foty(tp, app); 
   for (const [key, value] of Object.entries(results)) {
     if(value == undefined) continue;
@@ -19,6 +20,7 @@
       case "nextdate":  nextdate  = value; break;
       case "prevname":  prevname  = value; break;
       case "nextname":  nextname  = value; break;
+      case "lastline":  lastline  = value; break;
       default: break;
       }
     }

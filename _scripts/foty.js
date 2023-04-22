@@ -122,19 +122,19 @@ function cssClassCbk(tp, noteName, type) {
 //  #region USER CONFIGURATION
 //  #endregion USER CONFIGURATION
 //  #region onne configuration data
-/*@convert*/ function creat(tp, notename, type) {
+/*@convert*/ function createCbk(tp, noteName, type) {
   return tp.date.now()
 }
-/*@convert*/ function autag(tp, notename, type) {
+/*@convert*/ function autoTagCbk(tp, noteName, type) {
   return "0/" + type
 }
-/*@convert*/ function alias(tp, notename, type) {
-  let alias = notename
+/*@convert*/ function aliasCbk(tp, noteName, type) {
+  let alias = noteName
   if (type != "ort" && type != "person") {
-    alias = notename.replace(/,/g, ` `).replace(/  /g, ` `)
+    alias = noteName.replace(/,/g, ` `).replace(/  /g, ` `)
   } else {
     // ort, person
-    alias = notename.replace(/, /g, `,`)
+    alias = noteName.replace(/, /g, `,`)
     let strArr = alias.split(",")
     alias = strArr[0]
     strArr.shift()
@@ -146,54 +146,54 @@ function cssClassCbk(tp, noteName, type) {
   }
   return alias
 }
-/*@convert*/ function cscls(tp, notename, type) {
+/*@convert*/ function cssClsCbk(tp, noteName, type) {
   return type
 }
 
 const ONNE_FRONTMATTER_ENTRIES = {
-  /*@convert*/ aliases: {isList: true, defaut: alias},
-  /*@convert*/ date_created: {isList: false, defaut: creat},
-  /*@convert*/ tags: {isList: true, defaut: autag},
-  /*@convert*/ publish: {isList: false, defaut: false},
-  /*@convert*/ cssclass: {isList: true, defaut: cscls},
-  /*@convert*/ private: {isList: false, defaut: false},
+  /*@convert*/ aliases: {isList: true, defaultValue: aliasCbk},
+  /*@convert*/ date_created: {isList: false, defaultValue: createCbk},
+  /*@convert*/ tags: {isList: true, defaultValue: autoTagCbk},
+  /*@convert*/ publish: {isList: false, defaultValue: false},
+  /*@convert*/ cssclass: {isList: true, defaultValue: cssClsCbk},
+  /*@convert*/ private: {isList: false, defaultValue: false},
   /*@convert*/ position: {ignore: true},
 }
 const TYPES = {
   /*@convert*/ audio: {
     marker: "{a}",
     isDiary: false,
-    foto: "pexels-foteros-352505_200.jpg",
+    photo: "pexels-foteros-352505_200.jpg",
     name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
   },
   /*@convert*/ buch: {
     marker: "{b}",
     isDiary: false,
-    foto: "pexels-gül-işık-2203051_200.jpg",
+    photo: "pexels-gül-işık-2203051_200.jpg",
     name_prompt: "Autornachname - Buchtitel",
   },
   /*@convert*/ ort: {
     marker: "",
     isDiary: false,
-    foto: "pexels-dzenina-lukac-1563005_200.jpg",
+    photo: "pexels-dzenina-lukac-1563005_200.jpg",
     name_prompt: "Ortsname, Land",
   },
   /*@convert*/ person: {
     marker: "",
     isDiary: false,
-    foto: "pexels-lucas-andrade-14097235_200.jpg",
+    photo: "pexels-lucas-andrade-14097235_200.jpg",
     name_prompt: "Personnachname, Personvorname ?Geburtsdatum",
   },
   /*@convert*/ video: {
     marker: "{v}",
     isDiary: false,
-    foto: "pexels-vlad-vasnetsov-2363675_200.jpg",
+    photo: "pexels-vlad-vasnetsov-2363675_200.jpg",
     name_prompt: "?Reihe - ?Autornachname - Videotitel",
   },
   /*@convert*/ web: {
     marker: "{w}",
     isDiary: false,
-    foto: "pexels-sururi-ballıdağ-_200.jpeg",
+    photo: "pexels-sururi-ballıdağ-_200.jpeg",
     name_prompt: "?Autor - Webseitentitel - ?Datum",
   },
   /*@convert*/ zitat: {
@@ -221,7 +221,7 @@ const TYPES = {
   /*@convert*/ lesetagebuch: {
     marker: "",
     isDiary: true,
-    firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
+    firstline: "## ArticleTitle\n[NtvZdf]link\n\n",
     dateformat: "YY-MM-DD",
     before_date: "Lesetagebucheintrag ",
   },
@@ -293,11 +293,11 @@ const TYPES = {
   vaultroot: ["note"],
   temp: ["diary", "garten"],
 }
-/*@convert*/ const DEFAULTTYPE = "note"
-/*@convert*/ const ROOTKEY = "vaultroot"
+/*@convert*/ const DEFAULT_TYPE = "note"
+/*@convert*/ const ROOT_KEY = "vaultRoot"
 /*@convert*/ const RESOURCE_FOLDER = "_resources/"
 /*@convert*/ const RESOURCE_TYPES = ["jpg", "jpeg", "png", "mp3", "midi"]
-const NEWTITLES_ARRAY = ["Unbenannt", "Untitled"]
+const NEW_TITLES_ARRAY = ["Unbenannt", "Untitled"]
 const DEFAULT_NAME_PROMPT = "Name der Notiz (ohne Kenner/Marker)"
 const TYPE_PROMPT = "Typ wählen"
 const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
@@ -305,7 +305,8 @@ const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
 //  #region onne => foty
 /**
  * Defaults
- * __DIALOG_SETTINGS: ONCE: true,
+ * __DIALOG_SETTINGS:
+ * __TRANSLATE:
  * __NOTE_TYPES: ONCE: true, REPEAT: true
  * __FOLDER2TYPE: ONCE: true, REPEAT: true
  * __SPEC:
@@ -320,7 +321,7 @@ const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
  *   - generalType is added as TYPE
  *   - value is added as VALUE
  * - __SPEC for nodes is an Object
- * ESSENCE  |forwhat  |type   |default |inherited |remark|
+ * ESSENCE  |for what |type   |default |inherited |remark|
  * ---------------------------------------------------------
  *  ROOT    |Node     |Boolean|false   |automatic ||
  *  RENDER  |Node Atom|Boolean|false   |inherited ||
@@ -331,38 +332,31 @@ const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
  *  FLAT    |Node     |Boolean|false   |individual|values are not parsed, even if they are objects|
  *  ONCE    |Node     |Boolean|false   |individual|if true, has to be the outermost possible|
  *  REPEAT  |         |Boolean|false   |individual|same entryType can be added several times under diff. keys|
- *  LOCAL   |Node Atom|Boolean|false   |inhereted |should be/can be localized (translated)|
+ *  LOCAL   |Node Atom|Boolean|false   |inherited |should be/can be localized (translated)|
  *  //@todo DEFAULTS  |       |Object |object  |individual|makes only sense for REPEAT: sections|
  * @ignore
  */
 //prettier-ignore
 let onne = {
-  // __TRANSLATE: 
-  // { //ONCE LOCAL
-  //      /* String */
-  //   TYPE_PROMPT: "Typ wählen",
-  //      /* String or Array of Strings */
-  //   TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
-  //      /* String */
-  //   DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
-  // },
-  // __DIALOGSETTINGS: {
-  //      /* Number */
-  //   TYPE_MAX_ENTRIES: 10 /* Number */, // Max entries in "type" drop down list
-  // },
-  Name: "Wert",
-  Name2: "Wert2",
-  c: {__SPEC: {RENDER: true},
-  pict: "Russian-Matroshka2.jpg"
-  }
+   __TRANSLATE: //localType: (String|Array.<String>)
+   { 
+     TYPE_PROMPT:         "Typ wählen",
+     TITLE_NEW_FILE:      ["Unbenannt", "Untitled"],
+     DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
+   },
+   __DIALOG_SETTINGS: { //localType: (Number|Array.<Number>)
+     TYPE_MAX_ENTRIES: 10,
+   },
+   sosa: {VALUE: "naga", __SPEC: true, RENDER: false},
+   c:    {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
 }
 //prettier-ignore
 let FoTy = { __SPEC: {TYPE: "Number"},
   pict: {VALUE: "Russian-Matroshka2.jpg", 
          __SPEC: true, RENDER: true},
-  zahl: {VALUE: 127, __SPEC: false, },
+  integer: {VALUE: 127, __SPEC: false, },
   noValue: {__SPEC: true, },
-  soso: [128,127]
+  sosa: [128,127]
 }
 //  #endregion  onne => foty
 //  #region test configurations
@@ -416,13 +410,13 @@ const gray = "silver"
  * dbgYAML output of {@link foty|main function} is only shown, if  {@link DEBUG} is on.
  * @type {Boolean}
  */
-var DEBUG = true
+var DEBUG = false
 /** For testing purpose. If on, {@link test}s will run when script is executed.
  * <p>
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -878,12 +872,12 @@ class TestSuite {
   /** Shows results resets
    */
   destruct() {
-    let succStr = this.#succeeded === 1 ? "test" : "tests"
+    let suc_Str = this.#succeeded === 1 ? "test" : "tests"
     let failStr = this.#failed === 1 ? "test" : "tests"
     if (this.#failed === 0) {
       this.#praut(
         this.s,
-        `Suite "${this.#name}": ${this.#succeeded} ${succStr} succeeded`
+        `Suite "${this.#name}": ${this.#succeeded} ${suc_Str} succeeded`
       )
     } else {
       this.#praut(
@@ -1043,7 +1037,7 @@ class TestSuite {
     }
   }
 
-  /** silents exception of one testcase, asserts & shows message if no exception
+  /** silents exception of one test case, asserts & shows message if no exception
    * @param {Number} errCase
    * @param {Function} fn
    * @param {...*} ...params
@@ -1081,8 +1075,8 @@ class TestSuite {
      * z = "summary" */
     let nl_indent = "\n        "
     if (key != this.s && key != this.f && key != this.d) {
-      let errstr = "%c" + key
-      console.log(errstr, "background: rgba(255, 99, 71, 0.5)")
+      let errStr = "%c" + key
+      console.log(errStr, "background: rgba(255, 99, 71, 0.5)")
     } else if (this.o[key] === this.e) {
       this.o[key] = str
     } else if (str[0] === TestSuite.nok) {
@@ -1282,7 +1276,7 @@ class Event {
   //#endregion Event tests
 }
 registeredTests.push(Event.test)
-/** Event manager.
+/** Event worker.
  *
  */
 class Dispatcher {
@@ -2031,9 +2025,9 @@ class Essence extends GenePool {
    * <p>
    * Values in literal with wrong type (e.g. if value of Essence#RENDER|RENDER}
    * is <code>yes</code>) will be skipped and added to {@link skipped}.
-   * @param {Object} literal
-   * @param {GenePool} parent
-   * @throws TypeError if {@link parent} is no {@link GenePool}
+   * @param {(Undefined|Object)} literal
+   * @param {(Undefined|GenePool)} parent
+   * @throws TypeError
    */
   constructor(literal, parent) {
     super()
@@ -2043,6 +2037,10 @@ class Essence extends GenePool {
     if (parent != undefined && !this.isA(parent, GenePool))
       throw new TypeError(
         `function 'Essence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
+      )
+    if (literal != undefined && typeof literal != "object")
+      throw new TypeError(
+        `function 'Essence.constructor'${NL}1st parameter '${literal}' is not of type 'Object'`
       )
     this.add(Essence)
 
@@ -2108,7 +2106,7 @@ class Essence extends GenePool {
    * {@link Essence#TYPE|TYPE} property with value  {@link type}
    * is added to {@link literal}[{@link key}]. This only if {@link type}
    * is a <code>String</code>. Nothing is added in any other case.<br>
-   * A new {@link Essence} from (evtl changed, see above){@link literal}[{@link key}]
+   * A new {@link Essence} from (possibly changed, see above){@link literal}[{@link key}]
    * is created with <code>this</code> instance as parent.<br>
    * Value of {@link literal}[{@link key}] becomes {@link Essence#VALUE|VALUE} of
    * this newly created instance.
@@ -2384,7 +2382,10 @@ class Essence extends GenePool {
   }
 }
 registeredTests.push(Essence.test)
-registeredExceptions.push("new Essence({}, new Error())")
+registeredExceptions.push(
+  "new Essence({}, new Error())",
+  "new Essence('thisIsNotAnObject')"
+)
 
 //#endregion Gene, Pool and Essence
 //#region code
@@ -2441,9 +2442,8 @@ class BreadCrumbs extends Essence {
     this.throwIfNotOfType(key, "key", "(string|symbol)")
     if (typeof key === "symbol") this.#ident = "Symbol"
     this.#ident = key
-    if (!this.isA(literal, "undefined")) {
+    if (!this.isA(literal, "undefined"))
       this.throwIfNotOfType(literal, "literal", "object")
-    }
     this.#literal = literal
     if (this.skipped.length) {
       //prettier-ignore
@@ -2611,8 +2611,8 @@ Skipped values are: `
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
       let un
-      let bc = new BreadCrumbs(un, "NameisATest")
-      _.bassert(1,bc.isA(new BreadCrumbs(un, "NameisATest"),BreadCrumbs),"BreadCrumbs instance should be a BreadCrumbs")
+      let bc = new BreadCrumbs(un, "NameIsATest")
+      _.bassert(1,bc.isA(new BreadCrumbs(un, "NameIsATest"),BreadCrumbs),"BreadCrumbs instance should be a BreadCrumbs")
       _.bassert(2,!bc.isA(new Error(),BreadCrumbs),"Error instance should not be a BreadCrumbs")
       _.bassert(3,!bc.isA("BreadCrumbs",BreadCrumbs),"String should not be a BreadCrumbs")
       _.bassert(4,!bc.isA(22,BreadCrumbs),"number should not be a BreadCrumbs")
@@ -2662,9 +2662,9 @@ Skipped values are: `
     }
     function throwIfUndefinedTest() {
       let un
-      let vname
+      let vName
       _.assert(1,_tryThrowIfUndefined,22,un,un,un,"should accept all types for all parameter")
-      _.shouldAssert(2, _tryThrowIfUndefined,vname, "vname", "test",un,"Should throw as 'vname' is undefined")
+      _.shouldAssert(2, _tryThrowIfUndefined,vName, "vName", "test",un,"Should throw as 'vName' is undefined")
       _.assert(3,_tryThrowIfUndefined,null,un,un,un,"should not throw for null")
     }
     function throwIfNotOfTypeTest() {
@@ -2691,29 +2691,40 @@ Skipped values are: `
 /** shorthand for {@link BreadCrumbs} */
 var BC = BreadCrumbs
 registeredTests.push(BreadCrumbs.test)
-registeredExceptions.push("new BreadCrumbs({},'goodName', new GenePool())")
-registeredExceptions.push("new BreadCrumbs({}, undefined, undefined)")
-registeredExceptions.push("new BreadCrumbs({}, 22, undefined)")
-registeredExceptions.push("new BreadCrumbs(22,'goodName', undefined)")
+registeredExceptions.push(
+  "new BreadCrumbs({},'goodName', new GenePool())",
+  "new BreadCrumbs({}, undefined, undefined)",
+  "new BreadCrumbs({}, 22, undefined)",
+  "new BreadCrumbs(22,'goodName', undefined)"
+)
 
 /** setting parser; traverses deep literal to flat output
  * @classdesc
  * Setting is the only subclass which should be constructed from outside, with
  * only literal given as argument.
  *
- * It calls the managers and traverses given literal to flat output; thereby
- * respecting manager configuration rules and removing manager literals from
+ * It calls the workers and traverses given literal to flat output; thereby
+ * respecting worker configuration rules and removing worker literals from
  * output.
  *
  */
 class Setting extends BreadCrumbs {
   static #ROOT_KEY = "/"
+  static #workers = {}
+  #works = {}
   #children = {}
   #atoms = {}
   #frontmatterYAML = {}
   #renderYAML = {}
   static #generalType =
     "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
+  /** Workers registers by setting themselves <code>Setting.worker = WorkerClass</code>
+   * @type {Object.<string, Setting>}
+   * @param {Setting} workerClass
+   */
+  static set worker(workerClass) {
+    Setting.#workers[workerClass.workerKey] = workerClass
+  }
   /** Returns all frontmatter entries of this instance (not filtered by type)
    * @returns {Object.<String.any>}
    */
@@ -2735,10 +2746,12 @@ class Setting extends BreadCrumbs {
    * for them with <code>this</code> instance as parent and entry key as {@link key}.
    * <p>
    * Creates {@link Essence} instances for all other entries.
+   * <p>
+   * Throws on wrong parameter types
    * @param {Object} literal
    * @param {(Undefined|String|Symbol)} key - if undefined, becomes root key
    * @param {(Undefined|Setting)} parent
-   * @throws {SettingError} on wrong parameter types
+   * @throws {SettingError}
    */
   constructor(literal, key = undefined, parent = undefined) {
     let un
@@ -2750,10 +2763,17 @@ class Setting extends BreadCrumbs {
     // parent {(Undefined|BreadCrumbs)} checked by superclass
     if (!this.isA(parent, "undefined"))
       this.throwIfNotOfType(parent, "parent", Setting)
-
+    this.#parse()
+  }
+  #parse() {
+    let un
     for (const [key, value] of Object.entries(this.literal)) {
       let type = Setting.#generalType
-      if (Setting.#isHandlersKey(key)) continue
+      if (Setting.#isWorkerKey(key)) {
+        this.#works[key] = new Setting.#workers[key](value, key, this)
+        this.#works[key].parse()
+        continue
+      }
       if (this.isA(value, "object")) {
         let aEss = this.essenceOfAtom(this.literal, key, type)
         if (aEss != un) this.#atoms[key] = aEss
@@ -2767,6 +2787,11 @@ class Setting extends BreadCrumbs {
         if (this.#atoms[key].RENDER) this.#renderYAML[key] = this.literal[key]
         else this.#frontmatterYAML[key] = this.literal[key]
       }
+    }
+  }
+  getValue(worker, valueKey, ...params) {
+    if (this.#works[worker] !== undefined) {
+      return this.#works[worker].getValue(valueKey, params)
     }
   }
 
@@ -2794,12 +2819,12 @@ class Setting extends BreadCrumbs {
     return renderYAML
   }
 
-  /** Returns whether key is main key of known handlers
+  /** Returns whether key is main key of known workers
    * @param {*} key
    * @returns {Boolean}
    */
-  static #isHandlersKey(key) {
-    return false
+  static #isWorkerKey(key) {
+    return Setting.#workers[key] !== undefined
   }
 
   // prettier-ignore
@@ -2823,7 +2848,7 @@ class Setting extends BreadCrumbs {
       let sym = Symbol("a")
       let setting1 = new Setting({},"getterLiteralTest02",un)
       let setting2 = new Setting({sym: {}},"getterLiteralTest03",un)
-      let setting3 = new Setting({"__NOTETYPES": {}},"getterLiteralTest04",un)
+      let setting3 = new Setting({"__NOTE_TYPES": {}},"getterLiteralTest04",un)
       let setting4 = new Setting({"a": {"MARKER":"2"}},"getterLiteralTest05",un)
       let setting5 = new Setting({"a": {"MARKER":"2","DATE":true,}},"getterLiteralTest06",un)
       let setting6 = new Setting({"a": {MARKER:"2",DATE:false,},"d": {TITLE_BEFORE_DATE:"abc"}},"getterLiteralTest07",un)
@@ -2837,7 +2862,7 @@ class Setting extends BreadCrumbs {
       _.bassert(2,Object.keys(lit2).length === 1,"only 1 value should be contained, as only one given")
       _.bassert(3,Object.keys(lit2.sym).length === 0,"object assigned to symbol key should be empty as given")
       _.bassert(4,Object.keys(lit3).length === 1,"only 1 value should be contained, as only one given")
-      _.bassert(5,Object.keys(lit3.__NOTETYPES).length === 0,"object assigned to '__NOTETYPES' key should be empty as given")
+      _.bassert(5,Object.keys(lit3.__NOTE_TYPES).length === 0,"object assigned to '__NOTE_TYPES' key should be empty as given")
       _.bassert(6,Object.keys(lit4).length === 1,"only 1 value should be contained, as only one given")
       _.bassert(7,Object.keys(lit4.a).length === 1,"object assigned to 'a' should only contain one entry as only one given")
       _.bassert(8,lit4.a.MARKER === "2","value of a.MARKER should be '2' as given")
@@ -2905,24 +2930,24 @@ class Setting extends BreadCrumbs {
     function constructorTest() {
       let un
       let b = new BreadCrumbs(un, "constructorTest", un)
-      let st = new Setting({}, "constructorTest1", un, un)
-      _.assert(1,_tryConstruct,{},"cTest1",un,un,"should be created, all parameters ok")
-      _.shouldAssert(2,_tryConstruct,un,"cTest2",un,un,"should not be created, literal is undefined")
-      _.shouldAssert(3,_tryConstruct,22,"cTest3",un,un,"should not be created, literal is number")
-      _.shouldAssert(4,_tryConstruct,"literal","cTest4",un,un,"should not be created, literal is string")
-      _.shouldAssert(5,_tryConstruct,null,"cTest5",un,un,"should not be created, literal is null")
-      _.assert(6,_tryConstruct,{},un,un,un,"should be created, undefined key is ok")
-      _.shouldAssert(7,_tryConstruct,{},22,un,un,"should not be created, key is number")
-      _.shouldAssert(8,_tryConstruct,{},{},un,un,"should not be created, key is object")
-      _.shouldAssert(9,_tryConstruct,{},b,un,un,"should not be created, key is Object")
-      _.assert(10,_tryConstruct,{},Symbol("a"),un,un,"should be created, key is Symbol")
-      _.assert(11,_tryConstruct,{},"cTest11",un,un,"should  be created, undefined parent is ok")
-      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),un,"should not be be created, parent is Error")
-      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},un,"should not be be created, parent is object")
-      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring",un,"should not be be created, parent is string")
-      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,un,"should not be be created, parent is number")
-      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,un,"should not be be created, parent is null")
-      _.shouldAssert(16,_tryConstruct,{},"cTest16",b,un,"should not be be created, parent is BreadCrumbs")
+      let st = new Setting({}, "constructorTest1", un)
+      _.assert(1,_tryConstruct,{},"cTest1",un,"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",un,"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",un,"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",un,"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",un,"should not be created, literal is null")
+      _.assert(6,_tryConstruct,{},un,un,"should be created, undefined key is ok")
+      _.shouldAssert(7,_tryConstruct,{},22,un,"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},un,"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},b,un,"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),un,"should be created, key is Symbol")
+      _.assert(11,_tryConstruct,{},"cTest11",un,"should  be created, undefined parent is ok")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",b,"should not be be created, parent is BreadCrumbs")
       let setting = new Setting({},"constructorTest101")
       _.bassert(101,setting instanceof Object,"'Setting' has to be an instance of 'Object'")
       _.bassert(102,setting instanceof BreadCrumbs,"'Setting' has to be an instance of 'BreadCrumbs'")
@@ -2936,7 +2961,7 @@ class Setting extends BreadCrumbs {
       // "function", "object", "array" added for each BreadCrumbs instance
       // Setting added for each Setting instance
       let un
-      let setting1 = new Setting({},"NameisATest",un)
+      let setting1 = new Setting({},"NameIsATest",un)
       _.bassert(1,setting1.isA(setting1,"object"), "'" + setting1 + "' should be a " + "object")
       _.bassert(2,setting1.isA(setting1,Object), "'" + setting1 + "' should be a " + "Object")
       _.bassert(3,setting1.isA(setting1,BreadCrumbs), "'" + setting1 + "' should be a " + "BreadCrumbs")
@@ -3015,22 +3040,22 @@ class Setting extends BreadCrumbs {
       let lit0 = { __SPEC: {TYPE: "Number"},
         pict: {VALUE: "Russian-Matroshka2.jpg", 
               __SPEC: true, RENDER: true, },
-        zahl: {VALUE: 127, __SPEC: false, },
-        soso: [128,127],
+        integer: {VALUE: 127, __SPEC: false, },
+        sosa: [128,127],
         noValue: {__SPEC: true, },
         noValueButType: {__SPEC: false, },
       }
       let set0 = new Setting(lit0)
       let frontMY0 = set0.getFrontmatterYAML()
       let renderY0 = set0.getRenderYAML()
-      _.bassert(1,frontMY0["zahl"] == 127,"Type of 'Number' should be inherited")
-      _.bassert(2,areEqual(frontMY0["soso"],[128,127]),"Type of 'Array<Number>' should be general")
+      _.bassert(1,frontMY0["integer"] == 127,"Type of 'Number' should be inherited")
+      _.bassert(2,areEqual(frontMY0["sosa"],[128,127]),"Type of 'Array<Number>' should be general")
       _.bassert(3,frontMY0["noValue"] == "","No value should become default empty string")
       _.bassert(4,frontMY0["noValueButType"] === "","No value should become default empty string, even if type is set to 'Number'")
       _.bassert(5,Object.keys(frontMY0).length == 4,"only added entries should appear in frontmatter YAML")
       _.bassert(6,renderY0["pict"] == "Russian-Matroshka2.jpg","'pict' should be in render YAML as given")
-      _.bassert(7,renderY0["zahl"] == undefined,"'zahl' should not appear in render YAML")
-      _.bassert(8,renderY0["soso"] == undefined,"'soso' should not appear in render YAML")
+      _.bassert(7,renderY0["integer"] == undefined,"'integer' should not appear in render YAML")
+      _.bassert(8,renderY0["sosa"] == undefined,"'sosa' should not appear in render YAML")
       _.bassert(9,Object.keys(renderY0).length == 1,"only added entries should appear in render YAML")
 
       /************************************************************************/
@@ -3077,7 +3102,7 @@ class Setting extends BreadCrumbs {
       _.bassert(32,Array.isArray(frontMY2.b),"array of numbers should be returned as array")
       _.bassert(33,Array.isArray(frontMY2.c),"array of booleans should be returned as array")
       _.bassert(34,Array.isArray(frontMY2.d),"array of strings should be returned as array")
-      _.bassert(35,areEqual(frontMY2.a,[]),"empty array should be returned as empty arra")
+      _.bassert(35,areEqual(frontMY2.a,[]),"empty array should be returned as empty array")
       _.bassert(36,areEqual(frontMY2.b,[1,2,3]),"array of numbers should be returned as same array")
       _.bassert(37,areEqual(frontMY2.c,[false,false,true]),"array of booleans should be returned as same array")
       _.bassert(38,areEqual(frontMY2.d,["a"]),"array of strings should be returned as same array")
@@ -3133,7 +3158,7 @@ class Setting extends BreadCrumbs {
       _.bassert(62,Array.isArray(frontMY4.b),"should be as given, generalType is used")
       _.bassert(63,Array.isArray(frontMY4.c),"should be as given, generalType is used")
       _.bassert(64,Array.isArray(frontMY4.d),"should be as given, generalType is used")
-      _.bassert(65,areEqual(frontMY4.a,[]),"empty array should be returned as empty arra")
+      _.bassert(65,areEqual(frontMY4.a,[]),"empty array should be returned as empty array")
       _.bassert(66,areEqual(frontMY4.b,[1,2,3]),"array of numbers should be returned as same array")
       _.bassert(67,areEqual(frontMY4.c,[false,false,true]),"array of booleans should be returned as same array")
       _.bassert(68,areEqual(frontMY4.d,["a"]),"array of strings should be returned as same array")
@@ -3189,7 +3214,7 @@ class Setting extends BreadCrumbs {
       _.bassert(92,Array.isArray(frontMY6.b),"should be as given, generalType is used")
       _.bassert(93,Array.isArray(frontMY6.c),"should be as given, generalType is used")
       _.bassert(94,Array.isArray(frontMY6.d),"should be as given, generalType is used")
-      _.bassert(95,areEqual(frontMY6.a,[]),"empty array should be returned as empty arra")
+      _.bassert(95,areEqual(frontMY6.a,[]),"empty array should be returned as empty array")
       _.bassert(96,areEqual(frontMY6.b,[1,2,3]),"array of numbers should be returned as same array")
       _.bassert(97,areEqual(frontMY6.c,[false,false,true]),"array of booleans should be returned as same array")
       _.bassert(98,areEqual(frontMY6.d,["a"]),"array of strings should be returned as same array")
@@ -3253,15 +3278,224 @@ class Setting extends BreadCrumbs {
 
       /************************************************************************/      
     }
-    function _tryConstruct(arg1, arg2, arg3, arg4) {
-      new Setting(arg1, arg2, arg3, arg4)
+    function _tryConstruct(arg1, arg2, arg3) {
+      new Setting(arg1, arg2, arg3)
     }
   }
 }
 registeredTests.push(Setting.test)
-registeredExceptions.push("new Setting({},'goodN', new BreadCrumbs({},'root'))")
-registeredExceptions.push("new Setting()")
+registeredExceptions.push(
+  "new Setting({},'goodN', new BreadCrumbs({},'root'))",
+  "new Setting()"
+)
+//  #region workers
+/** For translation
+ * @classdesc
+ */
+class LocalizationWorker extends Setting {
+  static #KEY = "__TRANSLATE"
+  static get workerKey() {
+    return LocalizationWorker.#KEY
+  }
+  #phrases = {}
+  constructor(literal, key, parent) {
+    let un
+    super(literal, key, parent)
+    this.add(LocalizationWorker)
+    // literal {(Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    // parent {(Undefined|Setting)} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    this.throwIfUndefined(key, "key")
+  }
+  parse() {
+    let un
+    let type = "(String|Array<String>)"
+    for (const [key, value] of Object.entries(this.literal)) {
+      if (this.isA(value, "object")) {
+      } else {
+        let litAtom = {VALUE: this.literal[key], __SPEC: true}
+        this.literal[key] = litAtom
+        this.#phrases[key] = this.essenceOfAtom(this.literal, key, type)
+      }
+    }
+  }
+  getValue(key, ...params) {
+    return this.#phrases[key].VALUE
+  }
+  //prettier-ignore
+  static test(outputObj) { // LocalizationWorker
+    let _ = null
+    if(_ = new TestSuite("LocalizationWorker", outputObj)) {
+      _.run(constructorTest)
+      _.run(isATest)
+      _.run(toStringTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      let un
+      let b = new BreadCrumbs(un, "constructorTest", un)
+      let lm = new LocalizationWorker({}, "constructorTest1", new Setting({}))
+      _.assert(1,_tryConstruct,{},"cTest1",new Setting({}),"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",new Setting({}),"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",new Setting({}),"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",new Setting({}),"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",new Setting({}),"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,new Setting({}),"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,new Setting({}),"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},new Setting({}),"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},b,new Setting({}),"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),new Setting({}),"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"cTest11",un,"should  not be created, undefined parent is not ok")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",b,"should not be be created, parent is BreadCrumbs")
+      let locMan = new LocalizationWorker({},"constructorTest101", new Setting({}))
+      _.bassert(101,locMan instanceof Object,"'LocalizationWorker' has to be an instance of 'Object'")
+      _.bassert(102,locMan instanceof BreadCrumbs,"'LocalizationWorker' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,locMan instanceof LocalizationWorker,"'LocalizationWorker' has to be an instance of 'LocalizationWorker'")
+      _.bassert(104,locMan.constructor === LocalizationWorker,"the constructor property is not 'LocalizationWorker'")
+    }
+    function isATest() {
+      // Object, Gene, GenePool, Essence added for each Essence instance
+      // BreadCrumbs added for each BreadCrumbs instance
+      // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
+      // "function", "object", "array" added for each BreadCrumbs instance
+      // LocalizationWorker added for each LocalizationWorker instance
+      let locMan1 = new LocalizationWorker({},"NameIsATest",new Setting({}))
+      _.bassert(1,locMan1.isA(locMan1,"object"), "'" + locMan1 + "' should be a " + "object")
+      _.bassert(2,locMan1.isA(locMan1,Object), "'" + locMan1 + "' should be a " + "Object")
+      _.bassert(3,locMan1.isA(locMan1,BreadCrumbs), "'" + locMan1 + "' should be a " + "BreadCrumbs")
+      _.bassert(4,locMan1.isA(locMan1,Setting), "'" + locMan1 + "' should be a " + "Setting")
+      _.bassert(5,locMan1.isA(locMan1,LocalizationWorker), "'" + locMan1 + "' should be a " + "LocalizationWorker")
+      _.bassert(6,!locMan1.isA(locMan1,Error), "'" + locMan1 + "' should not be a " + "Error")
+      _.bassert(7,!locMan1.isA(locMan1,Gene), "'" + locMan1 + "' should not be a " + "Gene")
+    }
+    function toStringTest() {
+      let locMan1 = new LocalizationWorker({},"toStringTest1",new Setting({}))
+      _.bassert(1,locMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,locMan1.toString().includes("LocalizationWorker"),"result does not contain class string"    )
+    }
 
+    function _tryConstruct(arg1, arg2,arg3) {
+      new LocalizationWorker(arg1,arg2,arg3)
+    }
+  }
+}
+Setting.worker = LocalizationWorker
+registeredTests.push(LocalizationWorker.test)
+registeredExceptions.push(
+  "new LocalizationWorker({},'goodName', undefined)",
+  "new LocalizationWorker({},undefined, new Setting({}))"
+)
+
+/** For Dialogs
+ * @classdesc
+ */
+class DialogWorker extends Setting {
+  static #KEY = "__DIALOG_SETTINGS"
+  static get workerKey() {
+    return DialogWorker.#KEY
+  }
+  #preferences = {}
+  constructor(literal, key, parent) {
+    let un
+    super(literal, key, parent)
+    this.add(DialogWorker)
+    // literal {(Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    // parent {(Undefined|Setting)} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    this.throwIfUndefined(key, "key")
+  }
+  parse() {
+    let type = "(Number|Array<Number>)"
+    for (const [key, value] of Object.entries(this.literal)) {
+      if (this.isA(value, "object")) {
+      } else {
+        let litAtom = {VALUE: this.literal[key], __SPEC: true}
+        this.literal[key] = litAtom
+        this.#preferences[key] = this.essenceOfAtom(this.literal, key, type)
+      }
+    }
+  }
+  getValue(key, ...params) {
+    return this.#preferences[key].VALUE
+  }
+  //prettier-ignore
+  static test(outputObj) { // DialogWorker
+    let _ = null
+    if(_ = new TestSuite("DialogWorker", outputObj)) {
+      _.run(constructorTest)
+      _.run(isATest)
+      _.run(toStringTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      let un
+      let b = new BreadCrumbs(un, "constructorTest", un)
+      let dlgMan0 = new DialogWorker({}, "constructorTest1", new Setting({}))
+      _.assert(1,_tryConstruct,{},"cTest1",new Setting({}),"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"cTest2",new Setting({}),"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"cTest3",new Setting({}),"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","cTest4",new Setting({}),"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"cTest5",new Setting({}),"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,new Setting({}),"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,new Setting({}),"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},new Setting({}),"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},b,new Setting({}),"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),new Setting({}),"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"cTest11",un,"should  not be created, undefined parent is not ok")
+      _.shouldAssert(12,_tryConstruct,{},"cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",null,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"cTest16",b,"should not be be created, parent is BreadCrumbs")
+      let dlgMan = new DialogWorker({},"constructorTest101", new Setting({}))
+      _.bassert(101,dlgMan instanceof Object,"'DialogWorker' has to be an instance of 'Object'")
+      _.bassert(102,dlgMan instanceof BreadCrumbs,"'DialogWorker' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,dlgMan instanceof DialogWorker,"'DialogWorker' has to be an instance of 'DialogWorker'")
+      _.bassert(104,dlgMan.constructor === DialogWorker,"the constructor property is not 'DialogWorker'")
+    }
+    function isATest() {
+      // Object, Gene, GenePool, Essence added for each Essence instance
+      // BreadCrumbs added for each BreadCrumbs instance
+      // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
+      // "function", "object", "array" added for each BreadCrumbs instance
+      // DialogWorker added for each DialogWorker instance
+      let dlgMan1 = new DialogWorker({},"NameIsATest",new Setting({}))
+      _.bassert(1,dlgMan1.isA(dlgMan1,"object"), "'" + dlgMan1 + "' should be a " + "object")
+      _.bassert(2,dlgMan1.isA(dlgMan1,Object), "'" + dlgMan1 + "' should be a " + "Object")
+      _.bassert(3,dlgMan1.isA(dlgMan1,BreadCrumbs), "'" + dlgMan1 + "' should be a " + "BreadCrumbs")
+      _.bassert(4,dlgMan1.isA(dlgMan1,Setting), "'" + dlgMan1 + "' should be a " + "Setting")
+      _.bassert(5,dlgMan1.isA(dlgMan1,DialogWorker), "'" + dlgMan1 + "' should be a " + "DialogWorker")
+      _.bassert(6,!dlgMan1.isA(dlgMan1,Error), "'" + dlgMan1 + "' should not be a " + "Error")
+      _.bassert(7,!dlgMan1.isA(dlgMan1,Gene), "'" + dlgMan1 + "' should not be a " + "Gene")
+    }
+    function toStringTest() {
+      let dlgMan1 = new DialogWorker({},"toStringTest1",new Setting({}))
+      _.bassert(1,dlgMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,dlgMan1.toString().includes("DialogWorker"),"result does not contain class string"    )
+    }
+
+    function _tryConstruct(arg1, arg2,arg3) {
+      new DialogWorker(arg1,arg2,arg3)
+    }
+  }
+}
+Setting.worker = DialogWorker
+registeredTests.push(DialogWorker.test)
+registeredExceptions.push(
+  "new DialogWorker({},'goodName', undefined)",
+  "new DialogWorker({},undefined, new Setting({}))"
+)
+//  #endregion workers
 //#endregion code
 
 /** exported function.
@@ -3283,10 +3517,12 @@ async function foty(tp, app) {
   }
   test(testYAML)
   try {
-    let lit = FoTy
+    let lit = onne
     let setting = new Setting(lit)
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(renderYAML, setting.getRenderYAML())
+    aut(setting.getValue("__TRANSLATE", "TYPE_PROMPT"))
+    aut(setting.getValue("__DIALOG_SETTINGS", "TYPE_MAX_ENTRIES"))
   } catch (e) {
     if (e instanceof FotyError) {
       let errYAML = {}
