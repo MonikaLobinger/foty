@@ -310,8 +310,9 @@ const TYPE_MAX_ENTRIES = 10 // Max entries in "type" drop down list
  * __FOLDER2TYPE: ONCE: true, REPEAT: true
  * __SPEC:
  * - __SPEC explicit for atoms is anything but an Object
- *   - generalType: (Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)
- *   - true means: use generalType
+ *   -- generalType: (Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)
+ *   -- true means: just convert to spec'd atom, use generalType
+ *   -- anything else means: I have thought about this and care of TYPE by myself
  *   - if true generalType is added as TYPE
  *   - else (anything but not true) TYPE is the inherited or default TYPE
  *   - has to contain value as VALUE property
@@ -360,6 +361,7 @@ let FoTy = { __SPEC: {TYPE: "Number"},
   pict: {VALUE: "Russian-Matroshka2.jpg", 
          __SPEC: true, RENDER: true},
   zahl: {VALUE: 127, __SPEC: false, },
+  noValue: {__SPEC: true, },
   soso: [128,127]
 }
 //  #endregion  onne => foty
@@ -1982,6 +1984,9 @@ class Essence extends GenePool {
     "Boolean",
     "Function"
   )
+  /** private member SPEC key
+   * @type {String}
+   */
   static #SPEC_KEY = "__SPEC"
   static #RENDER_DEFT = false
   static #TYPE_DEFT = "String"
@@ -1994,32 +1999,39 @@ class Essence extends GenePool {
   static #REPEAT_DEFT = false
   #skipped = [] //[{.name,.value,.expectedType}]
 
-  /** Creates instance, removes {@link Essence.SPEC_KEY|__SPEC} property from {@link literal}.
+  /** Creates {@link Essence} instance,
+   * removes {@link Essence#SPEC_KEY|__SPEC} property from {@link literal} and
+   * removes all <code>__SPEC properties</code> from literal if value of
+   * {@link Essence#SPEC_KEY|__SPEC} property is no {@link Object}.
    * <p>
-   * Adds <code>Object</code>, {@link Object},{@link Gene},{@link GenePool} and {@link Essence} as Genes with {@link cbkInstanceOf} to its pool.
+   * Adds {@link Object}, {@link Gene}, {@link GenePool} and {@link Essence}
+   * to its pool as Genes with {@link GeneCallback|callback} {@link cbkInstanceOf}.
    * <p>
-   * Adds {@link Essence.SPEC_KEY|__SPEC properties} from {@link literal} as hidden properties
+   * <p> Recognizes <code>__SPEC properties</code>
+   * ({@link Essence#DEFAULT|DEFAULT} - {@link Essence#VALUE|VALUE})
+   * in {@link literal}.<br>
+   * Adds <code>__SPEC properties</code> from {@link literal} as hidden properties
+   * to this instance and {@link literal}.<br>
+   * Adds hidden properties which are not given in {@link literal}
+   * with parent value (if inherited) or hardcoded default value
    * to this instance and {@link literal}.
-   * Adds hidden properties with parent value (if inherited) or hardcoded default value
-   * if not given in {@link Essence.SPEC_KEY|__SPEC properties}
-   * Recognized {@link Essence.SPEC_KEY|__SPEC properties} are:
+   * <p>
+   * Recognized {@link Essence#SPEC_KEY|__SPEC} properties are:
    * {@link Essence#RENDER|RENDER} (inherited),
-   * {@link Essence#TYPE|TYPE},
+   * {@link Essence#TYPE|TYPE} (inherited),
    * {@link Essence#DEFAULT|DEFAULT},
    * {@link Essence#VALUE|VALUE},
    * {@link Essence#IGNORE|IGNORE} (inherited),
    * {@link Essence#FLAT|FLAT},
-   * {@link Essence#LOCAL|LOCAL},
+   * {@link Essence#LOCAL|LOCAL} (inherited),
    * {@link Essence#ONCE|ONCE} and
    * {@link Essence#REPEAT|REPEAT}.
    * Additionally {@link Essence#ROOT|ROOT} is added, dependent whether {@link parent}
-   * is defined. Other entries in {@link ESSENCE.SPEC_KEY|__SPEC} are ignored.
+   * is defined. Other entries in {@link literal} are ignored.
    * <p>
-   * Values in literal with wrong type will be skipped and added to {@link skipped}.
-   * <p>
-   * If a {@link Essence.SPEC_KEY|__SPEC property} is not set in {@link Essence.SPEC_KEY|__SPEC},
-   * {@link parent} value is set, if it is inherited and {@link parent} is defined. Otherwise hardcoded value is set.
-   * @param {String} literal
+   * Values in literal with wrong type (e.g. if value of Essence#RENDER|RENDER}
+   * is <code>yes</code>) will be skipped and added to {@link skipped}.
+   * @param {Object} literal
    * @param {GenePool} parent
    * @throws TypeError if {@link parent} is no {@link GenePool}
    */
@@ -2081,12 +2093,42 @@ class Essence extends GenePool {
 
     if (literal != un) delete literal[Essence.#SPEC_KEY]
   }
+
+  /** Returns {@link Essence} for <code>atomic literal</code>,
+   * <code>undefined</code> for <code>node literal</code>
+   * <p>
+   * If value of {@link Essence#SPEC_KEY|__SPEC} property
+   * of {@link literal}[{@link key}] is
+   * <code>undefined</code> or an {@link Object}
+   * {@link literal} is <code>node literal</code>,
+   * in any other case it is <code>atomic literal</code>
+   * <p>
+   * For atomic literals:<br>
+   * If value of {@link Essence#SPEC_KEY|__SPEC} is true,
+   * {@link Essence#TYPE|TYPE} property with value  {@link type}
+   * is added to {@link literal}[{@link key}]. This only if {@link type}
+   * is a <code>String</code>. Nothing is added in any other case.<br>
+   * A new {@link Essence} from (evtl changed, see above){@link literal}[{@link key}]
+   * is created with <code>this</code> instance as parent.<br>
+   * Value of {@link literal}[{@link key}] becomes {@link Essence#VALUE|VALUE} of
+   * this newly created instance.
+   * <p>
+   * Returns <code>undefined</code> on wrong parameter types
+   * <p><b>Simply said:</b> Changes value of {@link literal}[{@link key}]
+   * to given {@link Essence#VALUE|VALUE}.
+   * @param {Object} literal
+   * @param {*} key
+   * @param {String} type
+   * @returns {(Essence|Undefined)}
+   */
   essenceOfAtom(literal, key, type) {
     let un
     let aEss = undefined
+    if (typeof literal != "object") return undefined
     let specLit = literal[key][Essence.#SPEC_KEY]
     if (specLit != un && (specLit === null || typeof specLit != "object")) {
-      if (specLit == true && type != un) literal[key]["TYPE"] = type
+      if (specLit == true && typeof type == "string")
+        literal[key]["TYPE"] = type
       aEss = new Essence(literal[key], this)
       literal[key] = aEss.VALUE
     }
@@ -2364,10 +2406,15 @@ class BreadCrumbs extends Essence {
   }
   /** Creates new instance.
    * <p>
-   * Adds self to the pool which it is. Adds 'undefined', 'boolean', 'number',
-   * 'bigint', 'string', 'symbol' and 'function' to this pool with cbk 'cbkTypeOf'
-   * Adds 'object' with cbk 'cbkIsObjectNotNullNotArray',
-   * 'null' with cbk 'cbkIsNull' and 'array' with cbk 'cbkIsArray'
+   * Adds {@link BreadCrumbs}
+   * to its pool as Gene with {@link GeneCallback|callback} {@link cbkInstanceOf}.<br>
+   * Adds <code>undefined</code>, <code>boolean</code>, <code>number</code>,
+   * <code>bigint</code>, <code>string</code>, <code>symbol</code>
+   * and <code>function</code> to this pool with
+   * {@link GeneCallback|callback} {@link cbkTypeOf}.<br>
+   * Adds <code>object</code> with {@link GeneCallback|callback} {@link cbkIsObjectNotNullNotArray},
+   * <code>null</code> with {@link GeneCallback|callback} {@link cbkIsNull}
+   * and <code>array</code> with {@link GeneCallback|callback} {@link cbkIsNull}
    * to this pool.
    * @param {(Undefined|Object)} literal
    * @param {(String|Symbol)} key
@@ -2666,7 +2713,7 @@ class Setting extends BreadCrumbs {
   #frontmatterYAML = {}
   #renderYAML = {}
   static #generalType =
-    "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<String>)"
+    "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
   /** Returns all frontmatter entries of this instance (not filtered by type)
    * @returns {Object.<String.any>}
    */
@@ -2680,10 +2727,16 @@ class Setting extends BreadCrumbs {
     return this.#renderYAML
   }
 
-  /** Constructs a new Setting and registers its type once
-   * @constructor
+  /** Constructs a new Setting instance.
+   * Adds {@link Setting}
+   * to its pool as Gene with {@link GeneCallback|callback} {@link cbkInstanceOf}.
+   * <p>
+   * Recurses into {@link Object} entries and creates {@link Setting} instances
+   * for them with <code>this</code> instance as parent and entry key as {@link key}.
+   * <p>
+   * Creates {@link Essence} instances for all other entries.
    * @param {Object} literal
-   * @param {(Undefined|String|Symbol)} key
+   * @param {(Undefined|String|Symbol)} key - if undefined, becomes root key
    * @param {(Undefined|Setting)} parent
    * @throws {SettingError} on wrong parameter types
    */
@@ -2761,6 +2814,7 @@ class Setting extends BreadCrumbs {
       _.run(toStringTest)
       _.run(getFrontmatterYAMLTest)
       _.run(getRenderYAMLTest)
+      _.run(deepLiteralTest)
       _.destruct()
     _ = null
     }
@@ -2956,6 +3010,248 @@ class Setting extends BreadCrumbs {
       _.bassert(2,JSON.stringify(answ2) === expAnsw2,`output of JSON.stringify(result) is:'${JSON.stringify(answ2)}',but should be:'${expAnsw2}'`)
       _.bassert(3,JSON.stringify(answ3) === expAnsw3,`output of JSON.stringify(result) is:'${JSON.stringify(answ3)}',but should be:'${expAnsw3}'`)
       _.bassert(4,JSON.stringify(answ4) === expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
+    }
+    function deepLiteralTest() {
+      let lit0 = { __SPEC: {TYPE: "Number"},
+        pict: {VALUE: "Russian-Matroshka2.jpg", 
+              __SPEC: true, RENDER: true, },
+        zahl: {VALUE: 127, __SPEC: false, },
+        soso: [128,127],
+        noValue: {__SPEC: true, },
+        noValueButType: {__SPEC: false, },
+      }
+      let set0 = new Setting(lit0)
+      let frontMY0 = set0.getFrontmatterYAML()
+      let renderY0 = set0.getRenderYAML()
+      _.bassert(1,frontMY0["zahl"] == 127,"Type of 'Number' should be inherited")
+      _.bassert(2,areEqual(frontMY0["soso"],[128,127]),"Type of 'Array<Number>' should be general")
+      _.bassert(3,frontMY0["noValue"] == "","No value should become default empty string")
+      _.bassert(4,frontMY0["noValueButType"] === "","No value should become default empty string, even if type is set to 'Number'")
+      _.bassert(5,Object.keys(frontMY0).length == 4,"only added entries should appear in frontmatter YAML")
+      _.bassert(6,renderY0["pict"] == "Russian-Matroshka2.jpg","'pict' should be in render YAML as given")
+      _.bassert(7,renderY0["zahl"] == undefined,"'zahl' should not appear in render YAML")
+      _.bassert(8,renderY0["soso"] == undefined,"'soso' should not appear in render YAML")
+      _.bassert(9,Object.keys(renderY0).length == 1,"only added entries should appear in render YAML")
+
+      /************************************************************************/
+      let lit1 = {  a:2,
+                    b:"stg",
+                    c:true,
+                    d:false,
+                    e:undefined,
+                    f:null,
+                    g:Symbol("abc"),
+                    h:cbkTypeOf,
+                    i:22n,
+                   }
+      let set1 = new Setting(lit1)
+      let frontMY1 = set1.getFrontmatterYAML()
+      let renderY1 = set1.getRenderYAML()
+      _.bassert(20,Object.keys(renderY1).length == 0,"no render entries given")
+      _.bassert(21,frontMY1["a"] === 2,"should be as given")
+      _.bassert(22,frontMY1["b"] === "stg","should be as given")
+      _.bassert(23,frontMY1["c"] === true,"should be as given")
+      _.bassert(24,frontMY1["d"] === false,"should be as given")
+      _.bassert(25,frontMY1["e"] === "","Value should be removed, 'undefined' no generalType")
+      _.bassert(26,frontMY1["f"] === "","Value should be removed, 'null' no generalType")
+      _.bassert(27,frontMY1["g"] === "","Value should be removed, 'symbol' no generalType")
+      _.bassert(28,frontMY1["h"] === "","Value should be removed, 'function' no generalType")
+      _.bassert(29,frontMY1["i"] === "","Value should be removed, 'bigint' no generalType")
+
+      /************************************************************************/
+      let lit2 = {  a:[],
+                    b:[1,2,3],
+                    c:[false,false,true],
+                    d:["a"],
+                    e:[undefined],
+                    f:[null],
+                    g:[Symbol("abc")],
+                    h:[cbkTypeOf],
+                    i:[22n],
+                   }
+      let set2 = new Setting(lit2)
+      let frontMY2 = set2.getFrontmatterYAML()
+      let renderY2 = set2.getRenderYAML()
+      _.bassert(30,Object.keys(renderY2).length === 0,"no render entries given")
+      _.bassert(31,Array.isArray(frontMY2.a),"empty array should be returned as array")
+      _.bassert(32,Array.isArray(frontMY2.b),"array of numbers should be returned as array")
+      _.bassert(33,Array.isArray(frontMY2.c),"array of booleans should be returned as array")
+      _.bassert(34,Array.isArray(frontMY2.d),"array of strings should be returned as array")
+      _.bassert(35,areEqual(frontMY2.a,[]),"empty array should be returned as empty arra")
+      _.bassert(36,areEqual(frontMY2.b,[1,2,3]),"array of numbers should be returned as same array")
+      _.bassert(37,areEqual(frontMY2.c,[false,false,true]),"array of booleans should be returned as same array")
+      _.bassert(38,areEqual(frontMY2.d,["a"]),"array of strings should be returned as same array")
+      _.bassert(39,frontMY1["e"] === "","Value should be removed, array of 'undefined' no generalType")
+      _.bassert(40,frontMY1["f"] === "","Value should be removed, array of 'null' no generalType")
+      _.bassert(41,frontMY1["g"] === "","Value should be removed, array of 'symbol' no generalType")
+      _.bassert(42,frontMY1["h"] === "","Value should be removed, array of 'function' no generalType")
+      _.bassert(43,frontMY1["i"] === "","Value should be removed, array of 'bigint' no generalType")
+
+      /************************************************************************/
+      let lit3 = { __SPEC: {TYPE: "Number"},
+                  a:2,
+                  b:"stg",
+                  c:true,
+                  d:false,
+                  e:undefined,
+                  f:null,
+                  g:Symbol("abc"),
+                  h:cbkTypeOf,
+                  i:22n,
+                }      
+      let set3 = new Setting(lit3)
+      let frontMY3 = set3.getFrontmatterYAML()
+      let renderY3 = set3.getRenderYAML()
+      _.bassert(50,Object.keys(renderY3).length == 0,"no render entries given")
+      _.bassert(51,frontMY3["a"] === 2,"should be as given")
+      _.bassert(52,frontMY3["b"] === "stg","should be as given, generalType is used")
+      _.bassert(53,frontMY3["c"] === true,"should be as given, generalType is used")
+      _.bassert(54,frontMY3["d"] === false,"should be as given, generalType is used")
+      _.bassert(55,frontMY3["e"] === "","Value should be removed, 'undefined' no generalType")
+      _.bassert(56,frontMY3["f"] === "","Value should be removed, 'null' no generalType")
+      _.bassert(57,frontMY3["g"] === "","Value should be removed, 'symbol' no generalType")
+      _.bassert(58,frontMY3["h"] === "","Value should be removed, 'function' no generalType")
+      _.bassert(59,frontMY3["i"] === "","Value should be removed, 'bigint' no generalType")
+
+      /************************************************************************/
+      let lit4 = {  __SPEC: {TYPE: "Number"},
+                    a:[],
+                    b:[1,2,3],
+                    c:[false,false,true],
+                    d:["a"],
+                    e:[undefined],
+                    f:[null],
+                    g:[Symbol("abc")],
+                    h:[cbkTypeOf],
+                    i:[22n],
+                   }
+      let set4 = new Setting(lit4)
+      let frontMY4 = set4.getFrontmatterYAML()
+      let renderY4 = set4.getRenderYAML()
+      _.bassert(60,Object.keys(renderY4).length === 0,"no render entries given")
+      _.bassert(61,Array.isArray(frontMY4.a),"should be as given, generalType is used")
+      _.bassert(62,Array.isArray(frontMY4.b),"should be as given, generalType is used")
+      _.bassert(63,Array.isArray(frontMY4.c),"should be as given, generalType is used")
+      _.bassert(64,Array.isArray(frontMY4.d),"should be as given, generalType is used")
+      _.bassert(65,areEqual(frontMY4.a,[]),"empty array should be returned as empty arra")
+      _.bassert(66,areEqual(frontMY4.b,[1,2,3]),"array of numbers should be returned as same array")
+      _.bassert(67,areEqual(frontMY4.c,[false,false,true]),"array of booleans should be returned as same array")
+      _.bassert(68,areEqual(frontMY4.d,["a"]),"array of strings should be returned as same array")
+      _.bassert(69,frontMY4["e"] === "","Value should be removed, array of 'undefined' no generalType")
+      _.bassert(70,frontMY4["f"] === "","Value should be removed, array of 'null' no generalType")
+      _.bassert(71,frontMY4["g"] === "","Value should be removed, array of 'symbol' no generalType")
+      _.bassert(72,frontMY4["h"] === "","Value should be removed, array of 'function' no generalType")
+      _.bassert(73,frontMY4["i"] === "","Value should be removed, array of 'bigint' no generalType")
+
+      /************************************************************************/
+      let lit5 = { __SPEC: {TYPE: "Number"},
+                  a:{__SPEC: true, VALUE:2},
+                  b:{__SPEC: true, VALUE:"stg"},
+                  c:{__SPEC: true, VALUE:true},
+                  d:{__SPEC: true, VALUE:false},
+                  e:{__SPEC: true, VALUE:undefined},
+                  f:{__SPEC: true, VALUE:null},
+                  g:{__SPEC: true, VALUE:Symbol("abc")},
+                  h:{__SPEC: true, VALUE:cbkTypeOf},
+                  i:{__SPEC: true, VALUE:22n},
+                 }
+      let set5 = new Setting(lit5)
+      let frontMY5 = set5.getFrontmatterYAML()
+      let renderY5 = set5.getRenderYAML()
+      _.bassert(80,Object.keys(renderY5).length == 0,"no render entries given")
+      _.bassert(81,frontMY5["a"] === 2,"should be as given")
+      _.bassert(82,frontMY5["b"] === "stg","should be as given, generalType is used")
+      _.bassert(83,frontMY5["c"] === true,"should be as given, generalType is used")
+      _.bassert(84,frontMY5["d"] === false,"should be as given, generalType is used")
+      _.bassert(85,frontMY5["e"] === "","Value should be removed, 'undefined' no generalType")
+      _.bassert(86,frontMY5["f"] === "","Value should be removed, 'null' no generalType")
+      _.bassert(87,frontMY5["g"] === "","Value should be removed, 'symbol' no generalType")
+      _.bassert(88,frontMY5["h"] === "","Value should be removed, 'function' no generalType")
+      _.bassert(89,frontMY5["i"] === "","Value should be removed, 'bigint' no generalType")
+
+      /************************************************************************/
+      let lit6 = {  __SPEC: {TYPE: "Number"},
+                    a:{__SPEC: true, VALUE:[]},
+                    b:{__SPEC: true, VALUE:[1,2,3]},
+                    c:{__SPEC: true, VALUE:[false,false,true]},
+                    d:{__SPEC: true, VALUE:["a"]},
+                    e:{__SPEC: true, VALUE:[undefined]},
+                    f:{__SPEC: true, VALUE:[null]},
+                    g:{__SPEC: true, VALUE:[Symbol("abc")]},
+                    h:{__SPEC: true, VALUE:[cbkTypeOf]},
+                    i:{__SPEC: true, VALUE:[22n]},
+                   }
+      let set6 = new Setting(lit6)
+      let frontMY6 = set6.getFrontmatterYAML()
+      let renderY6 = set6.getRenderYAML()
+      _.bassert(90,Object.keys(renderY6).length === 0,"no render entries given")
+      _.bassert(91,Array.isArray(frontMY6.a),"should be as given, generalType is used")
+      _.bassert(92,Array.isArray(frontMY6.b),"should be as given, generalType is used")
+      _.bassert(93,Array.isArray(frontMY6.c),"should be as given, generalType is used")
+      _.bassert(94,Array.isArray(frontMY6.d),"should be as given, generalType is used")
+      _.bassert(95,areEqual(frontMY6.a,[]),"empty array should be returned as empty arra")
+      _.bassert(96,areEqual(frontMY6.b,[1,2,3]),"array of numbers should be returned as same array")
+      _.bassert(97,areEqual(frontMY6.c,[false,false,true]),"array of booleans should be returned as same array")
+      _.bassert(98,areEqual(frontMY6.d,["a"]),"array of strings should be returned as same array")
+      _.bassert(99,frontMY6["e"] === "","Value should be removed, array of 'undefined' no generalType")
+      _.bassert(100,frontMY6["f"] === "","Value should be removed, array of 'null' no generalType")
+      _.bassert(101,frontMY6["g"] === "","Value should be removed, array of 'symbol' no generalType")
+      _.bassert(102,frontMY6["h"] === "","Value should be removed, array of 'function' no generalType")
+      _.bassert(103,frontMY6["i"] === "","Value should be removed, array of 'bigint' no generalType")
+
+      /************************************************************************/
+      let lit7 = { __SPEC: {TYPE: "Number"},
+                  a:{__SPEC: false, VALUE:2},
+                  b:{__SPEC: false, VALUE:"stg"},
+                  c:{__SPEC: false, VALUE:true},
+                  d:{__SPEC: false, VALUE:false},
+                  e:{__SPEC: false, VALUE:undefined},
+                  f:{__SPEC: false, VALUE:null},
+                  g:{__SPEC: false, VALUE:Symbol("abc")},
+                  h:{__SPEC: false, VALUE:cbkTypeOf},
+                  i:{__SPEC: false, VALUE:22n},
+                 }
+      let set7 = new Setting(lit7)
+      let frontMY7 = set7.getFrontmatterYAML()
+      let renderY7 = set7.getRenderYAML()
+      _.bassert(110,Object.keys(renderY7).length == 0,"no render entries given")
+      _.bassert(111,frontMY7["a"] === 2,"should be as given")
+      _.bassert(112,frontMY7["b"] === "","Value should be removed, generalType is not used")
+      _.bassert(113,frontMY7["c"] === "","Value should be removed, generalType is not used")
+      _.bassert(114,frontMY7["d"] === "","Value should be removed, generalType is not used")
+      _.bassert(115,frontMY7["e"] === "","Value should be removed, 'undefined' no generalType")
+      _.bassert(116,frontMY7["f"] === "","Value should be removed, 'null' no generalType")
+      _.bassert(117,frontMY7["g"] === "","Value should be removed, 'symbol' no generalType")
+      _.bassert(118,frontMY7["h"] === "","Value should be removed, 'function' no generalType")
+      _.bassert(119,frontMY7["i"] === "","Value should be removed, 'bigint' no generalType")
+
+      /************************************************************************/
+      let lit8 = {  __SPEC: {TYPE: "Number"},
+                    a:{__SPEC: false, VALUE:[]},
+                    b:{__SPEC: false, VALUE:[1,2,3]},
+                    c:{__SPEC: false, VALUE:[false,false,true]},
+                    d:{__SPEC: false, VALUE:["a"]},
+                    e:{__SPEC: false, VALUE:[undefined]},
+                    f:{__SPEC: false, VALUE:[null]},
+                    g:{__SPEC: false, VALUE:[Symbol("abc")]},
+                    h:{__SPEC: false, VALUE:[cbkTypeOf]},
+                    i:{__SPEC: false, VALUE:[22n]},
+                   }
+      let set8 = new Setting(lit8)
+      let frontMY8 = set8.getFrontmatterYAML()
+      let renderY8 = set8.getRenderYAML()
+      _.bassert(120,Object.keys(renderY8).length === 0,"no render entries given")
+      _.bassert(111,frontMY8["a"] === "","Value should be removed, generalType is not used")
+      _.bassert(112,frontMY8["b"] === "","Value should be removed, generalType is not used")
+      _.bassert(113,frontMY8["c"] === "","Value should be removed, generalType is not used")
+      _.bassert(114,frontMY8["d"] === "","Value should be removed, generalType is not used")
+      _.bassert(115,frontMY8["e"] === "","Value should be removed, 'undefined' no generalType")
+      _.bassert(116,frontMY8["f"] === "","Value should be removed, 'null' no generalType")
+      _.bassert(117,frontMY8["g"] === "","Value should be removed, 'symbol' no generalType")
+      _.bassert(118,frontMY8["h"] === "","Value should be removed, 'function' no generalType")
+      _.bassert(119,frontMY8["i"] === "","Value should be removed, 'bigint' no generalType")
+
+      /************************************************************************/      
     }
     function _tryConstruct(arg1, arg2, arg3, arg4) {
       new Setting(arg1, arg2, arg3, arg4)
