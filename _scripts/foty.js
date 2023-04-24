@@ -360,11 +360,13 @@ const TYPES = {
  *          |in DEFAULTS|
  *  VALUE   |     Atom  |TYPE    |""      |individual|yes ||
  *  IGNORE  |Node Atom  |Boolean |false   |inherited |    |It is possible to IGNORE ancestors, but not descendants|
+ *  INTERNAL|Node       |Boolean |false   |individual|    |
+ *          |           |        |        |automatic |
  *  FLAT    |Node Atom  |Boolean |false   |individual|yes |set automatically, if specified in literal: |
  *          |           |        |        |          |    |values are not parsed, even if they are objects|
- *  ONCE    |Node Atom  |Boolean |false   |individual|    |if true, has to be the outermost possible|
+ *  ONCE    |Node Atom  |Boolean |false   |individual|    |
  *  REPEAT  |Node       |Boolean |false   |individual|yes |same entryType can be added several times under diff. keys|
- *  LOCAL   |Node Atom  |Boolean |false   |inherited |    |should be/can be localized (translated)|
+ *  LOCAL   |Node Atom  |Boolean |false   |inherited |    |
  *  DEFAULTS|if REPEAT  |Object  |object  |individual|yes |makes only sense for REPEAT: sections|
  * @ignore
  */
@@ -471,7 +473,7 @@ var DEBUG = false
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -486,6 +488,7 @@ if (CHECK_ERROR_OUTPUT) {
   DEBUG = false
   TESTING = false
 }
+var LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE = true
 
 /** If {@link CHECK_ERROR_OUTPUT|reviewing error output} strings in this array {@link letAllThrow|will be evaluated}
  * @type {Array.<String>}
@@ -530,11 +533,13 @@ function flatten(inp) {
   let res = inp
   if (typeof inp === "object") {
     let entries = Object.entries(inp)
-    if (entries.length != 0) {
+    if (entries.length == 0) {
+      res = "{}"
+    } else {
       res = ""
       entries.forEach(([key, value], idx) => {
         if (typeof value == "symbol") value = "Symbol"
-        let indent = idx === 0 ? "OBJ  " : "\n                        "
+        let indent = idx === 0 ? "OBJ  " : "\n                 "
         if (typeof value == "object" && value !== null) {
           Object.values(value).forEach((v) => {
             if (typeof v == "symbol") value = "Object with Symbol"
@@ -2035,6 +2040,12 @@ class Essence extends GenePool {
   get IGNORE() {
     return this[Essence.#pre + "IGNORE"]
   }
+  /** INTERNAL essence, inherited
+   * @type {Boolean}
+   */
+  get INTERNAL() {
+    return this[Essence.#pre + "INTERNAL"]
+  }
   /** FLAT essence, individual
    * @type {Boolean}
    */
@@ -2093,6 +2104,7 @@ class Essence extends GenePool {
   static #DEFAULT_DEFT = ""
   static #VALUE_DEFT = ""
   static #IGNORE_DEFT = false
+  static #INTERNAL_DEFT = false
   static #FLAT_DEFT = false
   static #LOCAL_DEFT = false
   static #ONCE_DEFT = false
@@ -2164,6 +2176,34 @@ class Essence extends GenePool {
     this.add(Essence)
     this.#userPool.add("Date", cbkIsDate)
 
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        name === undefined
+          ? "undefined"
+          : typeof name == "symbol"
+          ? "Symbol"
+          : name
+      let literal_x =
+        literal === undefined
+          ? "undefined"
+          : literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(literal, null, 4)
+          : flatten(literal)
+      let specLit_x =
+        literal != undefined ? flatten(literal[Essence.#SPEC_KEY]) : "undefined"
+      let line_x = ""
+      if (parent == undefined)
+        line_x = "----------------------------------------------------"
+      aut(
+        `START Essence ---------  ${name_x}  ${line_x}---------\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
+        lime
+      )
+    }
+    /*========================================================================*/
+
     let un
     let p = parent
     let specLit = {}
@@ -2198,8 +2238,10 @@ class Essence extends GenePool {
           enumerable: false,
         })
       } catch (e) {
-        if (!TESTING && !CHECK_ERROR_OUTPUT) {
-          vaut(name, e)
+        let col = undefined
+        if (lit != undefined && Essence.getINTERNAL(lit)) col = red
+        if (!TESTING && !col && !CHECK_ERROR_OUTPUT) {
+          vaut(name, e, col)
           throw e
         }
       }
@@ -2207,18 +2249,82 @@ class Essence extends GenePool {
     let hide = changeToHiddenProp
     let l = literal
     let s = specLit
-    hide(this, l, s, "ROOT", "Boolean", p, un, parent == un, name)
-    hide(this, l, s, "RENDER", "Boolean", p, Essence.#RENDER_DEFT, un, name)
-    hide(this, l, s, "TYPE", "String", p, Essence.#TYPE_DEFT, un, name)
-    hide(this, l, s, "IGNORE", "Boolean", p, Essence.#IGNORE_DEFT, un, name)
-    hide(this, l, s, "FLAT", "Boolean", un, Essence.#FLAT_DEFT, un, name)
-    hide(this, l, s, "LOCAL", "Boolean", p, Essence.#LOCAL_DEFT, un, name)
-    hide(this, l, s, "ONCE", "Boolean", un, Essence.#ONCE_DEFT, un, name)
-    hide(this, l, s, "REPEAT", "Boolean", un, Essence.#REPEAT_DEFT, un, name)
-    hide(this, l, s, "DEFAULT", this.TYPE, un, Essence.#DEFAULT_DEFT, un, name)
-    hide(this, l, s, "VALUE", this.TYPE, un, Essence.#VALUE_DEFT, un, name)
-    hide(this, l, s, "DEFAULTS", "Object", un, Essence.#DEFAULTS_DEFT, un, name)
+    let n = name
+    hide(this, l, s, "ROOT", "Boolean", p, un, parent == un, n)
+    hide(this, l, s, "RENDER", "Boolean", p, Essence.#RENDER_DEFT, un, n)
+    hide(this, l, s, "TYPE", "String", p, Essence.#TYPE_DEFT, un, n)
+    hide(this, l, s, "IGNORE", "Boolean", p, Essence.#IGNORE_DEFT, un, n)
+    hide(this, l, s, "INTERNAL", "Boolean", un, Essence.#INTERNAL_DEFT, un, n)
+    hide(this, l, s, "FLAT", "Boolean", un, Essence.#FLAT_DEFT, un, n)
+    hide(this, l, s, "LOCAL", "Boolean", p, Essence.#LOCAL_DEFT, un, n)
+    hide(this, l, s, "ONCE", "Boolean", un, Essence.#ONCE_DEFT, un, n)
+    hide(this, l, s, "REPEAT", "Boolean", un, Essence.#REPEAT_DEFT, un, n)
+    hide(this, l, s, "DEFAULT", this.TYPE, un, Essence.#DEFAULT_DEFT, un, n)
+    hide(this, l, s, "VALUE", this.TYPE, un, Essence.#VALUE_DEFT, un, n)
+    hide(this, l, s, "DEFAULTS", "Object", un, Essence.#DEFAULTS_DEFT, un, n)
     if (literal != un) delete literal[Essence.#SPEC_KEY]
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        name === undefined
+          ? "undefined"
+          : typeof name == "symbol"
+          ? "Symbol"
+          : name
+      let literal_x =
+        literal === undefined
+          ? "undefined"
+          : literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(literal, null, 4)
+          : flatten(literal)
+      let specLit_x = specLit != undefined ? flatten(specLit) : "undefined"
+      let flat_x = this.FLAT ? "FLAT" : "flat"
+      let ignore_x = this.IGNORE ? "IGNORE" : "ignore"
+      let root_x = this.ROOT ? "ROOT" : "root"
+      let repeat_x = this.REPEAT ? "REPEAT" : "repeat"
+      let render_x = this.RENDER ? "RENDER" : "render"
+      let value_x = this.VALUE.length ? "VALUE" : "value"
+      let default_x = this.DEFAULT.length ? "DEFAULT" : "default"
+      let type_x = "type"
+      let defaults_x = Object.keys(this.DEFAULTS).length
+        ? "DEFAULTS"
+        : "defaults"
+      if (literal != undefined)
+        aut(
+          `\
+${flat_x}:${Essence.getFLAT(literal)} \
+${ignore_x}:${Essence.getIGNORE(literal)} \
+${root_x}:${Essence.getROOT(literal)} \
+${repeat_x}:${Essence.getREPEAT(literal)} \
+${render_x}:${Essence.getRENDER(literal)}
+${value_x}:'${Essence.getVALUE(literal)}' \
+${default_x}:'${Essence.getDEFAULT(literal)}' \
+${type_x}:${Essence.getTYPE(literal)} \
+${defaults_x}:${flatten(Essence.getDEFAULTS(literal))}`,
+          blue
+        )
+      aut(
+        `   SPEC: ${specLit_x}\n   Literal :${literal_x}
+${flat_x}:${this.FLAT} \
+${ignore_x}:${this.IGNORE} \
+${root_x}:${this.ROOT} \
+${repeat_x}:${this.REPEAT} \
+${render_x}:${this.RENDER}
+${value_x}:'${this.VALUE}' \
+${default_x}:'${this.DEFAULT}' \
+${type_x}:${this.TYPE} \
+${defaults_x}:${flatten(this.DEFAULTS)}`,
+        lime
+      )
+      aut(
+        `ENDE Essence ---------  ${name_x}  \
+--------------------------------------------------------------`,
+        lime
+      )
+    }
+    /*========================================================================*/
   }
 
   #validateOrInform(value, type, name) {
@@ -2276,6 +2382,13 @@ class Essence extends GenePool {
    */
   static getIGNORE(lit) {
     return lit[Essence.#pre + "IGNORE"]
+  }
+  /** INTERNAL essence, individual
+   * @param {Object} lit
+   * @returns {Boolean}
+   */
+  static getINTERNAL(lit) {
+    return lit[Essence.#pre + "INTERNAL"]
   }
   /** FLAT essence, inherited
    * @param {Object} lit
@@ -2935,6 +3048,39 @@ class Setting extends BreadCrumbs {
     parent = undefined,
     templater = undefined
   ) {
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        key === undefined
+          ? "undefined"
+          : typeof key == "symbol"
+          ? "Symbol"
+          : key
+      let literal_x =
+        literal === undefined
+          ? "undefined"
+          : literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(literal, null, 4)
+          : flatten(literal)
+      let specLit_x =
+        literal != undefined ? flatten(literal["__SPEC"]) : "undefined"
+      if (parent == undefined)
+        aut(
+          `========================================================================================`,
+          lime
+        )
+      aut(
+        `========================================================================================`,
+        lime
+      )
+      aut(
+        `START Setting =========  ${name_x}  =========\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
+        lime
+      )
+    }
+    /*========================================================================*/
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
     this.add(Setting)
     this.throwIfUndefined(literal, "literal")
@@ -2945,6 +3091,33 @@ class Setting extends BreadCrumbs {
       this.throwIfNotOfType(parent, "parent", Setting)
     this.#tp = this.ROOT ? templater : undefined
     this.#parse()
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        this.name === undefined
+          ? "undefined"
+          : typeof name == "symbol"
+          ? "Symbol"
+          : this.name
+      let literal_x =
+        this.literal === undefined
+          ? "undefined"
+          : this.literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(this.literal, null, 4)
+          : flatten(this.literal)
+      let specLit_x =
+        this.literal != undefined
+          ? flatten(this.literal["__SPEC"])
+          : "undefined"
+      aut(
+        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE Setting =========  ${name_x}  \
+=============================================================`,
+        lime
+      )
+    }
+    /*========================================================================*/
   }
   #parse() {
     let un
@@ -3000,7 +3173,7 @@ class Setting extends BreadCrumbs {
     if (typeof specLit == "boolean") {
       if (specLit == true && typeof type == "string")
         literal[key]["TYPE"] = type
-      aEss = new Essence(literal[key], this, "essenceOfAtom")
+      aEss = new Essence(literal[key], this, key)
       literal[key] = aEss.VALUE
     }
     return aEss
@@ -3573,21 +3746,9 @@ class LocalizationWorker extends Setting {
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
-    this.#parse()
   }
   #parse() {
     let type = LocalizationWorker.#localType
-    for (const [key, value] of Object.entries(this.literal)) {
-      if (this.isA(value, "object")) {
-        let aEss = this.essenceOfAtom(this.literal, key, type)
-        if (aEss != undefined) this.#phrases[key] = aEss
-        else this.#phrases[key] = new LocalizationWorker(value, key, this)
-      } else {
-        let litAtom = {VALUE: this.literal[key], __SPEC: true}
-        this.literal[key] = litAtom
-        this.#phrases[key] = this.essenceOfAtom(this.literal, key, type)
-      }
-    }
   }
 
   /** Returns value
@@ -3599,10 +3760,7 @@ class LocalizationWorker extends Setting {
     if (typeof key == "string") {
       let subKeys = key.split(",")
       if (subKeys.length > 1) {
-        if (this.#phrases[subKeys[0]] != undefined)
-          return this.#phrases[subKeys.shift()].getValue(subKeys.toString())
-      } else if (this.#phrases[key] !== undefined)
-        return this.#phrases[key].VALUE
+      } else if (this.#phrases[key] !== undefined);
     }
   }
 
@@ -3744,21 +3902,9 @@ class DialogWorker extends Setting {
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
-    this.#parse()
   }
   #parse() {
     let type = DialogWorker.#localType
-    for (const [key, value] of Object.entries(this.literal)) {
-      if (this.isA(value, "object")) {
-        let aEss = this.essenceOfAtom(this.literal, key, type)
-        if (aEss != undefined) this.#preferences[key] = aEss
-        else this.#preferences[key] = new DialogWorker(value, key, this)
-      } else {
-        let litAtom = {VALUE: this.literal[key], __SPEC: true}
-        this.literal[key] = litAtom
-        this.#preferences[key] = this.essenceOfAtom(this.literal, key, type)
-      }
-    }
   }
 
   /** Returns value
@@ -3770,10 +3916,7 @@ class DialogWorker extends Setting {
     if (typeof key == "string") {
       let subKeys = key.split(",")
       if (subKeys.length > 1) {
-        if (this.#preferences[subKeys[0]] != undefined)
-          return this.#preferences[subKeys.shift()].getValue(subKeys.toString())
-      } else if (this.#preferences[key] !== undefined)
-        return this.#preferences[key].VALUE
+      } else if (this.#preferences[key] !== undefined);
     }
   }
 
@@ -3917,11 +4060,10 @@ class TypesManager extends Setting {
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
-    this.#parse()
   }
   #parse() {
+    let type = TypesManager.#localType
     if (this.REPEAT && this.literal["DEFAULTS"] != undefined) {
-      this.#def = new Setting(this.literal["DEFAULTS"], "DEFAULTS", this)
     }
   }
 
@@ -3930,11 +4072,7 @@ class TypesManager extends Setting {
    * @param  {...any} params - not used
    * @returns {Undefined}
    */
-  getValue(key, ...params) {
-    if (this.#def != undefined) {
-      return this.#def.getValue(key)
-    }
-  }
+  getValue(key, ...params) {}
 
   //prettier-ignore
   static test(outputObj) { // TypesManager
@@ -4068,18 +4206,18 @@ async function foty(tp, app) {
   }
   test(testYAML)
   try {
-    let lit = onne
-    let setting = new Setting(lit, undefined, undefined, tp)
-    frontmatterYAML = setting.getFrontmatterYAML()
-    Object.assign(renderYAML, setting.getRenderYAML())
-    for (const [key, val] of setting) {
-      //   if (!val.FLAT)
-      //     for (const [key2, val2] of val) {
-      //       vaut("   " + key2, val2.VALUE)
-      //     }
-      //   else vaut(key, val.VALUE)
-      //aut(key)
-    }
+    // let lit = onne
+    // let setting = new Setting(lit, undefined, undefined, tp)
+    // frontmatterYAML = setting.getFrontmatterYAML()
+    // Object.assign(renderYAML, setting.getRenderYAML())
+    // for (const [key, val] of setting) {
+    //   //   if (!val.FLAT)
+    //   //     for (const [key2, val2] of val) {
+    //   //       vaut("   " + key2, val2.VALUE)
+    //   //     }
+    //   //   else vaut(key, val.VALUE)
+    //   //aut(key)
+    // }
     // vaut('setting.at("a").at("A").VALUE', setting.at("a").at("A").VALUE)
     //aut(setting.getValue("__TRANSLATE", "TYPE_PROMPT"))
     //aut(this.literal["date_created"](this.tp))
@@ -4111,3 +4249,73 @@ async function foty(tp, app) {
 
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
+
+let onne_x = {
+  //localType: (String|Array.<String>)
+  __TRANSLATE: {
+    TYPE_PROMPT: "Typ wählen",
+    TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
+    DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
+  },
+  //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
+  __DIALOG_SETTINGS: {
+    TYPE_MAX_ENTRIES: 10,
+  },
+  __NOTE_TYPES: {
+    __SPEC: {REPEAT: true},
+    DEFAULTS: {
+      marker: {__SPEC: false, TYPE: "String", DEFAULT: ""},
+      date: {__SPEC: false, TYPE: "Boolean", DEFAULT: false},
+      // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
+      // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
+      frontmatter: {
+        __SPEC: {},
+        aliases: {
+          __SPEC: false,
+          TYPE: "(Array.<String>|Function)",
+          DEFAULT: cbkFmtAlias,
+        },
+        date_created: {
+          __SPEC: false,
+          TYPE: "(Date|Function)",
+          DEFAULT: cbkFmtCreated,
+        },
+        //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
+        //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
+        //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
+        //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
+        //     position: {__SPEC:false,IGNORE: true},
+      },
+      language: {__SPEC: false, IGNORE: true},
+    },
+    diary: {
+      date: true,
+      dateformat: "YYYY-MM-DD",
+      frontmatter: {private: true},
+      language: "Portuguese" /* will be ignored */,
+    },
+    citation: {
+      marker: "°",
+      frontmatter: {cssclass: "garten, tagebuch"},
+    },
+  },
+  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
+  c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
+}
+
+let test_x = {
+  __DIALOG_SETTINGS: {
+    TYPE_MAX_ENTRIES: 10,
+  },
+  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
+  c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
+}
+let test_1 = {
+  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
+  c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
+}
+aut(JSON.stringify(test_1, null, 4))
+let set = new Setting(test_1)
+aut(JSON.stringify(test_1, null, 4))
+aut(set.getValue("soso"))
+aut(set.getValue("c,pict"))
