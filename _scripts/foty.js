@@ -336,18 +336,20 @@ const TYPES = {
 /**
  * Defaults
  * __DIALOG_SETTINGS: //hardcoded localType: (Number|Array.<Number>)
- * __TRANSLATE:       //hardcoded localType: (String|Array.<String>)
+ * __TRANSLATE:       //hardcoded localType: (String|Array.<String>|Array.<Array.<String>>)
  * __NOTE_TYPES:  REPEAT: true
  * __FOLDER2TYPE: REPEAT: true
  * __SPEC:
  * - __SPEC explicit for atoms is anything but an Object
  *   -- generalType: (Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)
- *   -- true means: just convert to spec'd atom, use generalType
+ *   -- true means: just convert to spec'd atom, use generalType or TYPE given as sibling
+ *      so ignoring inherited and default TYPE
  *   -- anything else means: I have thought about this and care of TYPE by myself
- *   - if true generalType is added as TYPE
- *   - else (anything but not true) TYPE is the inherited or default TYPE
- *   - has to contain value as VALUE property
+ *   - if true generalType is added as TYPE (or TYPE given as sibling of __SPEC)
+ *   - else (anything but not true) TYPE is the given, inherited or default TYPE
+ *   - has to contain value as VALUE property, if missing, default VALUE is used
  * - __SPEC implicit for atoms (is created always for atoms or FLAT values)
+ *   - __SPEC is set to TRUE
  *   - generalType is added as TYPE
  *   - value is added as VALUE
  * - __SPEC for nodes is an Object
@@ -372,7 +374,7 @@ const TYPES = {
  */
 //prettier-ignore
 let onne = {
-  __TRANSLATE: //localType: (String|Array.<String>)
+  __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
   { 
     TYPE_PROMPT:         "Typ wählen",
     TITLE_NEW_FILE:      ["Unbenannt", "Untitled"],
@@ -447,6 +449,10 @@ const black = "black"
 const cyan = "cyan"
 /** Color, to be used without quotation marks during development. */
 const red = "orange"
+/** Color, to be used without quotation marks during development. */
+let rose = "salmon"
+/** Color, to be used without quotation marks during development. */
+let pink = "pink"
 /** Color, to be used without quotation marks during development. */
 const blue = "deepskyblue"
 /** Color, to be used without quotation marks during development. */
@@ -671,15 +677,10 @@ function vaut(vn, v, b = "yellow", c = "red") {
   console.log(`%c${str}`, css)
 }
 
-/** @classdesc superclass for all foty errors (but not unit test errors).
- * <p>
- * Additionally to the {@link external:Error} properties <code>FotyError</code>
- * receives callers name as string on construction.
- * @extends external:Error
- */
 class FotyError extends Error {
   static #nl = "\n     "
-  /** Newline for multi line error messages
+  /**
+   * Newline for multi line error messages
    * <p>
    * As shorthand {@link NL} can be used.<br>
    * @type {String}
@@ -687,16 +688,23 @@ class FotyError extends Error {
   static get nl() {
     return FotyError.#nl
   }
-
-  /** Set on construction. Will be part of {FotyError#errOut|output message}.
+  /**
+   * @description
+   * Set on construction. Will be part of {@link FotyError#errOut|output message}.
    * @type {String}
    */
   #caller = ""
 
-  /** Constructs a FotyError instance, with
+  /**
+   * @classdesc superclass for all foty errors (but not unit test errors).
+   * <p>
+   * Additionally to the parameters for {@link external:Error}
+   * <code>FotyError</code> receives callers name on construction.
+   * @extends external:Error
+   * @constructor
+   * @description Constructs a FotyError instance, with
    * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name&#x2348;}</code>
    * set to "Foty Error".
-   *
    * @param {String} caller - Will be part of {FotyError#errOut|output message}.
    * @param  {...*} params - Params are given to {@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error|superclass&#x2348;}
    * They consist of
@@ -708,12 +716,14 @@ class FotyError extends Error {
     this.name = "Foty Error"
     this.#caller = typeof caller === "string" ? caller : ""
   }
-  /** Puts error information formatted to {@link YAML} properties.
+  /**
+   * Puts error information formatted to {@link YAML} properties.
    * <p>
    * If {@link cnt} is a number, {@link YAML} keys will be created using this
    * number, otherwise fully hardcoded keys will be used.
    * <p>
-   * The key which's value contains the <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|message&#x2348;}</code>
+   * The key which's value contains the
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|message&#x2348;}</code>
    * is returned.
    *<p>
    * <b>Usage of cnt</b>
@@ -721,7 +731,8 @@ class FotyError extends Error {
    * In production mode no cnt argument should be given. A short key for e.name
    * and another for e.message will created. They are added to YAML.
    * In every call always the same keys are used. This means, that only the last
-   * message is contained in YAML.
+   * message is contained in YAML. (In production mode this is supposed to be the
+   * first and only one)
    *<p>
    * In some testing cases an every time different cnt argument can be given.
    * Short keys are created in dependance of cnt and appended to YAML. This means,
@@ -744,7 +755,8 @@ class FotyError extends Error {
     FotyError.#changePad(prevPad)
     return [msgKey]
   }
-  /** Puts error information formatted to {@link YAML} properties.
+  /**
+   * Puts error information formatted to {@link YAML} properties.
    * <p>
    * This static variant of {@link FotyError#errOut|FotyError.errOut} can be used
    * for output of non FotyErrors. They will be formatted same way as FotyError instance
@@ -770,7 +782,8 @@ class FotyError extends Error {
     YAML[msgKey] = e.message.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
     return msgKey
   }
-  /** Creates and returns key for this instances name in dependence of value of {@link cnt}.
+  /**
+   * Creates and returns key for this instances name in dependence of value of {@link cnt}.
    * <p>
    * Can be overridden by subclasses.
    * @param {(undefined|Number)} cnt
@@ -781,7 +794,8 @@ class FotyError extends Error {
       ? "????"
       : cnt.pad() + "?"
   }
-  /** Creates and returns key for error name in dependence of value of {@link cnt}.
+  /**
+   * Creates and returns key for error name in dependence of value of {@link cnt}.
    * @param {(undefined|Number)} cnt
    * @returns {String}
    */
@@ -790,7 +804,8 @@ class FotyError extends Error {
       ? "????"
       : cnt.pad() + "?"
   }
-  /** Creates and returns key for error msg in dependence of value of {@link cnt}.
+  /**
+   * Creates and returns key for error msg in dependence of value of {@link cnt}.
    * @param {(undefined|Number)} cnt
    * @returns {String}
    */
@@ -799,7 +814,8 @@ class FotyError extends Error {
       ? "\u00A8\u00A8\u00A8\u00A8"
       : cnt.pad() + "\u00A8"
   }
-  /** Creates and returns key for separator in dependence of value of {@link cnt}.
+  /**
+   * Creates and returns key for separator in dependence of value of {@link cnt}.
    * @param {(undefined|Number)} cnt
    * @returns {String}
    */
@@ -821,16 +837,18 @@ class FotyError extends Error {
 /** shorthand for {@link FotyError#nl|FotyError.nl} */
 const NL = FotyError.nl
 
-/** @classdesc User error thrown from setting tree.
- * <p>
- * Some of the errors from setting tree for sure can only occur if entries in
- * setting input are wrong. Those are user errors. Using the 2nd parameter
- * a user specific message can be given.
- * @extends FotyError
- */
 class SettingError extends FotyError {
   usrMsg = ""
-  /** Constructs a SettingError instance,
+  /**
+   * @classdesc User error thrown from setting tree.
+   * <p>
+   * Some of the errors from setting tree for sure can only occur if entries in
+   * setting input are wrong. Those are user errors. Using the 2nd parameter
+   * a user specific message can be given.
+   * @extends FotyError
+   * @constructor
+   * @description
+   * Constructs a SettingError instance,
    * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name&#x2348;}</code>
    * set to "Setting Error"
    * @param {String} caller
@@ -842,7 +860,8 @@ class SettingError extends FotyError {
     this.name = "Setting Error"
     this.usrMsg = usrMsg === undefined ? "" : usrMsg
   }
-  /** Appends user message if given to output object.
+  /**
+   * Appends user message if given to output object.
    * @param {Object} YAML
    * @param {Undefined|Number} cnt
    */
@@ -852,25 +871,25 @@ class SettingError extends FotyError {
     if (this.usrMsg.length > 0)
       YAML[msgKey] += NL + this.usrMsg.replace(/(?<!(\n[ ]*))[ ][ ]*/g, " ")
   }
-  /** Returns subclass specific name.
+  /**
+   * Returns subclass specific name.
    * @param {Undefined|Number} cnt
    * @returns {String}
    */
   getNameKey(cnt) {
     return cnt === undefined ? "_ERR" : cnt.pad(4)
   }
-  /** prettier-ignore jsdoc shall not add caller as override
-   * @ignore */ caller
 }
 
-/** @classdesc Programming error.
- * <p>
- * Some errors only can occur if code is wrong. If this is for sure,
- * CodingError should be thrown.
- * @extends FotyError
- */
 class CodingError extends FotyError {
-  /** Constructs a CodingError instance,
+  /** @classdesc Programming error.
+   * <p>
+   * Some errors only can occur if code is wrong. If this is for sure,
+   * CodingError should be thrown.
+   * @extends FotyError
+   * @constructor
+   * @description
+   * Constructs a CodingError instance,
    * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/name|Error.name&#x2348;}</code>
    * set to "Coding Error"
    *
@@ -888,13 +907,8 @@ class CodingError extends FotyError {
   getNameKey(cnt) {
     return cnt === undefined ? "!!!!" : cnt.pad(4) + "!"
   }
-  /** prettier-ignore jsdoc shall not add errOut as override
-   * @ignore */ errOut(YAML, cnt) {}
-  /** prettier-ignore jsdoc shall not add caller as override
-   * @ignore */ caller
 }
 
-/** Runs unit tests. */
 class TestSuite {
   //#region member variables
   static ok = "\u2713"
@@ -1463,7 +1477,7 @@ registeredTests.push(Dispatcher.test)
 
 //#endregion helper classes
 //#region Gene, Pool and Essence
-
+//  #region Callbacks
 /** callback to check {@link variable} against {@link gene}.
  * @callback GeneCallback
  * @param {*} variable
@@ -1533,31 +1547,8 @@ function cbkTypeOfLc(v, gene) {
 function cbkIsDate(v, gene) {
   return typeof v === "string"
 }
+//  #endregion Callbacks
 
-/** @classdesc Gene is type used in this application.
- * <p>
- * Every gene has a {@link GeneCallback} function associated with it. The default callback
- * function is '
- * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof&#x2348;}</code>
- * variable === {@link Gene#ident|Gene.ident}' . {@link Gene#is} calls this callback, comparing
- * variable to check against ident of {@link Gene}.
- * <p>
- * <b>Why this name? </b>
- * Many types of types we have to deal with. Therefore another name for 'allowed
- * types' was searched for. It should be short, have a meaning near to
- * 'very basic' and it should reasonable not be used further in the code, so
- * that name is replaceable throughout whole file, if another one would be
- * chosen.
- * <p>
- * The name has a flaw though: A real gene is something, a gene here is a
- * something definition. In other words: A real gene can be compared to another
- * real gene, e.g whether they are equal or which of them is longer. If you want
- * to decide (still in real world) whether those somethings to be compared are
- * genes at all, you need a gene definition. Here in this code {@link Gene}
- * instance fulfills the job of a gene definition in real world.
- * In {@link Gene#is|Gene.is} you give it a something and it decides,
- * whether it is as defined in this instance.
- */
 class Gene {
   #cbk
   #ident
@@ -1569,7 +1560,33 @@ class Gene {
     return this.#ident
   }
 
-  /** Constructs a Gene instance. Throws on wrong parameter types.
+  /**
+   * @classdesc Gene is type used in this application.
+   * <p>
+   * Every gene has a {@link GeneCallback} function associated with it. The default callback
+   * function is '
+   * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof&#x2348;}</code>
+   * variable === {@link Gene#ident|Gene.ident}' . {@link Gene#is} calls this callback, comparing
+   * variable to check against ident of {@link Gene}.
+   * <p>
+   * <b>Why this name? </b>
+   * Many types of types we have to deal with. Therefore another name for 'allowed
+   * types' was searched for. It should be short, have a meaning near to
+   * 'very basic' and it should reasonable not be used further in the code, so
+   * that name is replaceable throughout whole file, if another one would be
+   * chosen.
+   * <p>
+   * The name has a flaw though: A real gene is something, a gene here is a
+   * something definition. In other words: A real gene can be compared to another
+   * real gene, e.g whether they are equal or which of them is longer. If you want
+   * to decide (still in real world) whether those somethings to be compared are
+   * genes at all, you need a gene definition. Here in this code {@link Gene}
+   * instance fulfills the job of a gene definition in real world.
+   * In {@link Gene#is|Gene.is} you give it a something and it decides,
+   * whether it is as defined in this instance.
+   * @constructor
+   * @description
+   * Constructs a Gene instance. Throws on wrong parameter types.
    * @param {*} ident
    * @param {GeneCallback} cbk - default is function {@link cbkTypeOf},
    *                             which compares typeof its first parameter against
@@ -1682,18 +1699,20 @@ class Gene {
 registeredTests.push(Gene.test)
 registeredExceptions.push("new Gene('name',3)")
 
-/** @classdesc Collection of  Genes.
- * <p>
- * Stores  {@link Gene}s. The default {@link GeneCallback|callback} function for newly created
- * {@link Gene}s is '{@link cbkTypeOfLc}'. (Whereas the default {@link GeneCallback}|callback)
- * function for plain {@link Gene}s is '{@link cbkTypeOf}').
- * '.
- */
 class GenePool {
   #genes = {}
   #defaultCallback = cbkInstanceOf
 
-  /** Creates new instance of {@link GenePool}.
+  /**
+   * @classdesc Collection of  Genes.
+   *
+   * <p>
+   * Stores  {@link Gene}s. The default {@link GeneCallback|callback} function for newly created
+   * {@link Gene}s is '{@link cbkInstanceOf}'. (Whereas the default {@link GeneCallback}|callback)
+   * function for plain {@link Gene}s is '{@link cbkTypeOf}').
+   * '.
+   * @constructor
+   * @description Creates new instance of {@link GenePool}.
    * <p>
    * If not set to an other value, the default {@link GeneCallback|callback} function is {@link cbkInstanceOf}.
    * <p>
@@ -1707,10 +1726,12 @@ class GenePool {
   constructor(...params) {
     if (params.length > 0 && typeof params[0] === "function")
       this.#defaultCallback = params.shift()
-    while (params.length > 0) this.add(params.shift(), this.#defaultCallback)
+    while (params.length > 0)
+      this.addGene(params.shift(), this.#defaultCallback)
   }
 
-  /** Adds {@link ident} as new Gene with {@link cbk} as {@link GeneCallback|callback} function.
+  /**
+   * Adds {@link ident} as new Gene with {@link cbk} as {@link GeneCallback|callback} function.
    * <p>
    * If {@link cbk} is undefined, the newly created {@link Gene} gets default {@link GeneCallback|callback} function
    * as {@link GeneCallback|callback} function
@@ -1723,7 +1744,7 @@ class GenePool {
    * throws if given {@link cbk} is no function
    * @returns {Gene}
    */
-  add(ident, cbk) {
+  addGene(ident, cbk) {
     if (this.#genes[ident] === undefined)
       this.#genes[ident] = new Gene(
         ident,
@@ -1732,15 +1753,17 @@ class GenePool {
     return this.#genes[ident]
   }
 
-  /** Returns whether {@link ident} contained in this pool.
+  /**
+   * Returns whether {@link ident} contained in this pool.
    * @param {*} ident
    * @returns {Boolean}
    */
-  has(ident) {
+  hasGene(ident) {
     return this.#genes[ident] != undefined
   }
 
-  /** Returns whether {@link v} fulfills {@link ident}s requirements as {@link Gene}.
+  /**
+   * Returns whether {@link v} fulfills {@link ident}s requirements as {@link Gene}.
    * <p>
    * Returns false, if {@link ident} is no {@link Gene} of this pool.
    * <p>
@@ -1748,6 +1771,10 @@ class GenePool {
    * - ({@link ident1}|{@link ident2}|{@link ident3})<br>
    * - Array.&lt;{@link ident1}&gt;<br>
    * - combination of both
+   * <p>
+   * <b>Remark:</b><br>
+   * It is not static, because {@link v} is only compared against {@link Gene}s
+   * in this {@link GenePool|pool}
    * @param {*} v
    * @param {*} ident
    * @returns {Boolean}
@@ -1761,7 +1788,7 @@ class GenePool {
       let innerIdent = ident.slice("Array.<".length, -1)
       return v.every((innerV) => this.isA(innerV, innerIdent), this)
     } else {
-      if (!this.has(ident)) return false
+      if (!this.hasGene(ident)) return false
       return this.#genes[ident].is(v)
     }
   }
@@ -1822,9 +1849,9 @@ class GenePool {
     }
     function addTest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
-      let gn = gns.add("Number")
+      let gn = gns.addGene("Number")
       let gn2
-      _.bassert(1, gn = gns.add("Number"),"Trying to add existing Gene should return it")
+      _.bassert(1, gn = gns.addGene("Number"),"Trying to add existing Gene should return it")
       _.bassert(2, gn.ident === "Number", "The existing Gene should be returned")
       _.shouldAssert(3,_tryAdd,gns,"abc",22,"Adding Gene with no function as callback should throw")
 
@@ -1846,15 +1873,15 @@ class GenePool {
       let gnSymB
       let gnFunc
       let gnObjE
-      _.bassert(11, gnNull = gns.add(idNull),"null should be added")
-      _.bassert(12, gnUndE = gns.add(idUndE),"null should be added")
-      _.bassert(13, gnBool = gns.add(idBool),"null should be added")
-      _.bassert(14, gnNumb = gns.add(idNumb),"null should be added")
-      _.bassert(15, gnBigI = gns.add(idBigI),"null should be added")
-      _.bassert(16, gnStrI = gns.add(idStrI),"null should be added")
-      _.bassert(17, gnSymB = gns.add(idSymB),"null should be added")
-      _.bassert(18, gnFunc = gns.add(idFunc),"null should be added")
-      _.bassert(19, gnObjE = gns.add(idObjE),"null should be added")
+      _.bassert(11, gnNull = gns.addGene(idNull),"null should be added")
+      _.bassert(12, gnUndE = gns.addGene(idUndE),"null should be added")
+      _.bassert(13, gnBool = gns.addGene(idBool),"null should be added")
+      _.bassert(14, gnNumb = gns.addGene(idNumb),"null should be added")
+      _.bassert(15, gnBigI = gns.addGene(idBigI),"null should be added")
+      _.bassert(16, gnStrI = gns.addGene(idStrI),"null should be added")
+      _.bassert(17, gnSymB = gns.addGene(idSymB),"null should be added")
+      _.bassert(18, gnFunc = gns.addGene(idFunc),"null should be added")
+      _.bassert(19, gnObjE = gns.addGene(idObjE),"null should be added")
 
 
       _.bassert(21, gnNull.ident === idNull,"The added Gene should be added")
@@ -1869,11 +1896,11 @@ class GenePool {
     }
     function hasTest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
-      _.bassert(1,gns.has("Number"),"'Number' was given to constructor")
-      _.bassert(2,!gns.has("number"),"'number' was not given to constructor")
-      _.bassert(3,!gns.has("string"),"'string' was not given to constructor")
-      _.bassert(4,!gns.has(),"undefined is not given to constructor")
-      _.bassert(5,!gns.has({}),"'{}' is not given to constructor")
+      _.bassert(1,gns.hasGene("Number"),"'Number' was given to constructor")
+      _.bassert(2,!gns.hasGene("number"),"'number' was not given to constructor")
+      _.bassert(3,!gns.hasGene("string"),"'string' was not given to constructor")
+      _.bassert(4,!gns.hasGene(),"undefined is not given to constructor")
+      _.bassert(5,!gns.hasGene({}),"'{}' is not given to constructor")
 
       let idNull = null
       let idUndE = undefined
@@ -1885,24 +1912,24 @@ class GenePool {
       function idFunc() {return false}
       let idObjE = new Error("df")
       let gns2 = new GenePool()
-      gns2.add(idNull)
-      gns2.add(idUndE)
-      gns2.add(idBool)
-      gns2.add(idNumb)
-      gns2.add(idBigI)
-      gns2.add(idStrI)
-      gns2.add(idSymB)
-      gns2.add(idFunc)
-      gns2.add(idObjE)
-      _.bassert(11,gns2.has(idNull), "id had been added")
-      _.bassert(12,gns2.has(idUndE), "id had been added")
-      _.bassert(13,gns2.has(idBool), "id had been added")
-      _.bassert(14,gns2.has(idNumb), "id had been added")
-      _.bassert(15,gns2.has(idBigI), "id had been added")
-      _.bassert(16,gns2.has(idStrI), "id had been added")
-      _.bassert(17,gns2.has(idSymB), "id had been added")
-      _.bassert(18,gns2.has(idFunc), "id had been added")
-      _.bassert(19,gns2.has(idObjE), "id had been added")
+      gns2.addGene(idNull)
+      gns2.addGene(idUndE)
+      gns2.addGene(idBool)
+      gns2.addGene(idNumb)
+      gns2.addGene(idBigI)
+      gns2.addGene(idStrI)
+      gns2.addGene(idSymB)
+      gns2.addGene(idFunc)
+      gns2.addGene(idObjE)
+      _.bassert(11,gns2.hasGene(idNull), "id had been added")
+      _.bassert(12,gns2.hasGene(idUndE), "id had been added")
+      _.bassert(13,gns2.hasGene(idBool), "id had been added")
+      _.bassert(14,gns2.hasGene(idNumb), "id had been added")
+      _.bassert(15,gns2.hasGene(idBigI), "id had been added")
+      _.bassert(16,gns2.hasGene(idStrI), "id had been added")
+      _.bassert(17,gns2.hasGene(idSymB), "id had been added")
+      _.bassert(18,gns2.hasGene(idFunc), "id had been added")
+      _.bassert(19,gns2.hasGene(idObjE), "id had been added")
     }
     function isATest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
@@ -1942,15 +1969,15 @@ class GenePool {
       function cbkSymB(v, gene) {return typeof(v === "symbol")}
       function cbkFunc(v, gene) {return typeof(v === "function")}
       function cbkObjE(v, gene) {return typeof(v === "object")}
-      gns3.add(idNull,cbkNull)
-      gns3.add(idUndE,cbkUndE)
-      gns3.add(idBool,cbkBool)
-      gns3.add(idNumb,cbkNumb)
-      gns3.add(idBigI,cbkBigI)
-      gns3.add(idStrI,cbkStrI)
-      gns3.add(idSymB,cbkSymB)
-      gns3.add(idFunc,cbkFunc)
-      gns3.add(idObjE,cbkObjE)
+      gns3.addGene(idNull,cbkNull)
+      gns3.addGene(idUndE,cbkUndE)
+      gns3.addGene(idBool,cbkBool)
+      gns3.addGene(idNumb,cbkNumb)
+      gns3.addGene(idBigI,cbkBigI)
+      gns3.addGene(idStrI,cbkStrI)
+      gns3.addGene(idSymB,cbkSymB)
+      gns3.addGene(idFunc,cbkFunc)
+      gns3.addGene(idObjE,cbkObjE)
       
       _.bassert(21,gns3.isA(idNull,idNull), "should be a, see cbk")
       _.bassert(22,gns3.isA(idUndE,idUndE), "should be a, see cbk")
@@ -1973,35 +2000,20 @@ class GenePool {
 registeredTests.push(GenePool.test)
 registeredExceptions.push("new GenePool().add('noGene','noFunction')")
 
-/** @classdesc Essence is unrecognizable except through me.
- * Reads and stores specification properties and removes them from literal.
- * So __SPEC becomes essence and nobody will no longer be bothered by it.
- * Essence is always there. Either as found in __SPEC or as given from parent (if one)
- * or hardcoded default. If some __SPEC entry has wrong  {@link Gene} it will be
- * {@link Essence#skipped|skipped} and parent essence or (if no parent)
- * hardcoded essence will be used.
- * <p>
- * Essence has to do with two {@link GenePool}s. The one that it is and that it's
- * subclasses will be. And the user pool, the one it uses to remove
- * _SPEC from the literal given to it.
- * <p>
- * All known keys in the literals __SPEC object are changed to invisible and unremovable
- * properties of this instance, which represents the literal for subclass instances.
- * They also are added to the literal containing the __SPEC object as invisible
- * and unremovable properties. Those can be questioned using static get functions
- * ({@link Essence.getDEFAULT} - {@link Essence.getVALUE})
- * of {@link Essence}
- * <p>
- * <b>For clarity</b>
- * In fact, this is not Essence but a Essence, as it is specialized. It could be
- * called UserEssence. But as I only need this special case of Essence, I do not
- * build the general class. I even do not know, how I should realize it, so that
- * the members are described generalized and could be created specialized. I would
- * need a member generation procedure in the general Essence, to build the
- * members used in the special essence, e.g. for this UserEssence ROOT or RENDER.
- * @extends GenePool
- */
 class Essence extends GenePool {
+  //#region member variables
+  /** skipped essences
+   * @type {Array.<Object>}
+   */
+  get skipped() {
+    return this.#skipped
+  }
+  /** SPEC key
+   * @type {String}
+   */
+  static get SPEC_KEY() {
+    return Essence.#SPEC_KEY
+  }
   /** ROOT essence, set automatically
    * @type {Boolean}
    */
@@ -2076,18 +2088,6 @@ class Essence extends GenePool {
   get DEFAULTS() {
     return this[Essence.#pre + "DEFAULTS"]
   }
-  /** skipped essences
-   * @type {Array.<Object>}
-   */
-  get skipped() {
-    return this.#skipped
-  }
-  /** SPEC key
-   * @type {String}
-   */
-  static get SPEC_KEY() {
-    return Essence.#SPEC_KEY
-  }
 
   static #pre = "__"
   #userPool = new GenePool(
@@ -2112,8 +2112,41 @@ class Essence extends GenePool {
   static #DEFAULTS_DEFT = {}
   #skipped = [] //[{.name,.value,.expectedType}]
   #defaults = {}
-
-  /** Creates {@link Essence} instance.
+  //#endregion member variables
+  /**
+   * @classdesc Essence is unrecognizable except through me.
+   * Reads and stores specification properties and removes them from literal.
+   * So __SPEC becomes essence and nobody will no longer be bothered by it.
+   * Essence is always there. Either as found in __SPEC or as given from parent (if one)
+   * or hardcoded default. If some __SPEC entry has wrong  {@link Gene} it will be
+   * {@link Essence#skipped|skipped} and parent essence or (if no parent)
+   * hardcoded essence will be used.
+   * <p>
+   * Essence has to do with two {@link GenePool}s. The one that it is and that it's
+   * subclasses will be. And the user pool, the one it uses to remove
+   * _SPEC from the literal given to it.
+   * <p>
+   * All known keys in the literals __SPEC object are changed to invisible and unremovable
+   * properties of this instance, which represents the literal for subclass instances.
+   * They also are added to the literal containing the __SPEC object as invisible
+   * and unremovable properties. Those can be questioned using static get functions
+   * ({@link Essence.getDEFAULT} - {@link Essence.getVALUE})
+   * of {@link Essence}
+   * <p>
+   * <b>For clarity</b>
+   * In fact, this is not Essence but a Essence, as it is specialized. It could be
+   * called UserEssence. But as I only need this special case of Essence, I do not
+   * build the general class. I even do not know, how I should realize it, so that
+   * the members are described generalized and could be created specialized. I would
+   * need a member generation procedure in the general Essence, to build the
+   * members used in the special essence, e.g. for this UserEssence ROOT or RENDER.
+   * @mermaid
+   *  classDiagram
+   *      GenePool <|-- Essence
+   * @extends GenePool
+   * @constructor
+   * @description
+   * Creates {@link Essence} instance.
    * <p>
    * Adds {@link Object}, {@link Gene}, {@link GenePool} and {@link Essence}
    * to its pool as Genes with {@link GeneCallback|callback} {@link cbkInstanceOf}.
@@ -2162,9 +2195,9 @@ class Essence extends GenePool {
    */
   constructor(literal, parent, name) {
     super()
-    this.add(Object)
-    this.add(Gene)
-    this.add(GenePool)
+    this.addGene(Object)
+    this.addGene(Gene)
+    this.addGene(GenePool)
     if (parent != undefined && !this.isA(parent, GenePool))
       throw new TypeError(
         `function 'Essence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
@@ -2173,8 +2206,8 @@ class Essence extends GenePool {
       throw new TypeError(
         `function 'Essence.constructor'${NL}1st parameter '${literal}' is not of type 'Object'`
       )
-    this.add(Essence)
-    this.#userPool.add("Date", cbkIsDate)
+    this.addGene(Essence)
+    this.#userPool.addGene("Date", cbkIsDate)
 
     /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
@@ -2326,7 +2359,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
     }
     /*========================================================================*/
   }
-
   #validateOrInform(value, type, name) {
     let ok = value === undefined || this.#userPool.isA(value, type)
     if (!ok) {
@@ -2339,6 +2371,7 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
     return ok
   }
 
+  //#region static getESSENCE from literal
   /** ROOT essence, set automatically
    * @param {Object} lit
    * @returns {Boolean}
@@ -2425,6 +2458,7 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
   static getDEFAULTS(lit) {
     return lit[Essence.#pre + "DEFAULTS"]
   }
+  //#endregion static getESSENCE from literal
 
   //prettier-ignore
   static test(outputObj) {
@@ -2609,35 +2643,52 @@ registeredExceptions.push(
 //#endregion Gene, Pool and Essence
 //#region code
 
-/**@classdesc Parsing tree superclass.
- * <p>
- * As shorthand {@link BC} can be used.
- * @extends Essence
- */
 class BreadCrumbs extends Essence {
   static sep = " \u00BB " // breadcrumbs separator (or \u2192 ?)
   #name
   #parent
   #literal
-  /** Returns literal given in BreadCrumbs constructor, __SPEC property removed.
+  /**
+   * Returns literal given in BreadCrumbs constructor, __SPEC property removed.
    * @returns {Object}
    */
   get literal() {
     return this.#literal
   }
-  /** Returns parent given in BreadCrumbs constructor
+  /**
+   * Returns parent given in BreadCrumbs constructor
    * @type (Undefined|BreadCrumbs)
    */
   get parent() {
     return this.#parent
   }
-  /** Returns key given in BreadCrumbs constructor
+  /**
+   * Returns key given in BreadCrumbs constructor
    * @type {String}
    */
   get name() {
     return this.#name
   }
-  /** Creates new BreadCrumbs instance.
+  /**
+   * Returns root
+   * @type {BreadCrumbs}
+   */
+  get root() {
+    return this.ROOT ? this : this.parent.root
+  }
+
+  /**
+   * @classdesc Parsing tree superclass.
+   * <p>
+   * As shorthand {@link BC} can be used.
+   * @mermaid
+   *  classDiagram
+   *      GenePool <|-- Essence
+   *      Essence <|-- BreadCrumbs
+   * @extends Essence
+   * @constructor
+   * @description
+   * Creates new BreadCrumbs instance.
    * <p>
    * Adds {@link BreadCrumbs}
    * to its pool as Gene with {@link GeneCallback|callback} {@link cbkInstanceOf}.<br>
@@ -2657,18 +2708,18 @@ class BreadCrumbs extends Essence {
    */
   constructor(literal, name, parent) {
     super(literal, parent, typeof name == "symbol" ? "Symbol" : name)
-    this.add(BreadCrumbs)
-    this.add("undefined", cbkTypeOf)
-    this.add("null", cbkIsNull)
-    this.add("boolean", cbkTypeOf)
-    this.add("number", cbkTypeOf)
-    this.add("bigint", cbkTypeOf)
-    this.add("string", cbkTypeOf)
-    this.add("symbol", cbkTypeOf)
-    this.add("function", cbkTypeOf)
-    this.add("date", cbkIsDate)
-    this.add("object", cbkIsObjectNotNullNotArray)
-    this.add("array", cbkIsArray)
+    this.addGene(BreadCrumbs)
+    this.addGene("undefined", cbkTypeOf)
+    this.addGene("null", cbkIsNull)
+    this.addGene("boolean", cbkTypeOf)
+    this.addGene("number", cbkTypeOf)
+    this.addGene("bigint", cbkTypeOf)
+    this.addGene("string", cbkTypeOf)
+    this.addGene("symbol", cbkTypeOf)
+    this.addGene("function", cbkTypeOf)
+    this.addGene("date", cbkIsDate)
+    this.addGene("object", cbkIsObjectNotNullNotArray)
+    this.addGene("array", cbkIsArray)
     if (!this.isA(parent, "undefined"))
       this.throwIfNotOfType(parent, "parent", BreadCrumbs)
     this.#parent = parent
@@ -2694,7 +2745,8 @@ Skipped values are: `
     }
   }
 
-  /** Returns string representing class instance for BreadCrumbs and derived instances .
+  /**
+   * Returns string representing class instance for BreadCrumbs and derived instances .
    * @returns {String} string containing class name of deepest subclass and key
    *          as given in BreadCrumbs constructor.
    */
@@ -2705,7 +2757,8 @@ Skipped values are: `
       return "°°°" + this.constructor.name + " " + "Symbol"
   }
 
-  /** Returns line of ancestors with keys given in BreadCrumbs constructor.
+  /**
+   * Returns line of ancestors with keys given in BreadCrumbs constructor.
    *
    * For this instance and its ancestors keys are returned, separated by
    * {@link BreadCrumbs.sep}.
@@ -2724,7 +2777,8 @@ Skipped values are: `
     return breadcrumbs
   }
 
-  /** Throws if {@link val} is strictly undefined (null is defined).
+  /**
+   * Throws if {@link val} is strictly undefined (null is defined).
    *<p>
    * Does not throw on parameter type errors.
    * @param {*} val
@@ -2753,7 +2807,8 @@ Skipped values are: `
       )
   }
 
-  /** Throws if val is not of type or compound type, if type is defined with string.
+  /**
+   * Throws if val is not of type or compound type, if type is defined with string.
    * <p>
    * Does not throw on parameters type errors.
    * @param {*} val
@@ -2922,7 +2977,8 @@ Skipped values are: `
     }
   }
 }
-/** shorthand for {@link BreadCrumbs} */
+/**
+ * shorthand for {@link BreadCrumbs} */
 var BC = BreadCrumbs
 registeredTests.push(BreadCrumbs.test)
 registeredExceptions.push(
@@ -2932,98 +2988,118 @@ registeredExceptions.push(
   "new BreadCrumbs(22,'goodName', undefined)"
 )
 
-/** @classdesc setting parser; traverses deep literal to flat output
- * <p>
- * Setting is the only subclass which should be constructed from outside, with
- * only literal given as argument.
- * <p>
- * It calls the workers and traverses given literal to flat output; thereby
- * respecting worker configuration rules and removing worker literals from
- * output.
- * <p>
- * <b>Workflow and requisites</b><br>
- * BreadCrumbs:<br>
- * - Adds undefined, boolean, number, bigint, string, symbol and function
- * to this pool with callback cbkTypeOf.<br>
- * - Adds date to this pool with callback cbkIsDate.<br>
- * - Adds object with callback cbkIsObjectNotNullNotArray,
- * null with callback cbkIsNull and
- * array with callback cbkIsNull to this pool.
- *<p>
- * Essence:<br>
- * - Adds "String", "Number", "Boolean", "Function" and "Object" to user pool
- *   as Genes with callback cbkTypeOfLc.<br>
- * - Adds "Date" to user pool as Genes with callback cbkIsDate.
- *<p>
- * Setting:<br>
- *  #generalType =
- * "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
- *<p>
- * <i>In German, id do not understand it in English. I suppose, other people
- * would not understand it in my English, so not translated. </i>
- * <p>
- * Essence:<br>
- * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
- *     Vergleicht den Typ des Wertes des SPEC_Eintrags im __SPEC Node mit
- *     einem hardcoded Typ ("String", "Boolean" oder "Object" werden zur
- *     Zeit verwendet) oder, für DEFAULT und VALUE, dem Typ der in TYPE
- *     gegeben wird. Für den Vergleich benutzt er den user pool.<br>
- *     Wenn der Typ nicht stimmt, verwirft er den Wert und verwendet den
- *     Wert der Parent Essence, falls der SPEC_Eintrag inherited ist und
- *     eine Parent Essence existiert, sonst den hardcoded Default Wert.<br>
- *     - Löscht alle SPEC_Einträge aus __SPEC Node.<br>
- *     - Löscht den Eintrag __SPEC aus dem ParentNode<br>
- *     - erzeugt für jeden SPEC_Eintrag (auch nicht angegebene) einen Wert
- *       in der eigenen Instanz<br>
- *     - für jeden SPEC_Eintrag (auch nicht angegebene) eine hidden
- *       Property ans Node Literal<br>
- * Für Atoms: (bedeutet: der Wert von __SPEC ist Boolean)<br>
- *     Verwendet den ParentNode (den Node, der __SPEC enthält) als __SPEC
- *     Node.<br>
- *     Sets FLAT to true
- *<p>
- * Setting:<br>
- * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
- *    Wie Essence für Nodes.<br>
- * Für Atoms:<br>
- *    Für spezifizierte Atoms: (bedeutet: Der Wert ist ein Object und es
- *                              enthält einen __SPEC Eintrag und
- *                              dessen Wert ist vom Typ Boolean)<br>
- *       Falls __SPEC true ist: <br>TYPE wird auf #generalType gesetzt
- *                              (!!IMMER, auch wenn schon vorhanden)<br>
- *       Falls __SPEC false ist: <br>TYPE wird nicht gesetzt<br>
- *                               (!!NIE, auch wenn nicht vorhanden nicht)<br>
- *    Für reine Atoms: (bedeutet: der Wert ist kein Object)<br>
- *       erzeugt ein spezifiziertes Atom mit VALUE: Wert und __SPEC true
- *       (damit wird TYPE zu #generalType)
- *<p>
- *    Dann wie Essence für Atoms.<br>
- *    Danach wird VALUE aus der erzeugten Essence zum Wert des Atoms.<br>
- * @extends BreadCrumbs
- */
 class Setting extends BreadCrumbs {
   static #ROOT_KEY = "/"
   static #generalType =
     "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
+  #workersTypeForChildren
   static #workers = {} // and managers
   #works = {}
   #children = {}
   #tp
-  /** Workers registers by setting themselves <code>Setting.worker = WorkerClass</code>
+  /**
+   * Workers registers by setting themselves <code>Setting.worker = WorkerClass</code>
    * @type {Object.<string, Setting>}
    * @param {Setting} workerClass
    */
   static set worker(workerClass) {
     Setting.#workers[workerClass.workerKey] = workerClass
   }
-  /** Templater Object
+  get workersTypeForChildren() {
+    return this.#workersTypeForChildren
+  }
+  /** Type to be used for workers children construction
+   * @param {String} type
+   * @type {String}
+   */
+  set workersTypeForChildren(type) {
+    this.#workersTypeForChildren = type
+  }
+  /**
+   * Templater Object
    * @type Object
    */
   get tp() {
     return this.ROOT ? this.#tp : this.parent.tp
   }
 
-  /** Constructs a new Setting instance.
+  /**
+   * @classdesc setting parser; traverses deep literal to flat output
+   * <p>
+   * Setting is the only subclass which should be constructed from outside, with
+   * only literal given as argument.
+   * <p>
+   * It calls the workers and traverses given literal to flat output; thereby
+   * respecting worker configuration rules and removing worker literals from
+   * output.
+   * <p>
+   * <b>Workflow and requisites</b><br>
+   * BreadCrumbs:<br>
+   * - Adds undefined, boolean, number, bigint, string, symbol and function
+   * to this pool with callback cbkTypeOf.<br>
+   * - Adds date to this pool with callback cbkIsDate.<br>
+   * - Adds object with callback cbkIsObjectNotNullNotArray,
+   * null with callback cbkIsNull and
+   * array with callback cbkIsNull to this pool.
+   *<p>
+   * Essence:<br>
+   * - Adds "String", "Number", "Boolean", "Function" and "Object" to user pool
+   *   as Genes with callback cbkTypeOfLc.<br>
+   * - Adds "Date" to user pool as Genes with callback cbkIsDate.
+   *<p>
+   * Setting:<br>
+   *  #generalType =
+   * "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
+   *<p>
+   * <i>In German, id do not understand it in English. I suppose, other people
+   * would not understand it in my English, so not translated. </i>
+   * <p>
+   * Essence:<br>
+   * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
+   *     Vergleicht den Typ des Wertes des SPEC_Eintrags im __SPEC Node mit
+   *     einem hardcoded Typ ("String", "Boolean" oder "Object" werden zur
+   *     Zeit verwendet) oder, für DEFAULT und VALUE, dem Typ der in TYPE
+   *     gegeben wird. Für den Vergleich benutzt er den user pool.<br>
+   *     Wenn der Typ nicht stimmt, verwirft er den Wert und verwendet den
+   *     Wert der Parent Essence, falls der SPEC_Eintrag inherited ist und
+   *     eine Parent Essence existiert, sonst den hardcoded Default Wert.<br>
+   *     - Löscht alle SPEC_Einträge aus __SPEC Node.<br>
+   *     - Löscht den Eintrag __SPEC aus dem ParentNode<br>
+   *     - erzeugt für jeden SPEC_Eintrag (auch nicht angegebene) einen Wert
+   *       in der eigenen Instanz<br>
+   *     - für jeden SPEC_Eintrag (auch nicht angegebene) eine hidden
+   *       Property ans Node Literal<br>
+   * Für Atoms: (bedeutet: der Wert von __SPEC ist Boolean)<br>
+   *     Verwendet den ParentNode (den Node, der __SPEC enthält) als __SPEC
+   *     Node.<br>
+   *     Sets FLAT to true
+   *<p>
+   * Setting:<br>
+   * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
+   *    Wie Essence für Nodes.<br>
+   * Für Atoms:<br>
+   *    Für spezifizierte Atoms: (bedeutet: Der Wert ist ein Object und es
+   *                              enthält einen __SPEC Eintrag und
+   *                              dessen Wert ist vom Typ Boolean)<br>
+   *       Falls __SPEC true ist: <br>TYPE wird auf #generalType gesetzt
+   *                              (außer er ist parallel zu __SPEC gesetzt)<br>
+   *       Falls __SPEC false ist: <br>TYPE wird nicht gesetzt<br>
+   *                               (!!NIE, auch wenn nicht vorhanden nicht)<br>
+   *    Für reine Atoms: (bedeutet: der Wert ist kein Object)<br>
+   *       erzeugt ein spezifiziertes Atom mit VALUE: Wert und __SPEC true
+   *       (damit wird TYPE zu #generalType)
+   *<p>
+   *    Dann wie Essence für Atoms.<br>
+   *    Danach wird VALUE aus der erzeugten Essence zum Wert des Atoms.<br>
+   * @mermaid
+   *  classDiagram
+   *      GenePool <|-- Essence
+   *      Essence <|-- BreadCrumbs
+   *      BreadCrumbs <|-- Setting
+   * @extends BreadCrumbs
+   * @constructor
+   * @description
+   * Constructs a new Setting instance.
    * Adds {@link Setting}
    * to its pool as Gene with {@link GeneCallback|callback} {@link cbkInstanceOf}.
    * <p>
@@ -3082,7 +3158,7 @@ class Setting extends BreadCrumbs {
     }
     /*========================================================================*/
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
-    this.add(Setting)
+    this.addGene(Setting)
     this.throwIfUndefined(literal, "literal")
     // literal {(Undefined|Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
@@ -3090,6 +3166,8 @@ class Setting extends BreadCrumbs {
     if (!this.isA(parent, "undefined"))
       this.throwIfNotOfType(parent, "parent", Setting)
     this.#tp = this.ROOT ? templater : undefined
+    if (!this.ROOT)
+      this.#workersTypeForChildren = this.parent.workersTypeForChildren
     this.#parse()
     /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
@@ -3122,12 +3200,14 @@ class Setting extends BreadCrumbs {
   #parse() {
     let un
     for (const [key, value] of Object.entries(this.literal)) {
-      let type = Setting.#generalType
+      let type =
+        !this.ROOT && this.parent.workersTypeForChildren !== undefined
+          ? this.parent.workersTypeForChildren
+          : Setting.#generalType
       if (Setting.#isWorkerKey(key)) {
+        // constructs a workers instance
         this.#works[key] = new Setting.#workers[key](value, key, this)
-        continue
-      }
-      if (this.isA(value, "object")) {
+      } else if (this.isA(value, "object")) {
         let aEss = this.essenceOfAtom(this.literal, key, type)
         if (aEss != un) this.#children[key] = aEss
         else this.#children[key] = new Setting(value, key, this)
@@ -3139,7 +3219,8 @@ class Setting extends BreadCrumbs {
     }
   }
 
-  /** Returns {@link Essence} for <code>atomic literal</code>,
+  /**
+   * Returns {@link Essence} for <code>atomic literal</code>,
    * <code>undefined</code> for <code>node literal</code>
    * <p>
    * If value of {@link Essence#SPEC_KEY|__SPEC} property
@@ -3171,7 +3252,11 @@ class Setting extends BreadCrumbs {
     let aEss = undefined
     let specLit = literal[key][Essence.SPEC_KEY]
     if (typeof specLit == "boolean") {
-      if (specLit == true && typeof type == "string")
+      if (
+        specLit == true &&
+        typeof type == "string" &&
+        literal[key]["TYPE"] == undefined
+      )
         literal[key]["TYPE"] = type
       aEss = new Essence(literal[key], this, key)
       literal[key] = aEss.VALUE
@@ -3179,7 +3264,8 @@ class Setting extends BreadCrumbs {
     return aEss
   }
 
-  /** Iterator
+  /**
+   * Iterator
    * @returns {Essence}
    */
   iterator() {
@@ -3200,34 +3286,54 @@ class Setting extends BreadCrumbs {
     }
   }
 
-  /** Returns entry for key
+  /**
+   * Returns entry for key
    * @param {(String|Symbol)} key
    * @returns {(Essence|Setting)}
    */
   at(key) {
-    return this.#children[key]
+    if (typeof key == "string") {
+      let subKeys = key.split(".")
+      if (subKeys.length > 1) {
+        if (this.#works[subKeys[0]] !== undefined)
+          return this.#works[subKeys.shift()].at(subKeys.join("."))
+        if (this.#children[subKeys[0]] !== undefined)
+          return this.#children[subKeys.shift()].at(subKeys.join("."))
+      }
+    }
+    if (this.#works[key]) return this.#works[key]
+    else return this.#children[key]
   }
 
-  /** Returns value from worker, if {@link key} is registered worker, else from this
+  /**
+   * Returns value from worker, if {@link key} is registered worker, else from this
    * @param {String} key - if not worker identifier, key can specify child keys by
    *                       using commas, e.g. "grandParentKey,parentKey,childKey"
    * @param  {...any} params - for worker's getValue
    * @returns {*}
    */
   getValue(key, ...params) {
-    if (this.#works[key] !== undefined && params.length > 0) {
-      return this.#works[key].getValue(params.shift(), params)
-    } else if (typeof key == "string") {
-      let subKeys = key.split(",")
-      if (subKeys.length > 1) {
-        if (this.#children[subKeys[0]] != undefined)
-          return this.#children[subKeys.shift()].getValue(subKeys.toString())
-      } else if (this.#children[key] !== undefined)
-        return this.#children[key].VALUE
-    }
+    let works = this.#getWorks(key)
+    if (works !== undefined) {
+      return works[0].getValue(works[1], params)
+    } else if (this.at(key) !== undefined) return this.at(key).VALUE
   }
-
-  /** Returns all frontmatter entries of this instance and descendants
+  #getWorks(key) {
+    let answ
+    if (typeof key == "string") {
+      let subKeys = key.split(".")
+      let workerKey = subKeys.length > 1 ? subKeys[0] : key
+      if (this.#works[workerKey] !== undefined) {
+        answ = []
+        answ.push(this.#works[workerKey])
+        subKeys.shift()
+        answ.push(subKeys)
+      }
+    }
+    return answ
+  }
+  /**
+   * Returns all frontmatter entries of this instance and descendants
    * @returns  {Object.<String.any>}
    */
   getFrontmatterYAML() {
@@ -3240,7 +3346,8 @@ class Setting extends BreadCrumbs {
     return frontmatterYAML
   }
 
-  /** Returns all render entries of this instance and descendants
+  /**
+   * Returns all render entries of this instance and descendants
    * @returns  {Object.<String.any>}
    */
   getRenderYAML() {
@@ -3365,7 +3472,7 @@ class Setting extends BreadCrumbs {
       let set = new Setting(lit,"Setting:getValueTest1")
       _.bassert(1,set.getValue("a") ==2,"should return value of a")
       _.bassert(2,set.getValue("b") =="","value for node is empty string")
-      _.bassert(3,set.getValue("b,bb") =="bbValue","should return value of bb")
+      _.bassert(3,set.getValue("b.bb") =="bbValue","should return value of bb")
       _.bassert(4,set.getValue("b.bb") ==undefined,"key not there,should return undefined")
       }/**********************************************************************/{        
       let lit = {__TRANSLATE : {word: "Wort"}}
@@ -3719,205 +3826,97 @@ registeredExceptions.push(
   "new Setting()"
 )
 //  #region workers
-/** @classdesc For translation
- * @extends Setting
- */
-class LocalizationWorker extends Setting {
-  static #KEY = "__TRANSLATE"
-  static #localType = "(String|Array.<String>)"
-  /** Key which this worker will handle
-   * @type {String}
-   */
-  static get workerKey() {
-    return LocalizationWorker.#KEY
-  }
-  #phrases = {}
-
-  /** Creates a LocalizationWorker instance
-   * @param {Object} literal
-   * @param {String} key
-   * @param {Setting} parent
-   */
-  constructor(literal, key, parent) {
-    super(literal, key, parent)
-    this.add(LocalizationWorker)
-    // literal {(Object)} checked by superclass
-    // key {(String|Symbol)} checked by superclass
-    // parent {(Undefined|Setting)} checked by superclass
-    this.throwIfUndefined(parent, "parent")
-    this.throwIfUndefined(key, "key")
-  }
-  #parse() {
-    let type = LocalizationWorker.#localType
-  }
-
-  /** Returns value
-   * @param {String} key
-   * @param  {...any} params - not used
-   * @returns {String}
-   */
-  getValue(key, ...params) {
-    if (typeof key == "string") {
-      let subKeys = key.split(",")
-      if (subKeys.length > 1) {
-      } else if (this.#phrases[key] !== undefined);
-    }
-  }
-
-  //prettier-ignore
-  static test(outputObj) { // LocalizationWorker
-    let _ = null
-    if(_ = new TestSuite("LocalizationWorker", outputObj)) {
-      _.run(constructorTest)
-      _.run(isATest)
-      _.run(toStringTest)
-      _.run(getValueTest)
-      _.destruct()
-      _ = null
-    }
-    function constructorTest() {
-      let un
-      let b = new BreadCrumbs(un, "LocalizationWorker:constructorTest", un)
-      let lm = new LocalizationWorker({}, "LocalizationWorker:constructorTest1", new Setting({},"LocalizationWorker:cTest0:parent"))
-      _.assert(1,_tryConstruct,{},"LocalizationWorker:cTest1",new Setting({},"LocalizationWorker:cTest1:parent"),"should be created, all parameters ok")
-      _.shouldAssert(2,_tryConstruct,un,"LocalizationWorker:cTest2",new Setting({},"LocalizationWorker:cTest2:parent"),"should not be created, literal is undefined")
-      _.shouldAssert(3,_tryConstruct,22,"LocalizationWorker:cTest3",new Setting({},"LocalizationWorker:cTest3:parent"),"should not be created, literal is number")
-      _.shouldAssert(4,_tryConstruct,"literal","LocalizationWorker:cTest4",new Setting({},"LocalizationWorker:cTest4:parent"),"should not be created, literal is string")
-      _.shouldAssert(5,_tryConstruct,null,"LocalizationWorker:cTest5",new Setting({},"LocalizationWorker:cTest5:parent"),"should not be created, literal is null")
-      _.shouldAssert(6,_tryConstruct,{},un,new Setting({},"LocalizationWorker:wrong1:parent"),"should not be created, key is undefined")
-      _.shouldAssert(7,_tryConstruct,{},22,new Setting({},"LocalizationWorker:wrong2:parent"),"should not be created, key is number")
-      _.shouldAssert(8,_tryConstruct,{},{},new Setting({},"LocalizationWorker:wrong3:parent"),"should not be created, key is object")
-      _.shouldAssert(9,_tryConstruct,{},b,new Setting({},"LocalizationWorker:wrong4:parent"),"should not be created, key is Object")
-      _.assert(10,_tryConstruct,{},Symbol("a"),new Setting({},"LocalizationWorker:sym1:parent"),"should be created, key is Symbol")
-      _.shouldAssert(11,_tryConstruct,{},"LocalizationWorker:cTest11",un,"should  not be created, undefined parent is not ok")
-      _.shouldAssert(12,_tryConstruct,{},"LocalizationWorker:cTest12",new Error(),"should not be be created, parent is Error")
-      _.shouldAssert(13,_tryConstruct,{},"LocalizationWorker:cTest13",{},"should not be be created, parent is object")
-      _.shouldAssert(14,_tryConstruct,{},"LocalizationWorker:cTest14","ring","should not be be created, parent is string")
-      _.shouldAssert(15,_tryConstruct,{},"LocalizationWorker:cTest15",22,"should not be be created, parent is number")
-      _.shouldAssert(16,_tryConstruct,{},"LocalizationWorker:cTest16",null,"should not be be created, parent is null")
-      _.shouldAssert(16,_tryConstruct,{},"LocalizationWorker:cTest16",b,"should not be be created, parent is BreadCrumbs")
-      let locMan = new LocalizationWorker({},"LocalizationWorker:constructorTest101", new Setting({},"LocalizationWorker:101:parent"))
-      _.bassert(101,locMan instanceof Object,"'LocalizationWorker' has to be an instance of 'Object'")
-      _.bassert(102,locMan instanceof BreadCrumbs,"'LocalizationWorker' has to be an instance of 'BreadCrumbs'")
-      _.bassert(103,locMan instanceof LocalizationWorker,"'LocalizationWorker' has to be an instance of 'LocalizationWorker'")
-      _.bassert(104,locMan.constructor === LocalizationWorker,"the constructor property is not 'LocalizationWorker'")
-    }
-    function isATest() {
-      // Object, Gene, GenePool, Essence added for each Essence instance
-      // BreadCrumbs added for each BreadCrumbs instance
-      // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
-      // "function", "object", "array" added for each BreadCrumbs instance
-      // LocalizationWorker added for each LocalizationWorker instance
-      let locMan1 = new LocalizationWorker({},"LocalizationWorker:NameIsATest",new Setting({},"parent"))
-      _.bassert(1,locMan1.isA(locMan1,"object"), "'" + locMan1 + "' should be a " + "object")
-      _.bassert(2,locMan1.isA(locMan1,Object), "'" + locMan1 + "' should be a " + "Object")
-      _.bassert(3,locMan1.isA(locMan1,BreadCrumbs), "'" + locMan1 + "' should be a " + "BreadCrumbs")
-      _.bassert(4,locMan1.isA(locMan1,Setting), "'" + locMan1 + "' should be a " + "Setting")
-      _.bassert(5,locMan1.isA(locMan1,LocalizationWorker), "'" + locMan1 + "' should be a " + "LocalizationWorker")
-      _.bassert(6,!locMan1.isA(locMan1,Error), "'" + locMan1 + "' should not be a " + "Error")
-      _.bassert(7,!locMan1.isA(locMan1,Gene), "'" + locMan1 + "' should not be a " + "Gene")
-    }
-    function toStringTest() {
-      let locMan1 = new LocalizationWorker({},"LocWork:toStringTest1",new Setting({},"parent"))
-      _.bassert(1,locMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,locMan1.toString().includes("LocalizationWorker"),"result does not contain class string"    )
-    }
-    function getValueTest() {
-      let par = new Setting({},"LocalizationWorker:getValueTest:parent")
-      /**********************************************************************/{        
-      let lit = {word: "Wort"}
-      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
-      let val = loc.getValue("word")
-      _.bassert(1,val == "Wort","get the value via DialogWorker")
-      let litS = { __TRANSLATE:{word: "Wort"}}
-      let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","word")
-      _.bassert(2,valS == "Wort","get the value via Setting")
-      }/**********************************************************************/{        
-      let lit = { chapter: {word: "Wort"}}
-      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
-      let val = loc.getValue("chapter,word")
-      _.bassert(11,val == "Wort","get the value via Setting")
-      let litS = { __TRANSLATE:{chapter: {word: "Wort"}}}
-      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","chapter,word")
-      _.bassert(12,valS == "Wort","get the value via Setting")
-      }/**********************************************************************/{        
-      let lit = {word: ["de","Wort"]}
-      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
-      let val = loc.getValue("word")
-      _.bassert(21,areEqual(val,["de","Wort"]),"get the value via DialogWorker")
-      let litS = { __TRANSLATE:{word: ["de","Wort"]}}
-      let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","word")
-      _.bassert(22,areEqual(valS,["de","Wort"]),"get the value via Setting")
-      }/**********************************************************************/{        
-      let lit = { chapter: {word: ["de","Wort"]}}
-      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
-      let val = loc.getValue("chapter,word")
-      _.bassert(31,areEqual(val,["de","Wort"]),"get the value via Setting")
-      let litS = { __TRANSLATE:{chapter: {word: ["de","Wort"]}}}
-      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","chapter,word")
-      _.bassert(32,areEqual(valS,["de","Wort"]),"get the value via Setting")
-      }/**********************************************************************/        
-    }
-
-    function _tryConstruct(arg1, arg2,arg3) {
-      new LocalizationWorker(arg1,arg2,arg3)
-    }
-  }
-}
-Setting.worker = LocalizationWorker
-registeredTests.push(LocalizationWorker.test)
-registeredExceptions.push(
-  "new LocalizationWorker({},'goodName', undefined)",
-  "new LocalizationWorker({},undefined, new Setting({},'parent'))"
-)
-
-/** @classdesc For Dialogs
- * @extends Setting
- */
 class DialogWorker extends Setting {
   static #KEY = "__DIALOG_SETTINGS"
   static #localType = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
-  /** Key which this worker will handle
+  /**
+   * Key which this worker will handle
    * @type {String}
    */
   static get workerKey() {
     return DialogWorker.#KEY
   }
-  #preferences = {}
-
-  /** Creates a DialogWorker instance
+  /**
+   * @classdesc For note types
+   * @extends Setting
+   * @constructor
+   * @description
+   *
+   * Creates a DialogWorker instance
+   * @extends Setting
    * @param {Object} literal
    * @param {String} key
    * @param {Setting} parent
    */
   constructor(literal, key, parent) {
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        key === undefined
+          ? "undefined"
+          : typeof key == "symbol"
+          ? "Symbol"
+          : key
+      let literal_x =
+        literal === undefined
+          ? "undefined"
+          : literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(literal, null, 4)
+          : flatten(literal)
+      let specLit_x =
+        literal != undefined ? flatten(literal["__SPEC"]) : "undefined"
+      if (parent == undefined)
+        aut(
+          `========================================================================================`,
+          pink
+        )
+      aut(
+        `========================================================================================`,
+        pink
+      )
+      aut(
+        `START DialogWorker ======  ${name_x}  =======\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
+        pink
+      )
+    }
+    /*========================================================================*/
+    parent.workersTypeForChildren = DialogWorker.#localType
     super(literal, key, parent)
-    this.add(DialogWorker)
+    this.addGene(DialogWorker)
     // literal {(Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
-  }
-  #parse() {
-    let type = DialogWorker.#localType
-  }
-
-  /** Returns value
-   * @param {String} key
-   * @param  {...any} params - not used
-   * @returns {Number}
-   */
-  getValue(key, ...params) {
-    if (typeof key == "string") {
-      let subKeys = key.split(",")
-      if (subKeys.length > 1) {
-      } else if (this.#preferences[key] !== undefined);
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        this.name === undefined
+          ? "undefined"
+          : typeof name == "symbol"
+          ? "Symbol"
+          : this.name
+      let literal_x =
+        this.literal === undefined
+          ? "undefined"
+          : this.literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(this.literal, null, 4)
+          : flatten(this.literal)
+      let specLit_x =
+        this.literal != undefined
+          ? flatten(this.literal["__SPEC"])
+          : "undefined"
+      aut(
+        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE DialogWorker ======  ${name_x}  \
+=========================================================`,
+        pink
+      )
     }
+    /*========================================================================*/
   }
 
   //prettier-ignore
@@ -3992,11 +3991,11 @@ class DialogWorker extends Setting {
       }/**********************************************************************/{        
       let lit = { line: {pos:22}}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
-      let val = dlg.getValue("line,pos")
+      let val = dlg.getValue("line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
       let litS = { __DIALOG_SETTINGS:{line: {pos:22}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS","line,pos")
+      let valS = set.getValue("__DIALOG_SETTINGS","line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = {pos:[22,14]}
@@ -4010,11 +4009,11 @@ class DialogWorker extends Setting {
       }/**********************************************************************/{        
       let lit = { line: {pos:[22,14]}}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
-      let val = dlg.getValue("line,pos")
+      let val = dlg.getValue("line.pos")
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
       let litS = { __DIALOG_SETTINGS:{line: {pos:[22,14]}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS","line,pos")
+      let valS = set.getValue("__DIALOG_SETTINGS","line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{        
       }/**********************************************************************/         
@@ -4032,9 +4031,210 @@ registeredExceptions.push(
   "new DialogWorker({},undefined, new Setting({},'parent'))"
 )
 
-/** @classdesc For note types
- * @extends Setting
- */
+class LocalizationWorker extends Setting {
+  static #KEY = "__TRANSLATE"
+  static #localType = "(String|Array.<String>|Array.<Array.<String>>)"
+  static #defaultLang = "en"
+  /** Key which this worker will handle
+   * @type {String}
+   */
+  static get workerKey() {
+    return LocalizationWorker.#KEY
+  }
+
+  /**
+   * @classdesc For translation
+   * @extends Setting
+   * @constructor
+   * @description
+   * Creates a LocalizationWorker instance
+   * @param {Object} literal
+   * @param {String} key
+   * @param {Setting} parent
+   */
+  constructor(literal, key, parent) {
+    parent.workersTypeForChildren = LocalizationWorker.#localType
+    super(literal, key, parent)
+    this.addGene(LocalizationWorker)
+    // literal {(Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    // parent {(Undefined|Setting)} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    this.throwIfUndefined(key, "key")
+  }
+
+  /**
+   * Returns translated value or value or undefined if {@link key}
+   * not found
+   * <p>
+   * The value can be:<br>
+   * - a string<br>
+   * - an array of two strings<br>
+   * - an array of arrays of two strings
+   * <p>
+   * If the value is a string, this is returned
+   * <p>
+   * From a plain array of string the 2nd string is returned.
+   * <p>
+   * The 1st string in a two string array is considered as the language
+   * key. If it is equal with language string in {@link params} the 2nd
+   * string of this pair is returned. <br>
+   * If no match is found, the value for the default language is returned.<br>
+   * If this is not found, the 2nd value of the first pair is returned.
+   * @example
+   * // returns "word"
+   * let lit =  { __TRANSLATE: {
+   *             word: [ ["de", "Wort"], ["en", "word"] ]
+   * }          }
+   * let set = new Setting(lit)
+   * set.getValue("__TRANSLATE.word", "en")
+   * @example
+   * // returns "word", if "en" is default language
+   * let lit =  { __TRANSLATE: {
+   *            word: [ ["de", "Wort"], ["en", "word"] ]
+   * }          }
+   * let set = new Setting(lit)
+   * set.getValue("__TRANSLATE.word", "nl")
+   * @example
+   * // returns "Auto"
+   * let lit ={  __TRANSLATE: {
+   *            car: ["de", "Auto"],
+   * }         }
+   * let set = new Setting(lit)
+   * set.getValue("__TRANSLATE.car", "nl")
+   * @param {String} key
+   * @param  {...any} params - 2nd parameter should be language string
+   * @returns {String}
+   */
+  getValue(key, ...params) {
+    let atom = this.at(key)
+    if (atom != undefined && params.length > 0 && Array.isArray(atom.VALUE)) {
+      let lang = params[0]
+      let fallback
+      for (const langPair of atom.VALUE) {
+        if (Array.isArray(langPair) && langPair.length > 1) {
+          if (langPair[0] == lang) return langPair[1]
+          if (fallback == undefined) fallback = langPair[1]
+          if (langPair[0] == LocalizationWorker.#defaultLang)
+            fallback = langPair[1]
+        } else break
+      }
+      if (fallback != undefined) return fallback
+      if (atom.VALUE.length > 1) return atom.VALUE[1]
+    }
+    return atom.VALUE
+  }
+  //prettier-ignore
+  static test(outputObj) { // LocalizationWorker
+    let _ = null
+    if(_ = new TestSuite("LocalizationWorker", outputObj)) {
+      _.run(constructorTest)
+      _.run(isATest)
+      _.run(toStringTest)
+      _.run(getValueTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      let un
+      let b = new BreadCrumbs(un, "LocalizationWorker:constructorTest", un)
+      let lm = new LocalizationWorker({}, "LocalizationWorker:constructorTest1", new Setting({},"LocalizationWorker:cTest0:parent"))
+      _.assert(1,_tryConstruct,{},"LocalizationWorker:cTest1",new Setting({},"LocalizationWorker:cTest1:parent"),"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"LocalizationWorker:cTest2",new Setting({},"LocalizationWorker:cTest2:parent"),"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"LocalizationWorker:cTest3",new Setting({},"LocalizationWorker:cTest3:parent"),"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","LocalizationWorker:cTest4",new Setting({},"LocalizationWorker:cTest4:parent"),"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"LocalizationWorker:cTest5",new Setting({},"LocalizationWorker:cTest5:parent"),"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,new Setting({},"LocalizationWorker:wrong1:parent"),"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,new Setting({},"LocalizationWorker:wrong2:parent"),"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},new Setting({},"LocalizationWorker:wrong3:parent"),"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},b,new Setting({},"LocalizationWorker:wrong4:parent"),"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),new Setting({},"LocalizationWorker:sym1:parent"),"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"LocalizationWorker:cTest11",un,"should  not be created, undefined parent is not ok")
+      _.shouldAssert(12,_tryConstruct,{},"LocalizationWorker:cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"LocalizationWorker:cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"LocalizationWorker:cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"LocalizationWorker:cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"LocalizationWorker:cTest16",null,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"LocalizationWorker:cTest16",b,"should not be be created, parent is BreadCrumbs")
+      let locMan = new LocalizationWorker({},"LocalizationWorker:constructorTest101", new Setting({},"LocalizationWorker:101:parent"))
+      _.bassert(101,locMan instanceof Object,"'LocalizationWorker' has to be an instance of 'Object'")
+      _.bassert(102,locMan instanceof BreadCrumbs,"'LocalizationWorker' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,locMan instanceof LocalizationWorker,"'LocalizationWorker' has to be an instance of 'LocalizationWorker'")
+      _.bassert(104,locMan.constructor === LocalizationWorker,"the constructor property is not 'LocalizationWorker'")
+    }
+    function isATest() {
+      // Object, Gene, GenePool, Essence added for each Essence instance
+      // BreadCrumbs added for each BreadCrumbs instance
+      // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
+      // "function", "object", "array" added for each BreadCrumbs instance
+      // LocalizationWorker added for each LocalizationWorker instance
+      let locMan1 = new LocalizationWorker({},"LocalizationWorker:NameIsATest",new Setting({},"parent"))
+      _.bassert(1,locMan1.isA(locMan1,"object"), "'" + locMan1 + "' should be a " + "object")
+      _.bassert(2,locMan1.isA(locMan1,Object), "'" + locMan1 + "' should be a " + "Object")
+      _.bassert(3,locMan1.isA(locMan1,BreadCrumbs), "'" + locMan1 + "' should be a " + "BreadCrumbs")
+      _.bassert(4,locMan1.isA(locMan1,Setting), "'" + locMan1 + "' should be a " + "Setting")
+      _.bassert(5,locMan1.isA(locMan1,LocalizationWorker), "'" + locMan1 + "' should be a " + "LocalizationWorker")
+      _.bassert(6,!locMan1.isA(locMan1,Error), "'" + locMan1 + "' should not be a " + "Error")
+      _.bassert(7,!locMan1.isA(locMan1,Gene), "'" + locMan1 + "' should not be a " + "Gene")
+    }
+    function toStringTest() {
+      let locMan1 = new LocalizationWorker({},"LocWork:toStringTest1",new Setting({},"parent"))
+      _.bassert(1,locMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,locMan1.toString().includes("LocalizationWorker"),"result does not contain class string"    )
+    }
+    function getValueTest() {
+      let par = new Setting({},"LocalizationWorker:getValueTest:parent")
+      /**********************************************************************/{        
+      let lit = {word: "Wort"}
+      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
+      let val = loc.getValue("word")
+      _.bassert(1,val == "Wort","get the value via DialogWorker")
+      let litS = { __TRANSLATE:{word: "Wort"}}
+      let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
+      let valS = set.getValue("__TRANSLATE","word")
+      _.bassert(2,valS == "Wort","get the value via Setting")
+      }/**********************************************************************/{        
+      let lit = { chapter: {word: "Wort"}}
+      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
+      let val = loc.getValue("chapter.word")
+      _.bassert(11,val == "Wort","get the value via Setting")
+      let litS = { __TRANSLATE:{chapter: {word: "Wort"}}}
+      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
+      let valS = set.getValue("__TRANSLATE","chapter.word")
+      _.bassert(12,valS == "Wort","get the value via Setting")
+      }/**********************************************************************/{        
+      let lit = {word: ["de","Wort"]}
+      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
+      let val = loc.getValue("word")
+      _.bassert(21,areEqual(val,["de","Wort"]),"get the value via DialogWorker")
+      let litS = { __TRANSLATE:{word: ["de","Wort"]}}
+      let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
+      let valS = set.getValue("__TRANSLATE","word")
+      _.bassert(22,areEqual(valS,["de","Wort"]),"get the value via Setting")
+      }/**********************************************************************/{        
+      let lit = { chapter: {word: ["de","Wort"]}}
+      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
+      let val = loc.getValue("chapter.word")
+      _.bassert(31,areEqual(val,["de","Wort"]),"get the value via Setting")
+      let litS = { __TRANSLATE:{chapter: {word: ["de","Wort"]}}}
+      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
+      let valS = set.getValue("__TRANSLATE","chapter.word")
+      _.bassert(32,areEqual(valS,["de","Wort"]),"get the value via Setting")
+      }/**********************************************************************/        
+    }
+
+    function _tryConstruct(arg1, arg2,arg3) {
+      new LocalizationWorker(arg1,arg2,arg3)
+    }
+  }
+}
+Setting.worker = LocalizationWorker
+registeredTests.push(LocalizationWorker.test)
+registeredExceptions.push(
+  "new LocalizationWorker({},'goodName', undefined)",
+  "new LocalizationWorker({},undefined, new Setting({},'parent'))"
+)
+
 class TypesManager extends Setting {
   static #KEY = "__NOTE_TYPES"
   static #localType =
@@ -4047,14 +4247,23 @@ class TypesManager extends Setting {
   }
   #def
 
-  /** Creates a TypesManager instance
+  /** @classdesc For note types
+   * @extends Setting
+   * @constructor
+   * @description
+   *  For note types
+   * @extends Setting
+   * @constructor
+   * @description
+   * Creates a TypesManager instance
    * @param {Object} literal
    * @param {String} key
    * @param {Setting} parent
    */
   constructor(literal, key, parent) {
+    parent.workersTypeForChildren = TypesManager.#localType
     super(literal, key, parent)
-    this.add(TypesManager)
+    this.addGene(TypesManager)
     // literal {(Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
     // parent {(Undefined|Setting)} checked by superclass
@@ -4062,17 +4271,9 @@ class TypesManager extends Setting {
     this.throwIfUndefined(key, "key")
   }
   #parse() {
-    let type = TypesManager.#localType
     if (this.REPEAT && this.literal["DEFAULTS"] != undefined) {
     }
   }
-
-  /** Returns value
-   * @param {String} key
-   * @param  {...any} params - not used
-   * @returns {Undefined}
-   */
-  getValue(key, ...params) {}
 
   //prettier-ignore
   static test(outputObj) { // TypesManager
@@ -4146,11 +4347,11 @@ class TypesManager extends Setting {
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}
       let typ = new TypesManager(lit,"TypesManager:getValueTest11",par)
-      let val = typ.getValue("line,pos")
+      let val = typ.getValue("line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}}
       let set = new Setting(litS,"TypesManager:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES","line,pos")
+      let valS = set.getValue("__NOTE_TYPES","line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {pos:[22,14]}}
@@ -4164,11 +4365,11 @@ class TypesManager extends Setting {
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}
       let typ = new TypesManager(lit,"TypesManager:getValueTest11",par)
-      let val = typ.getValue("line,pos")
+      let val = typ.getValue("line.pos")
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}}
       let set = new Setting(litS,"TypesManager:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES","line,pos")
+      let valS = set.getValue("__NOTE_TYPES","line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{        
       }/**********************************************************************/         
@@ -4250,72 +4451,107 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 
-let onne_x = {
-  //localType: (String|Array.<String>)
-  __TRANSLATE: {
-    TYPE_PROMPT: "Typ wählen",
-    TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
-    DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
-  },
-  //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
-  __DIALOG_SETTINGS: {
-    TYPE_MAX_ENTRIES: 10,
-  },
-  __NOTE_TYPES: {
-    __SPEC: {REPEAT: true},
-    DEFAULTS: {
-      marker: {__SPEC: false, TYPE: "String", DEFAULT: ""},
-      date: {__SPEC: false, TYPE: "Boolean", DEFAULT: false},
-      // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
-      // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
-      frontmatter: {
-        __SPEC: {},
-        aliases: {
-          __SPEC: false,
-          TYPE: "(Array.<String>|Function)",
-          DEFAULT: cbkFmtAlias,
+if (false) {
+  let onne_x = {
+    //localType: (String|Array.<String>)
+    __TRANSLATE: {
+      TYPE_PROMPT: "Typ wählen",
+      TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
+      DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
+    },
+    //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
+    __DIALOG_SETTINGS: {
+      TYPE_MAX_ENTRIES: 10,
+    },
+    __NOTE_TYPES: {
+      __SPEC: {REPEAT: true},
+      DEFAULTS: {
+        marker: {__SPEC: false, TYPE: "String", DEFAULT: ""},
+        date: {__SPEC: false, TYPE: "Boolean", DEFAULT: false},
+        // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
+        // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
+        frontmatter: {
+          __SPEC: {},
+          aliases: {
+            __SPEC: false,
+            TYPE: "(Array.<String>|Function)",
+            DEFAULT: cbkFmtAlias,
+          },
+          date_created: {
+            __SPEC: false,
+            TYPE: "(Date|Function)",
+            DEFAULT: cbkFmtCreated,
+          },
+          //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
+          //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
+          //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
+          //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
+          //     position: {__SPEC:false,IGNORE: true},
         },
-        date_created: {
-          __SPEC: false,
-          TYPE: "(Date|Function)",
-          DEFAULT: cbkFmtCreated,
-        },
-        //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
-        //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
-        //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
-        //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
-        //     position: {__SPEC:false,IGNORE: true},
+        language: {__SPEC: false, IGNORE: true},
       },
-      language: {__SPEC: false, IGNORE: true},
+      diary: {
+        date: true,
+        dateformat: "YYYY-MM-DD",
+        frontmatter: {private: true},
+        language: "Portuguese" /* will be ignored */,
+      },
+      citation: {
+        marker: "°",
+        frontmatter: {cssclass: "garten, tagebuch"},
+      },
     },
-    diary: {
-      date: true,
-      dateformat: "YYYY-MM-DD",
-      frontmatter: {private: true},
-      language: "Portuguese" /* will be ignored */,
+    soso: {VALUE: "naja", __SPEC: true, RENDER: false},
+    c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
+  }
+  let test_x = {
+    __DIALOG_SETTINGS: {
+      TYPE_MAX_ENTRIES: 10,
     },
-    citation: {
-      marker: "°",
-      frontmatter: {cssclass: "garten, tagebuch"},
+    soso: {VALUE: "naja", __SPEC: true, RENDER: false},
+    c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
+  }
+  let test_1 = {
+    soso: {VALUE: "naja", __SPEC: true, RENDER: false},
+    c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
+  }
+  aut(JSON.stringify(test_1, null, 4))
+  let set1 = new Setting(test_1)
+  aut(JSON.stringify(test_1, null, 4))
+  aut(set1.getValue("soso"))
+  aut(set1.getValue("c.pict"))
+  aut(set1.at("soso").VALUE)
+  aut(set1.at("c").FLAT ? set1.at("c").VALUE : "NODE")
+  aut(set1.at("c.pict").VALUE)
+} else if (false) {
+  let test_2 = {
+    //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
+    __DIALOG_SETTINGS: {
+      TYPE_MAX_ENTRIES: 22,
     },
-  },
-  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
-  c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
+  }
+  aut(JSON.stringify(test_2, null, 4))
+  let set2 = new Setting(test_2)
+  aut(JSON.stringify(test_2, null, 4))
+  aut(set2.at("__DIALOG_SETTINGS").ROOT)
+  aut("'" + set2.getValue("__DIALOG_SETTINGS.TYPE_MAX_ENTRIES") + "'")
+} else {
+  let test_3 = {
+    //localType: (String|Array.<String>|Array.<Array.<String>>)
+    __TRANSLATE: {
+      word: [
+        ["de", "Wort"],
+        ["en", "word"],
+      ],
+      car: ["de", "Auto"],
+      msg: "ja ja",
+    },
+  }
+  aut(JSON.stringify(test_3, null, 4))
+  let set3 = new Setting(test_3)
+  aut(JSON.stringify(test_3, null, 4))
+  aut(set3.at("__TRANSLATE").ROOT)
+  aut("'" + set3.getValue("__TRANSLATE.word", "de") + "'")
+  aut("'" + set3.getValue("__TRANSLATE.car", "nl") + "'")
+  aut("'" + set3.getValue("__TRANSLATE.msg") + "'")
 }
-
-let test_x = {
-  __DIALOG_SETTINGS: {
-    TYPE_MAX_ENTRIES: 10,
-  },
-  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
-  c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
-}
-let test_1 = {
-  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
-  c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
-}
-aut(JSON.stringify(test_1, null, 4))
-let set = new Setting(test_1)
-aut(JSON.stringify(test_1, null, 4))
-aut(set.getValue("soso"))
-aut(set.getValue("c,pict"))

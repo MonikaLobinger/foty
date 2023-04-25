@@ -13,7 +13,7 @@
 // because I am not good with git. I do not know how to move it.
 // 
 module.exports = {
-    plugins: ['plugins/markdown'],
+    plugins: ['plugins/markdown','jsdoc-mermaid'],
     recurseDepth: 10,
     source: {
       includePattern: ".+\\.js(doc|x)?$",
@@ -21,7 +21,7 @@ module.exports = {
     },
     sourceType: "module",
     tags: {
-      allowUnknownTags: false,
+      allowUnknownTags: true,
       dictionaries: ["jsdoc"]
     },
     templates: {
