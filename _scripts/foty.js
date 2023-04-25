@@ -362,7 +362,9 @@ const TYPES = {
  *          |in DEFAULTS|
  *  VALUE   |     Atom  |TYPE    |""      |individual|yes ||
  *  IGNORE  |Node Atom  |Boolean |false   |inherited |    |It is possible to IGNORE ancestors, but not descendants|
- *  INTERNAL|Node       |Boolean |false   |individual|    |
+ *  PARSE   |Node       |Boolean |true    |inherited |yes |
+ *          |           |        |        |automatic |
+ *  INTERNAL|Node       |Boolean |false   |individual|yes |
  *          |           |        |        |automatic |
  *  FLAT    |Node Atom  |Boolean |false   |individual|yes |set automatically, if specified in literal: |
  *          |           |        |        |          |    |values are not parsed, even if they are objects|
@@ -2052,6 +2054,12 @@ class Essence extends GenePool {
   get IGNORE() {
     return this[Essence.#pre + "IGNORE"]
   }
+  /** PARSE essence, inherited
+   * @type {Boolean}
+   */
+  get PARSE() {
+    return this[Essence.#pre + "PARSE"]
+  }
   /** INTERNAL essence, inherited
    * @type {Boolean}
    */
@@ -2104,6 +2112,7 @@ class Essence extends GenePool {
   static #DEFAULT_DEFT = ""
   static #VALUE_DEFT = ""
   static #IGNORE_DEFT = false
+  static #PARSE_DEFT = true
   static #INTERNAL_DEFT = false
   static #FLAT_DEFT = false
   static #LOCAL_DEFT = false
@@ -2246,6 +2255,7 @@ class Essence extends GenePool {
       specLit["FLAT"] = true
     }
     if (specLit === un) specLit = {}
+    if (specLit["PARSE"] === false) return
 
     function changeToHiddenProp(me, lit, specL, key, type, p, def, val, name) {
       let v
@@ -2287,6 +2297,7 @@ class Essence extends GenePool {
     hide(this, l, s, "RENDER", "Boolean", p, Essence.#RENDER_DEFT, un, n)
     hide(this, l, s, "TYPE", "String", p, Essence.#TYPE_DEFT, un, n)
     hide(this, l, s, "IGNORE", "Boolean", p, Essence.#IGNORE_DEFT, un, n)
+    hide(this, l, s, "PARSE", "Boolean", p, Essence.#PARSE_DEFT, un, n)
     hide(this, l, s, "INTERNAL", "Boolean", un, Essence.#INTERNAL_DEFT, un, n)
     hide(this, l, s, "FLAT", "Boolean", un, Essence.#FLAT_DEFT, un, n)
     hide(this, l, s, "LOCAL", "Boolean", p, Essence.#LOCAL_DEFT, un, n)
@@ -2371,6 +2382,41 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
     return ok
   }
 
+  /**
+   * Set PARSE in literals __SPEC to false, creates __SPEC, if not exists
+   * @param {Object} literal
+   */
+  static setDoNotParse(literal) {
+    if (typeof literal != "object" || literal == null) return
+    let spec = literal["__SPEC"]
+    if (typeof spec != "object" || spec == null) literal["__SPEC"] = {}
+    literal["__SPEC"]["PARSE"] = false
+  }
+  /**
+   * Returns false if literal's __SPEC has PARSE set to false, true else
+   * @param {Object} literal
+   * @returns {Boolean}
+   */
+  static doParse(literal) {
+    let answ = true
+    if (typeof literal == "object" && literal != null) {
+      let spec = literal["__SPEC"]
+      if (typeof spec == "object" && spec != null) {
+        if (spec["PARSE"] !== undefined) answ = spec["PARSE"] !== false
+      }
+    }
+    return answ
+  }
+  /**
+   * Removes PARSE from literals __SPEC
+   * @param {Object} literal
+   */
+  static removeDoNotParse(literal) {
+    if (typeof literal != "object" || literal == null) return
+    let spec = literal["__SPEC"]
+    if (typeof spec != "object" || spec == null) return
+    delete literal["__SPEC"]["PARSE"]
+  }
   //#region static getESSENCE from literal
   /** ROOT essence, set automatically
    * @param {Object} lit
@@ -2416,12 +2462,12 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
   static getIGNORE(lit) {
     return lit[Essence.#pre + "IGNORE"]
   }
-  /** INTERNAL essence, individual
+  /** PARSE essence, individual
    * @param {Object} lit
    * @returns {Boolean}
    */
-  static getINTERNAL(lit) {
-    return lit[Essence.#pre + "INTERNAL"]
+  static getPARSE(lit) {
+    return lit[Essence.#pre + "PARSE"]
   }
   /** FLAT essence, inherited
    * @param {Object} lit
@@ -3005,10 +3051,8 @@ class Setting extends BreadCrumbs {
   static set worker(workerClass) {
     Setting.#workers[workerClass.workerKey] = workerClass
   }
-  get workersTypeForChildren() {
-    return this.#workersTypeForChildren
-  }
-  /** Type to be used for workers children construction
+  /**
+   * Type to be used for workers children construction
    * @param {String} type
    * @type {String}
    */
@@ -3122,7 +3166,8 @@ class Setting extends BreadCrumbs {
     literal,
     key = undefined,
     parent = undefined,
-    templater = undefined
+    templater = undefined,
+    add2parent = false
   ) {
     /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
@@ -3167,7 +3212,9 @@ class Setting extends BreadCrumbs {
       this.throwIfNotOfType(parent, "parent", Setting)
     this.#tp = this.ROOT ? templater : undefined
     if (!this.ROOT)
-      this.#workersTypeForChildren = this.parent.workersTypeForChildren
+      this.#workersTypeForChildren = this.parent.#workersTypeForChildren
+    if (add2parent && !this.ROOT) this.parent.#children[key] = this
+
     this.#parse()
     /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
@@ -3199,11 +3246,12 @@ class Setting extends BreadCrumbs {
   }
   #parse() {
     let un
+    let type =
+      !this.ROOT && this.parent.#workersTypeForChildren !== undefined
+        ? this.parent.#workersTypeForChildren
+        : Setting.#generalType
     for (const [key, value] of Object.entries(this.literal)) {
-      let type =
-        !this.ROOT && this.parent.workersTypeForChildren !== undefined
-          ? this.parent.workersTypeForChildren
-          : Setting.#generalType
+      if (!Essence.doParse(value)) continue
       if (Setting.#isWorkerKey(key)) {
         // constructs a workers instance
         this.#works[key] = new Setting.#workers[key](value, key, this)
@@ -3849,39 +3897,6 @@ class DialogWorker extends Setting {
    * @param {Setting} parent
    */
   constructor(literal, key, parent) {
-    /*========================================================================*/
-    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
-      let name_x =
-        key === undefined
-          ? "undefined"
-          : typeof key == "symbol"
-          ? "Symbol"
-          : key
-      let literal_x =
-        literal === undefined
-          ? "undefined"
-          : literal === null
-          ? "Null"
-          : false
-          ? JSON.stringify(literal, null, 4)
-          : flatten(literal)
-      let specLit_x =
-        literal != undefined ? flatten(literal["__SPEC"]) : "undefined"
-      if (parent == undefined)
-        aut(
-          `========================================================================================`,
-          pink
-        )
-      aut(
-        `========================================================================================`,
-        pink
-      )
-      aut(
-        `START DialogWorker ======  ${name_x}  =======\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
-        pink
-      )
-    }
-    /*========================================================================*/
     parent.workersTypeForChildren = DialogWorker.#localType
     super(literal, key, parent)
     this.addGene(DialogWorker)
@@ -3890,33 +3905,6 @@ class DialogWorker extends Setting {
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
-    /*========================================================================*/
-    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
-      let name_x =
-        this.name === undefined
-          ? "undefined"
-          : typeof name == "symbol"
-          ? "Symbol"
-          : this.name
-      let literal_x =
-        this.literal === undefined
-          ? "undefined"
-          : this.literal === null
-          ? "Null"
-          : false
-          ? JSON.stringify(this.literal, null, 4)
-          : flatten(this.literal)
-      let specLit_x =
-        this.literal != undefined
-          ? flatten(this.literal["__SPEC"])
-          : "undefined"
-      aut(
-        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE DialogWorker ======  ${name_x}  \
-=========================================================`,
-        pink
-      )
-    }
-    /*========================================================================*/
   }
 
   //prettier-ignore
@@ -4245,9 +4233,9 @@ class TypesManager extends Setting {
   static get workerKey() {
     return TypesManager.#KEY
   }
-  #def
 
-  /** @classdesc For note types
+  /**
+   * @classdesc For note types
    * @extends Setting
    * @constructor
    * @description
@@ -4261,7 +4249,41 @@ class TypesManager extends Setting {
    * @param {Setting} parent
    */
   constructor(literal, key, parent) {
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        key === undefined
+          ? "undefined"
+          : typeof key == "symbol"
+          ? "Symbol"
+          : key
+      let literal_x =
+        literal === undefined
+          ? "undefined"
+          : literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(literal, null, 4)
+          : flatten(literal)
+      let specLit_x =
+        literal != undefined ? flatten(literal["__SPEC"]) : "undefined"
+      if (parent == undefined)
+        aut(
+          `========================================================================================`,
+          pink
+        )
+      aut(
+        `========================================================================================`,
+        pink
+      )
+      aut(
+        `START TypesManager ======  ${name_x}  =======\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
+        pink
+      )
+    }
+    /*========================================================================*/
     parent.workersTypeForChildren = TypesManager.#localType
+    TypesManager.#setDoNotParse(literal)
     super(literal, key, parent)
     this.addGene(TypesManager)
     // literal {(Object)} checked by superclass
@@ -4269,9 +4291,53 @@ class TypesManager extends Setting {
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
+    this.#parse()
+    /*========================================================================*/
+    if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
+      let name_x =
+        this.name === undefined
+          ? "undefined"
+          : typeof name == "symbol"
+          ? "Symbol"
+          : this.name
+      let literal_x =
+        this.literal === undefined
+          ? "undefined"
+          : this.literal === null
+          ? "Null"
+          : false
+          ? JSON.stringify(this.literal, null, 4)
+          : flatten(this.literal)
+      let specLit_x =
+        this.literal != undefined
+          ? flatten(this.literal["__SPEC"])
+          : "undefined"
+      aut(
+        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE TypesManager ======  ${name_x}  \
+=========================================================`,
+        pink
+      )
+    }
+    /*========================================================================*/
   }
   #parse() {
-    if (this.REPEAT && this.literal["DEFAULTS"] != undefined) {
+    if (!this.REPEAT) return
+    for (const [key, value] of Object.entries(this.literal)) {
+      if (key == "DEFAULTS") continue
+      Essence.removeDoNotParse(value)
+      new Setting(value, key, this, undefined, true)
+    }
+  }
+  static #setDoNotParse(literal) {
+    if (typeof literal != "object" || literal == null) return
+    let spec = literal["__SPEC"]
+    if (typeof spec != "object" || spec == null) return
+
+    if (literal["DEFAULTS"] != undefined && spec["REPEAT"] === true) {
+      for (const [key, value] of Object.entries(literal)) {
+        if (key == "__SPEC" || key == "DEFAULTS") continue
+        Essence.setDoNotParse(value)
+      }
     }
   }
 
@@ -4451,9 +4517,9 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 
-if (false) {
+if (true) {
   let onne_x = {
-    //localType: (String|Array.<String>)
+    //localType: (String|Array.<String>|Array.<Array.<String>>)
     __TRANSLATE: {
       TYPE_PROMPT: "Typ wählen",
       TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
@@ -4515,27 +4581,13 @@ if (false) {
     soso: {VALUE: "naja", __SPEC: true, RENDER: false},
     c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
   }
-  aut(JSON.stringify(test_1, null, 4))
-  let set1 = new Setting(test_1)
-  aut(JSON.stringify(test_1, null, 4))
-  aut(set1.getValue("soso"))
-  aut(set1.getValue("c.pict"))
-  aut(set1.at("soso").VALUE)
-  aut(set1.at("c").FLAT ? set1.at("c").VALUE : "NODE")
-  aut(set1.at("c.pict").VALUE)
-} else if (false) {
+
   let test_2 = {
     //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
     __DIALOG_SETTINGS: {
       TYPE_MAX_ENTRIES: 22,
     },
   }
-  aut(JSON.stringify(test_2, null, 4))
-  let set2 = new Setting(test_2)
-  aut(JSON.stringify(test_2, null, 4))
-  aut(set2.at("__DIALOG_SETTINGS").ROOT)
-  aut("'" + set2.getValue("__DIALOG_SETTINGS.TYPE_MAX_ENTRIES") + "'")
-} else {
   let test_3 = {
     //localType: (String|Array.<String>|Array.<Array.<String>>)
     __TRANSLATE: {
@@ -4547,11 +4599,79 @@ if (false) {
       msg: "ja ja",
     },
   }
+
+  let test_4 = {
+    __NOTE_TYPES: {
+      //localType:(Number|String|Boolean|Array.<Number>|Array.<String>|
+      //  Array.<Boolean>|Function)
+      __SPEC: {REPEAT: true},
+      DEFAULTS: {
+        marker: {__SPEC: false, TYPE: "String", DEFAULT: "°°°°"},
+        date: {__SPEC: false, TYPE: "Boolean", DEFAULT: false},
+        frontmatter: {
+          __SPEC: {},
+          aliases: {
+            __SPEC: false,
+            TYPE: "(Array.<String>|Function)",
+            DEFAULT: cbkFmtAlias,
+          },
+          date_created: {
+            __SPEC: false,
+            TYPE: "(Date|Function)",
+            DEFAULT: cbkFmtCreated,
+          },
+          position: {__SPEC: false, IGNORE: true},
+        },
+        language: {__SPEC: false, IGNORE: true},
+      },
+      diary: {
+        date: true,
+        dateformat: "YYYY-MM-DD",
+        frontmatter: {private: true},
+        language: "Portuguese" /* will be ignored */,
+      },
+      citation: {
+        marker: "°",
+        frontmatter: {cssclass: "garten, tagebuch"},
+      },
+    },
+  }
+
+  aut(JSON.stringify(test_1, null, 4))
+  aut(JSON.stringify(test_2, null, 4))
   aut(JSON.stringify(test_3, null, 4))
+  let set1 = new Setting(test_1)
+  let set2 = new Setting(test_2)
   let set3 = new Setting(test_3)
+  aut(JSON.stringify(test_1, null, 4))
+  aut(JSON.stringify(test_2, null, 4))
   aut(JSON.stringify(test_3, null, 4))
+
+  aut(set1.getValue("soso"))
+  aut(set1.getValue("c.pict"))
+  aut(set1.at("soso").VALUE)
+  aut(set1.at("c").FLAT ? set1.at("c").VALUE : "NODE")
+  aut(set1.at("c.pict").VALUE)
+
+  aut(set2.at("__DIALOG_SETTINGS").ROOT)
+  aut("'" + set2.getValue("__DIALOG_SETTINGS.TYPE_MAX_ENTRIES") + "'")
+
   aut(set3.at("__TRANSLATE").ROOT)
   aut("'" + set3.getValue("__TRANSLATE.word", "de") + "'")
   aut("'" + set3.getValue("__TRANSLATE.car", "nl") + "'")
   aut("'" + set3.getValue("__TRANSLATE.msg") + "'")
+
+  aut(JSON.stringify(test_4, null, 4))
+  let set4 = new Setting(test_4)
+  aut(JSON.stringify(test_4, null, 4))
+  for (const [key, val] of set4.at("__NOTE_TYPES")) {
+    if (!val.FLAT) {
+      aut(key)
+      for (const [key2, val2] of val) {
+        vaut("   " + key2, val2.VALUE)
+      }
+    } else vaut(key, val.VALUE)
+  }
+  aut("'" + set4.getValue("__NOTE_TYPES.citation.marker") + "'")
+  aut("'" + set4.at("__NOTE_TYPES.DEFAULTS.marker").DEFAULT + "'")
 }
