@@ -1,4 +1,7 @@
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
+//@todo return default value of allowed type if type of given value not allowed
+//@todo let BreadCrumbs set the userGenes
+//@todo change symbol as key to consecutive string ("Symbol1", "Symbol2", ...)
 /**
  * @description
  * Script for obsidian, templater extension needed
@@ -362,10 +365,6 @@ const TYPES = {
  *          |in DEFAULTS|
  *  VALUE   |     Atom  |TYPE    |""      |individual|yes ||
  *  IGNORE  |Node Atom  |Boolean |false   |inherited |    |It is possible to IGNORE ancestors, but not descendants|
- *  PARSE   |Node       |Boolean |true    |inherited |yes |
- *          |           |        |        |automatic |
- *  INTERNAL|Node       |Boolean |false   |individual|yes |
- *          |           |        |        |automatic |
  *  FLAT    |Node Atom  |Boolean |false   |individual|yes |set automatically, if specified in literal: |
  *          |           |        |        |          |    |values are not parsed, even if they are objects|
  *  ONCE    |Node Atom  |Boolean |false   |individual|    |
@@ -444,7 +443,7 @@ const Dialog = {
   Ok: "Ok",
   Cancel: "Cancel",
 }
-
+//#region Colors
 /** Color, to be used without quotation marks during development. */
 const black = "black"
 /** Color, to be used without quotation marks during development. */
@@ -465,7 +464,7 @@ const lime = "lime"
 const green = "lightgreen"
 /** Color, to be used without quotation marks during development. */
 const gray = "silver"
-
+//#endregion Colors
 //#endregion globals and externals
 //#region debug, error and test
 
@@ -481,7 +480,7 @@ var DEBUG = false
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = false
+var TESTING = true
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -496,7 +495,7 @@ if (CHECK_ERROR_OUTPUT) {
   DEBUG = false
   TESTING = false
 }
-var LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE = true
+var LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE = false
 
 /** If {@link CHECK_ERROR_OUTPUT|reviewing error output} strings in this array {@link letAllThrow|will be evaluated}
  * @type {Array.<String>}
@@ -546,7 +545,7 @@ function flatten(inp) {
     } else {
       res = ""
       entries.forEach(([key, value], idx) => {
-        if (typeof value == "symbol") value = "Symbol"
+        if (typeof value == "symbol") value = "_Symbol_"
         let indent = idx === 0 ? "OBJ  " : "\n                 "
         if (typeof value == "object" && value !== null) {
           Object.values(value).forEach((v) => {
@@ -1214,7 +1213,7 @@ function testGlobals(outputObj) {
   function flattenTest() {
     let obj0 = {}
     let flat0 = flatten(obj0)
-    let exp0 = obj0.toString()
+    let exp0 = "{}"
     _.bassert(1,flat0 == exp0, "empty object should be same as toString output")
   }
   function areEqualTest() {
@@ -2055,6 +2054,11 @@ class Essence extends GenePool {
     return this[Essence.#pre + "IGNORE"]
   }
   /** PARSE essence, inherited
+   * <p>
+   * Only for internal use. If set, no Essences will be added. This is the only
+   * case, in which no Essences are possible. If used internally, instance has
+   * to be parsed later before returning. Never ever an instance without
+   * Essences should be given out from the using code.
    * @type {Boolean}
    */
   get PARSE() {
@@ -2224,7 +2228,7 @@ class Essence extends GenePool {
         name === undefined
           ? "undefined"
           : typeof name == "symbol"
-          ? "Symbol"
+          ? "_Symbol_"
           : name
       let literal_x =
         literal === undefined
@@ -2313,7 +2317,7 @@ class Essence extends GenePool {
         name === undefined
           ? "undefined"
           : typeof name == "symbol"
-          ? "Symbol"
+          ? "_Symbol_"
           : name
       let literal_x =
         literal === undefined
@@ -2469,6 +2473,13 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
   static getPARSE(lit) {
     return lit[Essence.#pre + "PARSE"]
   }
+  /** INTERNAL essence, inherited
+   * @param {Object} lit
+   * @returns {Boolean}
+   */
+  static getINTERNAL(lit) {
+    return lit[Essence.#pre + "INTERNAL"]
+  }
   /** FLAT essence, inherited
    * @param {Object} lit
    * @returns {Boolean}
@@ -2511,8 +2522,12 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
     let _ = null
     if(_ = new TestSuite("Essence", outputObj)) {
       _.run(getterEssencesTest)
+      _.run(getterSpecKeyTest)
       _.run(constructorTest)
       _.run(isATest)
+      _.run(setDoNotParseTest)
+      _.run(doParseTest)
+      _.run(removeDoNotParseTest)
       _.run(getEssencesTest)
       _.destruct()
       _ = null
@@ -2582,6 +2597,8 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(9,ess0.DEFAULT==="","Should always be defined")
       _.bassert(10,ess0.VALUE==="","Should always be defined")
       _.bassert(11,areEqual(ess0.DEFAULTS,{}),"Should always be defined")
+      _.bassert(12,ess0.PARSE===true,"Should always be defined")
+      _.bassert(13,ess0.INTERNAL===false,"Should always be defined")
       let lit1 = {__SPEC: {RENDER:true,
                            IGNORE:true,
                            ONCE:true,
@@ -2590,6 +2607,7 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
                            REPEAT:true,
                            TYPE:"Boolean",
                            DEFAULT:false,
+                           INTERNAL:true,
                            VALUE:false}}
       let ess1 = new Essence(lit1,un,"Essence:getterEssencesTest1")
       _.bassert(21,ess1.ROOT===true,"Should always be defined")
@@ -2602,7 +2620,9 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(28,ess1.TYPE==="Boolean","Should be set to literal value")
       _.bassert(29,ess1.DEFAULT===false,"Should be set to literal value")
       _.bassert(30,ess1.VALUE===false,"Should be set to literal value")
-      _.bassert(31,areEqual(ess1.DEFAULTS,{}),"Has an extra test")
+      _.bassert(31,ess1.INTERNAL===true,"Should be set to literal value")
+      _.bassert(32,ess1.PARSE===true,"Should stay at default value")
+      _.bassert(33,areEqual(ess1.DEFAULTS,{}),"Has an extra test")
       let ess2 = new Essence(undefined,ess1,"Essence:getterEssencesTest2")
       _.bassert(41,ess2.ROOT===false,"Should always be defined")
       _.bassert(42,ess2.RENDER===true,"Should be set to parent value")
@@ -2614,7 +2634,37 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(48,ess2.TYPE==="Boolean","Should be set to parent value")
       _.bassert(49,ess2.DEFAULT==="","Should be set to default value")
       _.bassert(50,ess2.VALUE==="","Should be set to default value")
-      _.bassert(51,areEqual(ess2.DEFAULTS,{}),"Has an extra test")
+      _.bassert(51,ess2.INTERNAL===false,"Should be set to default value")
+      _.bassert(52,ess1.PARSE===true,"Should stay at default value")
+      _.bassert(53,areEqual(ess2.DEFAULTS,{}),"Has an extra test")
+      let lit3 = {__SPEC: {RENDER:true,
+        IGNORE:true,
+        ONCE:true,
+        FLAT:true,
+        LOCAL:true,
+        REPEAT:true,
+        TYPE:"Boolean",
+        DEFAULT:false,
+        INTERNAL:true,
+        PARSE:false,
+        VALUE:false}}
+      let ess3 = new Essence(lit3,un,"Essence:getterEssencesTest3")
+      _.bassert(61,ess3.ROOT===undefined,"No Essences should be added")
+      _.bassert(62,ess3.RENDER===undefined,"No Essences should be added")
+      _.bassert(63,ess3.IGNORE===undefined,"No Essences should be added")
+      _.bassert(64,ess3.ONCE===undefined,"No Essences should be added")
+      _.bassert(65,ess3.FLAT===undefined,"No Essences should be added")
+      _.bassert(66,ess3.LOCAL===undefined,"No Essences should be added")
+      _.bassert(67,ess3.REPEAT===undefined,"No Essences should be added")
+      _.bassert(68,ess3.TYPE===undefined,"No Essences should be added")
+      _.bassert(69,ess3.DEFAULT===undefined,"No Essences should be added")
+      _.bassert(70,ess3.VALUE===undefined,"No Essences should be added")
+      _.bassert(71,ess3.INTERNAL===undefined,"No Essences should be added")
+      _.bassert(72,ess3.PARSE===undefined,"No Essences should be added")
+      _.bassert(73,ess3.DEFAULTS===undefined,"No Essences should be added")
+    }
+    function getterSpecKeyTest() {
+      _.bassert(1,typeof(Essence.SPEC_KEY)==="string","Should be a string")
     }
     function isATest() {
       let un
@@ -2626,12 +2676,87 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(3,ess1.isA(ess1,Object),"Essence should be Object")
       _.bassert(4,ess1.isA(gn1,Object),"Gene should be Object")
       _.bassert(5,ess1.isA(gn1,Gene),"Gene should be Gene")
+      _.bassert(6,!ess1.isA(ess1,Gene),"Essence should not be Gene")
+      _.bassert(7,!ess1.isA(gn1,GenePool),"Gene should not be GenePool")
+      _.bassert(8,!ess1.isA(gn1,Essence),"Gene should not be Essence")
 
       _.bassert(11,!ess1.isA(new Error(),Error),"should return false for Error, as not in pool")
       _.bassert(12,!ess1.isA("String",String),"should return false for string, as not in pool")
       _.bassert(13,!ess1.isA("String","String"),"should return false for string, as not in pool")
       _.bassert(14,!ess1.isA("String","string"),"should return false for string, as not in pool")
       _.bassert(15,!ess1.isA("String",Object),"should return false as string is not an Object")
+    }
+    function setDoNotParseTest() {
+      let lit1 = {a:"b"}
+      let lit2 = {a:"b",__SPEC:{}}
+      let lit3 = {a:"b",__SPEC:{anything:"something"}}
+      let lit4 = {a:"b",__SPEC:{anything:"something",PARSE:true}}
+      let lit5 = {a:"b",__SPEC:{anything:"something",PARSE:false}}
+      Essence.setDoNotParse(lit1)
+      Essence.setDoNotParse(lit2)
+      Essence.setDoNotParse(lit3)
+      Essence.setDoNotParse(lit4)
+      Essence.setDoNotParse(lit5)
+      _.bassert(0,lit1["__SPEC"] != undefined, "Spec is now set")
+      _.bassert(1,lit1["__SPEC"]["PARSE"] === false, "PARSE set to false")
+      _.bassert(2,lit2["__SPEC"]["PARSE"] === false, "PARSE set to false")
+      _.bassert(3,lit3["__SPEC"]["PARSE"] === false, "PARSE set to false")
+      _.bassert(4,lit4["__SPEC"]["PARSE"] === false, "PARSE set to false")
+      _.bassert(5,lit5["__SPEC"]["PARSE"] === false, "PARSE set to false")
+      _.bassert(11,lit1["a"] === "b", "nothing else changed")
+      _.bassert(12,lit2["a"] === "b", "nothing else changed")
+      _.bassert(13,lit3["a"] === "b", "nothing else changed")
+      _.bassert(14,lit4["a"] === "b", "nothing else changed")
+      _.bassert(15,lit5["a"] === "b", "nothing else changed")
+      _.bassert(21,Object.keys(lit1).length === 2, "nothing else changed")
+      _.bassert(22,Object.keys(lit2).length === 2, "nothing else changed")
+      _.bassert(23,Object.keys(lit3).length === 2, "nothing else changed")
+      _.bassert(24,Object.keys(lit4).length === 2, "nothing else changed")
+      _.bassert(25,Object.keys(lit5).length === 2, "nothing else changed")
+      _.bassert(31,Object.keys(lit1["__SPEC"]).length === 1, "nothing else changed")
+      _.bassert(32,Object.keys(lit2["__SPEC"]).length === 1, "nothing else changed")
+      _.bassert(33,Object.keys(lit3["__SPEC"]).length === 2, "nothing else changed")
+      _.bassert(34,Object.keys(lit4["__SPEC"]).length === 2, "nothing else changed")
+      _.bassert(35,Object.keys(lit5["__SPEC"]).length === 2, "nothing else changed")
+    }
+    function doParseTest() {
+      let lit1 = {a:"b"}
+      let lit2 = {a:"b",__SPEC:{}}
+      let lit3 = {a:"b",__SPEC:{anything:"something"}}
+      let lit4 = {a:"b",__SPEC:{anything:"something",PARSE:true}}
+      let lit5 = {a:"b",__SPEC:{anything:"something",PARSE:false}}
+      let answ1 = Essence.doParse(lit1)
+      let answ2 = Essence.doParse(lit2)
+      let answ3 = Essence.doParse(lit3)
+      let answ4 = Essence.doParse(lit4)
+      let answ5 = Essence.doParse(lit5)
+      _.bassert(1,answ1 === true, "PARSE is not set")
+      _.bassert(2,answ2 === true, "PARSE is not set")
+      _.bassert(3,answ3 === true, "PARSE is not set")
+      _.bassert(4,answ4 === true, "PARSE is set to true")
+      _.bassert(5,answ5 === false, "PARSE is set to false")
+    }
+    function removeDoNotParseTest() {
+      let lit1 = {a:"b"}
+      let lit2 = {a:"b",__SPEC:{}}
+      let lit3 = {a:"b",__SPEC:{anything:"something"}}
+      let lit4 = {a:"b",__SPEC:{anything:"something",PARSE:true}}
+      let lit5 = {a:"b",__SPEC:{anything:"something",PARSE:false}}
+      let exp1 = {a:"b"}
+      let exp2 = {a:"b",__SPEC:{}}
+      let exp3 = {a:"b",__SPEC:{anything:"something"}}
+      let exp4 = {a:"b",__SPEC:{anything:"something"}}
+      let exp5 = {a:"b",__SPEC:{anything:"something"}}
+      Essence.removeDoNotParse(lit1)
+      Essence.removeDoNotParse(lit2)
+      Essence.removeDoNotParse(lit3)
+      Essence.removeDoNotParse(lit4)
+      Essence.removeDoNotParse(lit5)
+      _.bassert(1,areEqual(lit1,exp1),"Nothing should change, no Spec")
+      _.bassert(2,areEqual(lit2,exp2),"Nothing should change, Spec empty")
+      _.bassert(3,areEqual(lit3,exp3),"Nothing should change, Spec does not contain PARSE")
+      _.bassert(4,areEqual(lit4,exp4),"PARSE should be removed from Spec, no other changes")
+      _.bassert(5,areEqual(lit5,exp5),"PARSE should be removed from Spec, no other changes")
     }
     function getEssencesTest() {
       let un
@@ -2655,7 +2780,9 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(8,Essence.getTYPE(lit1) === undefined, "Hidden properties not added")
       _.bassert(9,Essence.getDEFAULT(lit1) === undefined, "Hidden properties not added")
       _.bassert(10,Essence.getVALUE(lit1) === undefined, "Hidden properties not added")
-      _.bassert(11,Essence.getDEFAULTS(lit1) === undefined, "Hidden properties not added")
+      _.bassert(11,Essence.getINTERNAL(lit1) === undefined, "Hidden properties not added")
+      _.bassert(12,Essence.getPARSE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(13,Essence.getDEFAULTS(lit1) === undefined, "Hidden properties not added")
       new Essence(lit1,un,"Essence:getEssencesTest")
       _.bassert(20,lit1.__SPEC === undefined, "__SPEC properties removed")
       _.bassert(21,Essence.getROOT(lit1) === true, "Hidden properties added")
@@ -2668,8 +2795,48 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(28,Essence.getTYPE(lit1) === "Number", "Hidden properties added")
       _.bassert(29,Essence.getDEFAULT(lit1) === 126, "Hidden properties added")
       _.bassert(30,Essence.getVALUE(lit1) === 127, "Hidden properties added")
+      _.bassert(31,Essence.getINTERNAL(lit1) === false, "Hidden properties added")
+      _.bassert(32,Essence.getPARSE(lit1) === true, "Hidden properties added")
       _.bassert(31,areEqual(Essence.getDEFAULTS(lit1),{}), "Hidden properties added")
       _.bassert(32,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
+      let lit2 = {__SPEC: {RENDER:true,
+        IGNORE:true,
+        ONCE:true,
+        FLAT:true,
+        LOCAL:true,
+        REPEAT:true,
+        TYPE:"Boolean",
+        DEFAULT:"No Boolean",
+        INTERNAL:true,
+        PARSE:false,
+        VALUE:"No Boolean"}}
+      new Essence(lit2,un,"Essence:getEssencesTest")
+      _.bassert(40,typeof lit2.__SPEC === "object", "__SPEC not changed")
+      _.bassert(41,Essence.getROOT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(42,Essence.getRENDER(lit2) === undefined, "Hidden properties not added")
+      _.bassert(43,Essence.getIGNORE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(44,Essence.getONCE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(45,Essence.getFLAT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(46,Essence.getLOCAL(lit2) === undefined, "Hidden properties not added")
+      _.bassert(47,Essence.getREPEAT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(48,Essence.getTYPE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(49,Essence.getDEFAULT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(50,Essence.getVALUE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(51,Essence.getINTERNAL(lit2) === undefined, "Hidden properties not added")
+      _.bassert(52,Essence.getPARSE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(53,Essence.getDEFAULTS(lit2) === undefined, "Hidden properties not added")
+      _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed") 
+      _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed") 
+      _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed") 
+      _.bassert(57,lit2["__SPEC"]["ONCE"] === true,"SPEC not changed") 
+      _.bassert(58,lit2["__SPEC"]["FLAT"] === true,"SPEC not changed") 
+      _.bassert(59,lit2["__SPEC"]["LOCAL"] === true,"SPEC not changed") 
+      _.bassert(60,lit2["__SPEC"]["REPEAT"] === true,"SPEC not changed") 
+      _.bassert(61,lit2["__SPEC"]["TYPE"] === "Boolean","SPEC not changed") 
+      _.bassert(62,lit2["__SPEC"]["DEFAULT"] === "No Boolean","SPEC not changed") 
+      _.bassert(63,lit2["__SPEC"]["INTERNAL"] === true,"SPEC not changed") 
+      _.bassert(64,lit2["__SPEC"]["PARSE"] === false,"SPEC not changed") 
+      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed") 
     }
     function _tryConstruct1(arg1) { 
       new Essence(arg1) 
@@ -2695,6 +2862,7 @@ class BreadCrumbs extends Essence {
   #parent
   #literal
   /**
+   *
    * Returns literal given in BreadCrumbs constructor, __SPEC property removed.
    * @returns {Object}
    */
@@ -2753,7 +2921,7 @@ class BreadCrumbs extends Essence {
    * @param {(Undefined|BreadCrumbs)} parent
    */
   constructor(literal, name, parent) {
-    super(literal, parent, typeof name == "symbol" ? "Symbol" : name)
+    super(literal, parent, typeof name == "symbol" ? "_Symbol_" : name)
     this.addGene(BreadCrumbs)
     this.addGene("undefined", cbkTypeOf)
     this.addGene("null", cbkIsNull)
@@ -2771,7 +2939,7 @@ class BreadCrumbs extends Essence {
     this.#parent = parent
     this.throwIfUndefined(name, "name")
     this.throwIfNotOfType(name, "name", "(string|symbol)")
-    if (typeof name === "symbol") this.#name = "Symbol"
+    if (typeof name === "symbol") this.#name = "_Symbol_"
     this.#name = name
     if (!this.isA(literal, "undefined"))
       this.throwIfNotOfType(literal, "literal", "object")
@@ -2800,7 +2968,7 @@ Skipped values are: `
     if (typeof this.#name === "string")
       return "°°°" + this.constructor.name + " " + this.#name
     else if (typeof this.#name === "symbol")
-      return "°°°" + this.constructor.name + " " + "Symbol"
+      return "°°°" + this.constructor.name + " " + "_Symbol_"
   }
 
   /**
@@ -2892,6 +3060,9 @@ Skipped values are: `
     let _ = null
     if(_ = new TestSuite("BreadCrumbs", outputObj)) {
       _.run(getterLiteralTest)
+      _.run(getterParentTest)
+      _.run(getterNameTest)
+      _.run(getterRootTest)
       _.run(constructorTest)
       _.run(isATest)
       _.run(toStringTest)
@@ -2906,6 +3077,44 @@ Skipped values are: `
       let breadcrumbs1 = new BreadCrumbs({"key1": 87673}, "my name2")
       _.bassert(1,breadcrumbs1.literal.key1 === 87673, "does not return literal given on construction ")
       _.bassert(2,breadcrumbs0.literal != undefined, "empty literal given should be defined")
+    }
+    function getterParentTest() {
+      let un
+      let bc0 = new BreadCrumbs(un, "GodMother")
+      let bc1 = new BreadCrumbs(un, "Granny",bc0)
+      let bc2 = new BreadCrumbs(un, "Mummy",bc1)
+      let bc3 = new BreadCrumbs(un, "Youngster",bc2)
+      _.bassert(0,undefined == bc0.parent,"is root")
+      _.bassert(1,bc1.parent == bc0,"has bc0 as parent")
+      _.bassert(2,bc2.parent == bc1,"has bc1 as parent")
+      _.bassert(3,bc3.parent == bc2,"has bc2 as parent")
+    }
+    function getterNameTest() {
+      let un
+      let bc0 = new BreadCrumbs(un, "GodMother")
+      let bc1 = new BreadCrumbs(un, "Granny",bc0)
+      let bc2 = new BreadCrumbs(un, "Mummy",bc1)
+      let bc3 = new BreadCrumbs(un, "Youngster",bc2)
+      _.bassert(0,bc0.name == "GodMother","name is 'GodMother'")
+      _.bassert(1,bc1.name == "Granny","name is 'Granny'")
+      _.bassert(2,bc2.name == "Mummy","name is 'Mummy'")
+      _.bassert(3,bc3.name == "Youngster","name is 'Youngster'")
+      _.bassert(4,bc3.parent.name == "Mummy", "parents name is 'Mummy'")
+      _.bassert(4,bc3.parent.parent.name == "Granny", "grandparents name is 'Granny'")
+      _.bassert(4,bc3.parent.parent.parent.name == "GodMother", "first ancestors name is 'GodMother'")
+    }
+    function getterRootTest() {
+      let un
+      let bc0 = new BreadCrumbs(un, "GodMother")
+      let bc1 = new BreadCrumbs(un, "Granny",bc0)
+      let bc2 = new BreadCrumbs(un, "Mummy",bc1)
+      let bc3 = new BreadCrumbs(un, "Youngster",bc2)
+      _.bassert(1,bc0.root == bc0,"root is bc0")
+      _.bassert(2,bc1.root == bc0,"root is bc0")
+      _.bassert(3,bc2.root == bc0,"root is bc0")
+      _.bassert(4,bc3.root == bc0,"root is bc0")
+      _.bassert(5,bc3.root.parent == undefined, "root has no parent")
+      _.bassert(6,bc3.root.name == "GodMother", "roots name is 'GodMother'")
     }
     function constructorTest() {
       let un
@@ -2962,18 +3171,20 @@ Skipped values are: `
       _.bassert(18,bc.isA(cbkTypeOf,"function"),"should be registered and succeed")
       _.bassert(19,bc.isA({},"object"),"should be registered and succeed")
       _.bassert(20,bc.isA([],"array"),"should be registered and succeed")
+      _.bassert(21,bc.isA("abc","date"),"should be registered and succeed")
 
-      _.bassert(21,!bc.isA(null,"undefined"),"should be registered and fail")
-      _.bassert(22,!bc.isA(undefined,"null"),"should be registered and fail")
-      _.bassert(23,!bc.isA(null,"boolean"),"should be registered and fail")
-      _.bassert(24,!bc.isA(12n,"number"),"should be registered and fail")
-      _.bassert(25,!bc.isA(12,"bigint"),"should be registered and fail")
-      _.bassert(26,!bc.isA(String,"string"),"should be registered and fail")
-      _.bassert(27,!bc.isA({},"symbol"),"should be registered and fail")
-      _.bassert(28,!bc.isA({},"function"),"should be registered and fail")
-      _.bassert(29,!bc.isA([],"object"),"should be registered and fail")
-      _.bassert(30,!bc.isA({},"array"),"should be registered and fail")
-      _.bassert(31,!bc.isA(null,"object"),"should be registered and fail")
+      _.bassert(31,!bc.isA(null,"undefined"),"should be registered and fail")
+      _.bassert(32,!bc.isA(undefined,"null"),"should be registered and fail")
+      _.bassert(33,!bc.isA(null,"boolean"),"should be registered and fail")
+      _.bassert(34,!bc.isA(12n,"number"),"should be registered and fail")
+      _.bassert(35,!bc.isA(12,"bigint"),"should be registered and fail")
+      _.bassert(36,!bc.isA(String,"string"),"should be registered and fail")
+      _.bassert(37,!bc.isA({},"symbol"),"should be registered and fail")
+      _.bassert(38,!bc.isA({},"function"),"should be registered and fail")
+      _.bassert(39,!bc.isA([],"object"),"should be registered and fail")
+      _.bassert(40,!bc.isA({},"array"),"should be registered and fail")
+      _.bassert(41,!bc.isA({},"date"),"should be registered and fail")
+      _.bassert(42,!bc.isA(null,"object"),"should be registered and fail")
     }
     function toStringTest() {
       let str = new BreadCrumbs(undefined, "BrRrEadCrumbs:my name11").toString()
@@ -3160,6 +3371,7 @@ class Setting extends BreadCrumbs {
    * @param {(Undefined|String|Symbol)} key - if undefined, becomes root key
    * @param {(Undefined|Setting)} parent
    * @param {(Undefined|Object)} tp - templater object
+   * @param {Boolean} add2parent - internal
    * @throws {SettingError}
    */
   constructor(
@@ -3175,7 +3387,7 @@ class Setting extends BreadCrumbs {
         key === undefined
           ? "undefined"
           : typeof key == "symbol"
-          ? "Symbol"
+          ? "_Symbol_"
           : key
       let literal_x =
         literal === undefined
@@ -3221,8 +3433,8 @@ class Setting extends BreadCrumbs {
       let name_x =
         this.name === undefined
           ? "undefined"
-          : typeof name == "symbol"
-          ? "Symbol"
+          : typeof this.name == "symbol"
+          ? "_Symbol_"
           : this.name
       let literal_x =
         this.literal === undefined
@@ -3256,13 +3468,13 @@ class Setting extends BreadCrumbs {
         // constructs a workers instance
         this.#works[key] = new Setting.#workers[key](value, key, this)
       } else if (this.isA(value, "object")) {
-        let aEss = this.essenceOfAtom(this.literal, key, type)
+        let aEss = this.#essenceOfAtom(this.literal, key, type)
         if (aEss != un) this.#children[key] = aEss
         else this.#children[key] = new Setting(value, key, this)
       } else {
         let litAtom = {VALUE: this.literal[key], __SPEC: true}
         this.literal[key] = litAtom
-        this.#children[key] = this.essenceOfAtom(this.literal, key, type)
+        this.#children[key] = this.#essenceOfAtom(this.literal, key, type)
       }
     }
   }
@@ -3295,7 +3507,7 @@ class Setting extends BreadCrumbs {
    * @param {String} type
    * @returns {(Essence|Undefined)}
    */
-  essenceOfAtom(literal, key, type) {
+  #essenceOfAtom(literal, key, type) {
     if (typeof literal != "object") return undefined
     let aEss = undefined
     let specLit = literal[key][Essence.SPEC_KEY]
@@ -3375,7 +3587,7 @@ class Setting extends BreadCrumbs {
         answ = []
         answ.push(this.#works[workerKey])
         subKeys.shift()
-        answ.push(subKeys)
+        answ.push(subKeys.join("."))
       }
     }
     return answ
@@ -3421,12 +3633,17 @@ class Setting extends BreadCrumbs {
     let _ = null
     if(_ = new TestSuite("Setting", outputObj)) {
       _.run(getterLiteralTest)
+      _.run(setterWorkersTest)
+      _.run(setterWorkersTypeForChildrenTest)
+      _.run(getterTpTest)
       _.run(constructorTest)
       _.run(isATest)
       _.run(toStringTest)
+      _.run(iteratorTest)
+      _.run(atTest)
+      _.run(getValueTest)
       _.run(getFrontmatterYAMLTest)
       _.run(getRenderYAMLTest)
-      _.run(getValueTest)
       _.run(atomsTest)
       _.run(deepLiteralTest)
       _.destruct()
@@ -3465,7 +3682,53 @@ class Setting extends BreadCrumbs {
       _.bassert(16,lit6.a.MARKER === "2","value of a.MARKER should be '2' as given")
       _.bassert(17,lit6.a.DATE === false,"value of a.DATE should be 'false' as given")
       _.bassert(18,lit6.d.TITLE_BEFORE_DATE === "abc","value of d.TITLE_BEFORE_DATE should be 'abc' as given")
-    }    
+    }
+    function setterWorkersTest() {
+      class testWorker extends Setting {
+        static get workerKey() {
+          return "__TEST"
+        }
+        constructor(literal, key, parent) {
+          super(literal,key,parent)
+          this.addGene(testWorker)
+          delete literal["remove"]
+        }          
+      }
+      let lit = {__TEST:{remove:"Not removed", stay:"Always there"}}
+      Setting.worker = testWorker
+      let set = new Setting(lit)
+      _.bassert(1,lit["__TEST"]["remove"]==undefined,"Test worker removes it")
+      _.bassert(2,lit["__TEST"]["stay"]=="Always there","Test worker leaves it")
+    }
+    function setterWorkersTypeForChildrenTest() {
+      class testWorker extends Setting {
+        static get workerKey() {
+          return "__TEST"
+        }
+        constructor(literal, key, parent) {
+          parent.workersTypeForChildren = "Boolean"
+          super(literal,key,parent)
+          this.addGene(testWorker)
+        }          
+      }
+      let lit = {__TEST:{bool:true, str:"not allowed"}}
+      Setting.worker = testWorker
+      let set = new Setting(lit)
+      _.bassert(1,set.at("__TEST").getValue("bool")==true,"Boolean is ok")
+      _.bassert(2,set.at("__TEST").getValue("str")=="","String not allowed")
+    }
+    function getterTpTest() {
+      let tp = "SHOULD BE TEMPLATER OBJECT"
+      let set0 = new Setting({},undefined,undefined,tp)
+      let set1 = new Setting({}, "Granny",set0,"another tp")
+      let set2 = new Setting({}, "Mummy",set1, "and another one")
+      let set3 = new Setting({}, "Youngster",set2, "this will be ignored too")
+      _.bassert(1,set0.tp == tp, "tp is always of root")
+      _.bassert(2,set1.tp == tp, "tp is always of root")
+      _.bassert(3,set2.tp == tp, "tp is always of root")
+      _.bassert(4,set2.tp == tp, "tp is always of root")
+
+    }
     function constructorTest() {
       let un
       let b = new BreadCrumbs(un, "Setting:constructorTest", un)
@@ -3514,6 +3777,212 @@ class Setting extends BreadCrumbs {
       _.bassert(1,setting1.toString().includes("toStringTest1"),"result does not contain name string"    )
       _.bassert(2,setting1.toString().includes("Setting"),"result does not contain class string"    )
     }
+    function iteratorTest() {
+      /**********************************************************************/{
+      let lit = {a:"A",b:2,c:true,d:{da:"A", db:2, dc:true} }
+      let set = new Setting(lit)
+      let keyStr = ""
+      let valStr = ""
+      let expKeyStr = "abcd"
+      let expValStr = "A2true"
+      for (const [key, value] of set) {
+        keyStr+=key
+        valStr+=value.VALUE
+      }
+      _.bassert(1,keyStr == expKeyStr,"all keys should be contained")
+      _.bassert(2,valStr == expValStr,"all value.VALUEs should be contained")
+      keyStr = ""
+      valStr = ""
+      let expKeyStr2 = "ab"
+      let expValStr2 = "A2"
+      for (const [key, value] of set) {
+        keyStr+=key
+        valStr+=value.VALUE
+        if(key == "b") break
+      }
+      _.bassert(11,keyStr == expKeyStr2,"first 2 keys should be contained")
+      _.bassert(12,valStr == expValStr2,"first 2 value.VALUEs should be contained")
+      keyStr = ""
+      valStr = ""
+      for (const [key, value] of set) {
+        keyStr+=key
+        valStr+=value.VALUE
+      }
+      _.bassert(21,keyStr == expKeyStr,"all keys should be contained")
+      _.bassert(22,valStr == expValStr,"all value.VALUEs should be contained")
+      }/**********************************************************************/{        
+      let lit = {a:"A",b:2,c:true,d:{da:"A", db:2, dc:true},e:"ja" }
+      let set = new Setting(lit)
+      let keyStr = ""
+      let valStr = ""
+      let expKeyStr = "a b c d da db dc e "
+      let expValStr = "A 2 true A 2 true ja "
+      for (const [key, value] of set) {
+        keyStr+=key + " "
+        if(value.FLAT)
+          valStr+=value.VALUE + " "
+        else 
+        for (const [k, v] of value) {
+          keyStr+=k + " "
+          valStr+=v.VALUE + " "
+        }
+      }
+      _.bassert(31,keyStr == expKeyStr,"Should contain all keys")
+      _.bassert(32,valStr == expValStr, "Should contain all values")
+
+      keyStr = ""
+      valStr = ""
+      let expKeyStr2 = "a b c d da db e "
+      let expValStr2 = "A 2 true A 2 ja "
+      for (const [key, value] of set) {
+        keyStr+=key + " "
+        if(value.FLAT)
+          valStr+=value.VALUE + " "
+        else 
+        for (const [k, v] of value) {
+          keyStr+=k + " "
+          valStr+=v.VALUE + " "
+          if(k == "db") break
+        }
+      }
+      _.bassert(41,keyStr == expKeyStr2,"Should contain all keys except the last of 'd'")
+      _.bassert(42,valStr == expValStr2, "Should contain all values except the last of 'd'")
+
+      keyStr = ""
+      valStr = ""
+      for (const [key, value] of set) {
+        keyStr+=key + " "
+        if(value.FLAT)
+          valStr+=value.VALUE + " "
+        else 
+        for (const [k, v] of value) {
+          keyStr+=k + " "
+          valStr+=v.VALUE + " "
+        }
+      }
+      _.bassert(51,keyStr == expKeyStr,"Should contain all keys")
+      _.bassert(52,valStr == expValStr, "Should contain all values")
+      }/**********************************************************************/{        
+      let lit = {a:"A",b:2,c:true,d:{da:"A", db:2, dc:true},e:"ja" }
+      let set = new Setting(lit)
+      let keyStr = ""
+      let valStr = ""
+      let expKeyStr = "a b c d da db dc e "
+      let expValStr = "A 2 true A 2 true ja "
+      for (const [key, value] of set) {
+        keyStr+=key + " "
+        if(value.FLAT)
+          valStr+=value.VALUE + " "
+        else 
+        for (const [k, v] of value) {
+          keyStr+=k + " "
+          valStr+=v.VALUE + " "
+        }
+      }
+      _.bassert(61,keyStr == expKeyStr,"Should contain all keys")
+      _.bassert(62,valStr == expValStr, "Should contain all values")
+
+      keyStr = ""
+      valStr = ""
+      let expKeyStr2 = "a b c d da dc e "
+      let expValStr2 = "A 2 true A true ja "
+      for (const [key, value] of set) {
+        keyStr+=key + " "
+        if(value.FLAT)
+          valStr+=value.VALUE + " "
+        else 
+        for (const [k, v] of value) {
+          if(k == "db") continue
+          keyStr+=k + " "
+          valStr+=v.VALUE + " "
+        }
+      }
+      _.bassert(71,keyStr == expKeyStr2,"Should contain all keys except the last of 'd'")
+      _.bassert(72,valStr == expValStr2, "Should contain all values except the last of 'd'")
+
+      keyStr = ""
+      valStr = ""
+      for (const [key, value] of set) {
+        keyStr+=key + " "
+        if(value.FLAT)
+          valStr+=value.VALUE + " "
+        else 
+        for (const [k, v] of value) {
+          keyStr+=k + " "
+          valStr+=v.VALUE + " "
+        }
+      }
+      _.bassert(81,keyStr == expKeyStr,"Should contain all keys")
+      _.bassert(82,valStr == expValStr, "Should contain all values")
+      }/**********************************************************************/{        
+      class testWorker extends Setting {
+        static get workerKey() {
+          return "__TEST"
+        }
+        constructor(literal, key, parent) {
+          parent.workersTypeForChildren = "(Number|Array.<Number>)"
+          super(literal,key,parent)
+          this.addGene(testWorker)
+        }          
+      }
+      let lit = {__TEST:{a:1,b:2,c:3,d:{da:4, db:5, dc:6},e:7 }}
+      Setting.worker = testWorker
+      let set = new Setting(lit)
+      let keyStr = ""
+      let valStr = ""
+      let expKeyStr = "a b c d da db dc e "
+      let expValStr = "1 2 3 4 5 6 7 "
+      for (const [key, value] of set.at("__TEST")) {
+        keyStr+=key + " "
+        if(value.FLAT)
+          valStr+=value.VALUE + " "
+        else 
+        for (const [k, v] of value) {
+          keyStr+=k + " "
+          valStr+=v.VALUE + " "
+        }
+      }
+      _.bassert(91,keyStr == expKeyStr,"Should contain all keys")
+      _.bassert(92,valStr == expValStr, "Should contain all values")
+
+      }/**********************************************************************/              
+
+    }
+    function atTest() {
+      /**********************************************************************/{
+      let lit = {pos:[22,12], deep: {deeper: {pos:[14,13,18]}}}
+      let set = new Setting(lit)
+      let answ1 = set.at("deep")
+      let answ2 = set.at("deep.deeper")
+      let answ3 = set.at("deep.deeper.pos")
+      _.bassert(1,set.getValue("deep.deeper.pos")[2]==18,"should return value root")
+      _.bassert(2,answ1.getValue("deeper.pos")[2]==18,"should return its 'deep'")
+      _.bassert(3,answ2.getValue("pos")[2]==18,"should return its 'deep.deeper'")
+      _.bassert(4,answ3.VALUE[2]==18,"should return its 'deep.deeper.pos'")
+      }/**********************************************************************/{        
+      class testWorker extends Setting {
+        static get workerKey() {
+          return "__TEST"
+        }
+        constructor(literal, key, parent) {
+          parent.workersTypeForChildren = "(Number|Array.<Number>)"
+          super(literal,key,parent)
+          this.addGene(testWorker)
+        }          
+      }
+      let lit = {__TEST:{pos:[22,12], deep: {deeper: {pos:[14,13,18]}}}}
+      Setting.worker = testWorker
+      let set = new Setting(lit)
+      let test = set.at("__TEST")
+      let test1 = set.at("__TEST.deep")
+      let test2 = set.at("__TEST.deep.deeper")
+      let test3 = set.at("__TEST.deep.deeper.pos")
+      _.bassert(1,test.getValue("deep.deeper.pos")[2]==18,"should return Workers root")
+      _.bassert(2,test1.getValue("deeper.pos")[2]==18,"should return Workers 'deep'")
+      _.bassert(3,test2.getValue("pos")[2]==18,"should return Workers 'deep.deeper'")
+      _.bassert(3,test3.VALUE[2]==18,"should return Workers 'deep.deeper.pos'")
+      }/**********************************************************************/              
+    }
     function getValueTest() {
       /**********************************************************************/{        
       let lit = {a:2, b:{bb:"bbValue"}}
@@ -3521,11 +3990,24 @@ class Setting extends BreadCrumbs {
       _.bassert(1,set.getValue("a") ==2,"should return value of a")
       _.bassert(2,set.getValue("b") =="","value for node is empty string")
       _.bassert(3,set.getValue("b.bb") =="bbValue","should return value of bb")
-      _.bassert(4,set.getValue("b.bb") ==undefined,"key not there,should return undefined")
+      _.bassert(4,set.getValue("b.bbb") ==undefined,"key not there,should return undefined")
       }/**********************************************************************/{        
-      let lit = {__TRANSLATE : {word: "Wort"}}
-      let set = new Setting(lit,"Setting:getValueTest2")
-      _.bassert(1,set.getValue("__TRANSLATE","word") =="Wort","should return value of Worker")
+      class testWorker extends Setting {
+        static get workerKey() {
+          return "__TEST"
+        }
+        constructor(literal, key, parent) {
+          parent.workersTypeForChildren = "(Number|Array.<Number>)"
+          super(literal,key,parent)
+          this.addGene(testWorker)
+        }          
+      }
+      let lit = {__TEST:{pos:[22,12], str:"not allowed"}}
+      Setting.worker = testWorker
+      let set = new Setting(lit)
+      _.bassert(1,set.getValue("__TEST.pos")[0] ==22,"should return value of Worker")
+      _.bassert(2,set.getValue("__TEST.notThere") ==undefined,"is not there, has no VALUE")
+      _.bassert(3,set.getValue("__TEST") ==undefined,"is not FLAT, has no VALUE")
       }/**********************************************************************/              
     }
     function getFrontmatterYAMLTest() {
@@ -3974,7 +4456,7 @@ class DialogWorker extends Setting {
       _.bassert(1,val == 22,"get the value via DialogWorker")
       let litS = { __DIALOG_SETTINGS:{pos:22}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS","pos")
+      let valS = set.getValue("__DIALOG_SETTINGS.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { line: {pos:22}}
@@ -3983,7 +4465,7 @@ class DialogWorker extends Setting {
       _.bassert(11,val == 22,"get the value via Setting")
       let litS = { __DIALOG_SETTINGS:{line: {pos:22}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS","line.pos")
+      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = {pos:[22,14]}
@@ -3992,7 +4474,7 @@ class DialogWorker extends Setting {
       _.bassert(21,areEqual(val,[22,14]),"get the value via DialogWorker")
       let litS = { __DIALOG_SETTINGS:{pos:[22,14]}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS","pos")
+      let valS = set.getValue("__DIALOG_SETTINGS.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { line: {pos:[22,14]}}
@@ -4001,7 +4483,7 @@ class DialogWorker extends Setting {
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
       let litS = { __DIALOG_SETTINGS:{line: {pos:[22,14]}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS","line.pos")
+      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{        
       }/**********************************************************************/         
@@ -4028,6 +4510,13 @@ class LocalizationWorker extends Setting {
    */
   static get workerKey() {
     return LocalizationWorker.#KEY
+  }
+  /**
+   * @type {String}
+   * @param {String} lang
+   */
+  static set defaultLang(lang) {
+    if (typeof lang == "string") LocalizationWorker.#defaultLang = lang
   }
 
   /**
@@ -4110,7 +4599,7 @@ class LocalizationWorker extends Setting {
       if (fallback != undefined) return fallback
       if (atom.VALUE.length > 1) return atom.VALUE[1]
     }
-    return atom.VALUE
+    if (atom != undefined) return atom.VALUE
   }
   //prettier-ignore
   static test(outputObj) { // LocalizationWorker
@@ -4179,7 +4668,7 @@ class LocalizationWorker extends Setting {
       _.bassert(1,val == "Wort","get the value via DialogWorker")
       let litS = { __TRANSLATE:{word: "Wort"}}
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","word")
+      let valS = set.getValue("__TRANSLATE.word")
       _.bassert(2,valS == "Wort","get the value via Setting")
       }/**********************************************************************/{        
       let lit = { chapter: {word: "Wort"}}
@@ -4188,7 +4677,7 @@ class LocalizationWorker extends Setting {
       _.bassert(11,val == "Wort","get the value via Setting")
       let litS = { __TRANSLATE:{chapter: {word: "Wort"}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","chapter.word")
+      let valS = set.getValue("__TRANSLATE.chapter.word")
       _.bassert(12,valS == "Wort","get the value via Setting")
       }/**********************************************************************/{        
       let lit = {word: ["de","Wort"]}
@@ -4197,8 +4686,8 @@ class LocalizationWorker extends Setting {
       _.bassert(21,areEqual(val,["de","Wort"]),"get the value via DialogWorker")
       let litS = { __TRANSLATE:{word: ["de","Wort"]}}
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","word")
-      _.bassert(22,areEqual(valS,["de","Wort"]),"get the value via Setting")
+      let valS = set.getValue("__TRANSLATE.word")
+      _.bassert(22,areEqual(valS,"Wort"),"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { chapter: {word: ["de","Wort"]}}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
@@ -4206,10 +4695,76 @@ class LocalizationWorker extends Setting {
       _.bassert(31,areEqual(val,["de","Wort"]),"get the value via Setting")
       let litS = { __TRANSLATE:{chapter: {word: ["de","Wort"]}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE","chapter.word")
-      _.bassert(32,areEqual(valS,["de","Wort"]),"get the value via Setting")
+      let valS = set.getValue("__TRANSLATE.chapter.word")
+      _.bassert(32,areEqual(valS,"Wort"),"get the value via Setting")
       }/**********************************************************************/        
-    }
+      let lit = { word: "Wort", 
+                  coffee: ["de","Kaffee"],
+                  tree: [["en","tree"],["fr","arbre"],["es","botavara"],["de","Baum"]],
+                  notThere: ["some","use","less","words"],
+                  noLang: [["some","1"],["use","2"],["less","3"],["words","4"]],
+                }
+      LocalizationWorker.defaultLang = "de" 
+      let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest40",par)
+      let val1 = loc.getValue("word")
+      let val2 = loc.getValue("coffee")
+      let val3 = loc.getValue("tree")
+      let val4 = loc.getValue("notThere")
+      let val5 = loc.getValue("noLang")
+      let expAnsw1 = "Wort"
+      let expAnsw2 = "de,Kaffee"
+      let expAnsw3 = "en,tree,fr,arbre,es,botavara,de,Baum"
+      let expAnsw4 = "some,use,less,words"
+      let expAnsw5 = "some,1,use,2,less,3,words,4"
+      _.bassert(41,val1==expAnsw1,"no language given")
+      _.bassert(42,val2==expAnsw2,"no language given")
+      _.bassert(43,val3==expAnsw3,"no language given")
+      _.bassert(44,val4==expAnsw4,"no language given")
+      _.bassert(45,val5==expAnsw5,"no language given")
+
+      val1 = loc.getValue("word","de")
+      val2 = loc.getValue("coffee","de")
+      val3 = loc.getValue("tree","de")
+      val4 = loc.getValue("notThere","de")
+      val5 = loc.getValue("noLang","de")
+      expAnsw1 = "Wort"
+      expAnsw2 = "Kaffee"
+      expAnsw3 = "Baum"
+      expAnsw4 = "use"
+      expAnsw5 = "1"
+      _.bassert(51,val1==expAnsw1,"de")
+      _.bassert(52,val2==expAnsw2,"de")
+      _.bassert(53,val3==expAnsw3,"de")
+      _.bassert(54,val4==expAnsw4,"de")
+      _.bassert(55,val5==expAnsw5,"de")
+
+      val1 = loc.getValue("word","nl")
+      val2 = loc.getValue("coffee","nl")
+      val3 = loc.getValue("tree","nl")
+      val4 = loc.getValue("notThere","nl")
+      val5 = loc.getValue("noLang","nl")
+      _.bassert(61,val1==expAnsw1,"language 'nl' not found")
+      _.bassert(62,val2==expAnsw2,"language 'nl' not found")
+      _.bassert(63,val3==expAnsw3,"language 'nl' not found")
+      _.bassert(64,val4==expAnsw4,"language 'nl' not found")
+      _.bassert(65,val5==expAnsw5,"language 'nl' not found")
+
+      let litS = { __TRANSLATE:lit}
+      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
+      val1 = set.getValue("__TRANSLATE.word","de")
+      val2 = set.getValue("__TRANSLATE.coffee","de")
+      val3 = set.getValue("__TRANSLATE.tree","de")
+      val4 = set.getValue("__TRANSLATE.notThere","de")
+      val5 = set.getValue("__TRANSLATE.noLang","de")
+
+      _.bassert(71,val1==expAnsw1,"de")
+      _.bassert(72,val2==expAnsw2,"de")
+      _.bassert(73,val3==expAnsw3,"de")
+      _.bassert(74,val4==expAnsw4,"de")
+      _.bassert(75,val5==expAnsw5,"de")
+
+      }/**********************************************************************/{        
+      }
 
     function _tryConstruct(arg1, arg2,arg3) {
       new LocalizationWorker(arg1,arg2,arg3)
@@ -4239,10 +4794,6 @@ class TypesManager extends Setting {
    * @extends Setting
    * @constructor
    * @description
-   *  For note types
-   * @extends Setting
-   * @constructor
-   * @description
    * Creates a TypesManager instance
    * @param {Object} literal
    * @param {String} key
@@ -4255,7 +4806,7 @@ class TypesManager extends Setting {
         key === undefined
           ? "undefined"
           : typeof key == "symbol"
-          ? "Symbol"
+          ? "_Symbol_"
           : key
       let literal_x =
         literal === undefined
@@ -4266,7 +4817,7 @@ class TypesManager extends Setting {
           ? JSON.stringify(literal, null, 4)
           : flatten(literal)
       let specLit_x =
-        literal != undefined ? flatten(literal["__SPEC"]) : "undefined"
+        literal != undefined ? flatten(literal[Essence.SPEC_KEY]) : "undefined"
       if (parent == undefined)
         aut(
           `========================================================================================`,
@@ -4297,8 +4848,8 @@ class TypesManager extends Setting {
       let name_x =
         this.name === undefined
           ? "undefined"
-          : typeof name == "symbol"
-          ? "Symbol"
+          : typeof this.name == "symbol"
+          ? "_Symbol_"
           : this.name
       let literal_x =
         this.literal === undefined
@@ -4310,7 +4861,7 @@ class TypesManager extends Setting {
           : flatten(this.literal)
       let specLit_x =
         this.literal != undefined
-          ? flatten(this.literal["__SPEC"])
+          ? flatten(this.literal[Essence.SPEC_KEY])
           : "undefined"
       aut(
         `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE TypesManager ======  ${name_x}  \
@@ -4330,12 +4881,12 @@ class TypesManager extends Setting {
   }
   static #setDoNotParse(literal) {
     if (typeof literal != "object" || literal == null) return
-    let spec = literal["__SPEC"]
+    let spec = literal[Essence.SPEC_KEY]
     if (typeof spec != "object" || spec == null) return
 
     if (literal["DEFAULTS"] != undefined && spec["REPEAT"] === true) {
       for (const [key, value] of Object.entries(literal)) {
-        if (key == "__SPEC" || key == "DEFAULTS") continue
+        if (key == Essence.SPEC_KEY || key == "DEFAULTS") continue
         Essence.setDoNotParse(value)
       }
     }
@@ -4404,40 +4955,39 @@ class TypesManager extends Setting {
       /**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {pos:22}}
       let typ = new TypesManager(lit,"TypesManager:getValueTest1",par)
-      let val = typ.getValue("pos")
+      let val = typ.getValue("DEFAULTS.pos")
       _.bassert(1,val == 22,"get the value via TypesManager")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {pos:22}}}
       let set = new Setting(litS,"TypesManager:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES","pos")
+      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}
       let typ = new TypesManager(lit,"TypesManager:getValueTest11",par)
-      let val = typ.getValue("line.pos")
+      let val = typ.getValue("DEFAULTS.line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}}
       let set = new Setting(litS,"TypesManager:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES","line.pos")
+      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {pos:[22,14]}}
       let typ = new TypesManager(lit,"TypesManager:getValueTest1",par)
-      let val = typ.getValue("pos")
+      let val = typ.getValue("DEFAULTS.pos")
       _.bassert(21,areEqual(val,[22,14]),"get the value via TypesManager")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {pos:[22,14]}}}
       let set = new Setting(litS,"TypesManager:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES","pos")
+      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}
       let typ = new TypesManager(lit,"TypesManager:getValueTest11",par)
-      let val = typ.getValue("line.pos")
+      let val = typ.getValue("DEFAULTS.line.pos")
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}}
       let set = new Setting(litS,"TypesManager:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES","line.pos")
+      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
-      }/**********************************************************************/{        
       }/**********************************************************************/         
     }
 
@@ -4486,8 +5036,8 @@ async function foty(tp, app) {
     //   //aut(key)
     // }
     // vaut('setting.at("a").at("A").VALUE', setting.at("a").at("A").VALUE)
-    //aut(setting.getValue("__TRANSLATE", "TYPE_PROMPT"))
-    //aut(this.literal["date_created"](this.tp))
+    // aut(setting.getValue("__TRANSLATE", "TYPE_PROMPT"))
+    // aut(this.literal["date_created"](this.tp))
   } catch (e) {
     if (e instanceof FotyError) {
       let errYAML = {}
@@ -4517,7 +5067,7 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 
-if (true) {
+if (false) {
   let onne_x = {
     //localType: (String|Array.<String>|Array.<Array.<String>>)
     __TRANSLATE: {
@@ -4606,7 +5156,7 @@ if (true) {
       //  Array.<Boolean>|Function)
       __SPEC: {REPEAT: true},
       DEFAULTS: {
-        marker: {__SPEC: false, TYPE: "String", DEFAULT: "°°°°"},
+        marker: {__SPEC: false, TYPE: "String", DEFAULT: "^"},
         date: {__SPEC: false, TYPE: "Boolean", DEFAULT: false},
         frontmatter: {
           __SPEC: {},
