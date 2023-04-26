@@ -1,7 +1,5 @@
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
-//@todo let BreadCrumbs set the userGenes
-//@todo change symbol as key to consecutive string ("Symbol1", "Symbol2", ...)
 /**
  * @description
  * Script for obsidian, templater extension needed
@@ -358,18 +356,19 @@ const TYPES = {
  * - __SPEC for nodes is an Object
  * ESSENCE  |for what   |type    |default |inherited |impl|remark|
  * ------------------------------------------------------------
- *  ROOT    |Node       |Boolean |false   |automatic |yes ||
- *  RENDER  |Node Atom  |Boolean |false   |inherited |yes ||
- *  TYPE    |Node Atom  |String  |"String"|inherited |yes ||
- *  DEFAULT |Node Atom  |TYPE/cbk|""      |individual|yes ||
- *          |in DEFAULTS|
- *  VALUE   |     Atom  |TYPE    |""      |individual|yes ||
- *  IGNORE  |Node Atom  |Boolean |false   |inherited |    |It is possible to IGNORE ancestors, but not descendants|
+ *  ROOT    |Node       |Boolean |false   |automatic |yes | |
+ *  RENDER  |Node Atom  |Boolean |false   |inherited |yes | |
+ *  TYPE    |Node Atom  |String  |"String"|inherited |yes | |
+ *  DEFAULT |Node Atom  |TYPE/cbk|""      |individual|yes | |
+ *          |in DEFAULTS|        |        |          | "  | |
+ *  VALUE   |     Atom  |TYPE    |""      |individual|yes | |
+ *  IGNORE  |Node Atom  |Boolean |false   |inherited |yes |It is possible to IGNORE ancestors, but not descendants|
+ *          |           |        |        |          | "  |Some Workers/Managers ignore IGNORE, makes no sense for them|
  *  FLAT    |Node Atom  |Boolean |false   |individual|yes |set automatically, if specified in literal: |
- *          |           |        |        |          |    |values are not parsed, even if they are objects|
- *  ONCE    |Node Atom  |Boolean |false   |individual|    |
+ *          |           |        |        |          | "  |values are not parsed, even if they are objects|
+ *  ONCE    |Node Atom  |Boolean |false   |individual|    |Not used|
  *  REPEAT  |Node       |Boolean |false   |individual|yes |same entryType can be added several times under diff. keys|
- *  LOCAL   |Node Atom  |Boolean |false   |inherited |    |
+ *  LOCAL   |Node Atom  |Boolean |false   |inherited |    |Not used|
  *  DEFAULTS|if REPEAT  |Object  |object  |individual|yes |makes only sense for REPEAT: sections|
  * @ignore
  */
@@ -426,11 +425,13 @@ let onne = {
 //  #endregion test configurations
 //#endregion CONFIGURATION
 //#region globals and externals
+var GLOBAL_SYMBOL_COUNTER = 0
 /**
  * The built in Error object.
  * @external Error
  * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error|Error&#x2348;}
  */
+
 /** Dialog return codes for functions which call dialogs.
  * <p>
  * The templater dialogs do not return a status, they return the value given by
@@ -443,7 +444,46 @@ const Dialog = {
   Ok: "Ok",
   Cancel: "Cancel",
 }
-//#region Colors
+// TypesManager
+let GLOBAL_TYPES_MANAGER_KEY = "__NOTE_TYPES"
+let GLOBAL_TYPES_TYPE =
+  "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
+
+// LocalizationWorker
+let GLOBAL_LOCALIZATION_WORKER_KEY = "__TRANSLATE"
+let GLOBAL_LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
+
+// DialogWorker
+let GLOBAL_DIALOG_WORKER_KEY = "__DIALOG_SETTINGS"
+let GLOBAL_DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
+
+// Setting
+let GLOBAL_ROOT_KEY = "/"
+let GLOBAL_GENERAL_TYPE =
+  "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
+
+// BreadCrumbs
+let GLOBAL_BREADCRUMBS_SEPARATOR = " \u00BB "
+
+// AEssence
+let GLOBAL__SPEC = "__SPEC"
+
+// Essence
+let GLOBAL_namePartHiddenPropertiesStartWith = "__"
+let GLOBAL_RENDER_DEFAULT = false
+let GLOBAL_TYPE_DEFAULT = "String"
+let GLOBAL_DEFAULT_DEFAULT = ""
+let GLOBAL_VALUE_DEFAULT = ""
+let GLOBAL_IGNORE_DEFAULT = false
+let GLOBAL_PARSE_DEFAULT = true
+let GLOBAL_INTERNAL_DEFAULT = false
+let GLOBAL_FLAT_DEFAULT = false
+let GLOBAL_LOCAL_DEFAULT = false
+let GLOBAL_ONCE_DEFAULT = false
+let GLOBAL_REPEAT_DEFAULT = false
+let GLOBAL_DEFAULTS_DEFAULT = {}
+
+//  #region Colors
 /** Color, to be used without quotation marks during development. */
 const black = "black"
 /** Color, to be used without quotation marks during development. */
@@ -464,7 +504,7 @@ const lime = "lime"
 const green = "lightgreen"
 /** Color, to be used without quotation marks during development. */
 const gray = "silver"
-//#endregion Colors
+//  #endregion Colors
 //#endregion globals and externals
 //#region debug, error and test
 
@@ -480,7 +520,7 @@ var DEBUG = false
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -545,7 +585,8 @@ function flatten(inp) {
     } else {
       res = ""
       entries.forEach(([key, value], idx) => {
-        if (typeof value == "symbol") value = "_Symbol_"
+        if (typeof value == "symbol")
+          value = "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
         let indent = idx === 0 ? "OBJ  " : "\n                 "
         if (typeof value == "object" && value !== null) {
           Object.values(value).forEach((v) => {
@@ -1189,7 +1230,8 @@ class TestSuite {
     this.o[this.z] = `Suites: ${TestSuite.#totalSuites} | Tests: ${TestSuite.#totalTests} | Cases: ${TestSuite.#totalCases}`
   }
 }
-/** @classdesc Error used for unit tests.
+/**
+ * @classdesc Error used for unit tests.
  * @extends external:Error
  */
 class TestError extends Error {
@@ -1201,6 +1243,7 @@ class TestError extends Error {
     return " °°" + this.constructor.name + " " + this.name
   }
 }
+
 //prettier-ignore
 function testGlobals(outputObj) {
   let _ = null
@@ -1764,6 +1807,13 @@ class GenePool {
   }
 
   /**
+   * Returns number of {@link Gene}s in this pool
+   * @returns {Number}
+   */
+  length() {
+    return Object.keys(this.#genes).length
+  }
+  /**
    * Returns whether {@link v} fulfills {@link ident}s requirements as {@link Gene}.
    * <p>
    * Returns false, if {@link ident} is no {@link Gene} of this pool.
@@ -1815,6 +1865,7 @@ class GenePool {
       _.run(constructorTest)
       _.run(addTest)
       _.run(hasTest)
+      _.run(lengthTest)
       _.run(isATest)
       _.destruct()
       _ = null
@@ -1932,6 +1983,19 @@ class GenePool {
       _.bassert(18,gns2.hasGene(idFunc), "id had been added")
       _.bassert(19,gns2.hasGene(idObjE), "id had been added")
     }
+    function lengthTest() {
+      let pool0 = new GenePool()
+      let pool1 = new GenePool(1)
+      let pool2 = new GenePool(1,2)
+      let pool3 = new GenePool(1,2,3)
+      let pool4 = new GenePool(1,2,3)
+      pool4.addGene("Number",cbkTypeOfLc)
+      _.bassert(0,pool0.length() == 0, "no genes added")
+      _.bassert(1,pool1.length() == 1, "1 gene added")
+      _.bassert(2,pool2.length() == 2, "2 genes added")
+      _.bassert(3,pool3.length() == 3, "3 genes added")
+      _.bassert(4,pool4.length() == 4, "4 genes added")
+    }
     function isATest() {
       let gns = new GenePool(cbkTypeOfLc,"Number")
       _.bassert(1,gns.isA(22,"Number"),"22 is Number")
@@ -2003,17 +2067,31 @@ registeredExceptions.push("new GenePool().add('noGene','noFunction')")
 
 class Essence extends GenePool {
   //#region member variables
+  /**
+   * Default hardcoded key for SPEC sections
+   * @type {String}
+   */
+  static #DEFAULT_HARDCODED_SPEC_KEY = "_S_P_E_C_"
+  #specificationPool = new GenePool()
+  #SPEC_KEY = Essence.#DEFAULT_HARDCODED_SPEC_KEY
+  #skipped = [] //[{.name,.value,.expectedType}]
+  /**
+   * @type {GenePool}
+   */
+  get specificationPool() {
+    return this.#specificationPool
+  }
+  /**
+   * @type {String}
+   */
+  get SPEC_KEY() {
+    return this.#SPEC_KEY
+  }
   /** skipped essences
    * @type {Array.<Object>}
    */
   get skipped() {
     return this.#skipped
-  }
-  /** SPEC key
-   * @type {String}
-   */
-  static get SPEC_KEY() {
-    return Essence.#SPEC_KEY
   }
   /** ROOT essence, set automatically
    * @type {Boolean}
@@ -2101,58 +2179,74 @@ class Essence extends GenePool {
     return this[Essence.#pre + "DEFAULTS"]
   }
 
-  static #pre = "__"
-  #userPool = new GenePool(
-    cbkTypeOfLc,
-    "String",
-    "Number",
-    "Boolean",
-    "Function",
-    "Object"
-  )
-  static #SPEC_KEY = "__SPEC"
-  static #RENDER_DEFT = false
-  static #TYPE_DEFT = "String"
-  static #DEFAULT_DEFT = ""
-  static #VALUE_DEFT = ""
-  static #IGNORE_DEFT = false
-  static #PARSE_DEFT = true
-  static #INTERNAL_DEFT = false
-  static #FLAT_DEFT = false
-  static #LOCAL_DEFT = false
-  static #ONCE_DEFT = false
-  static #REPEAT_DEFT = false
-  static #DEFAULTS_DEFT = {}
-  #skipped = [] //[{.name,.value,.expectedType}]
-  #defaults = {}
+  static #pre =
+    GLOBAL_namePartHiddenPropertiesStartWith !== undefined
+      ? GLOBAL_namePartHiddenPropertiesStartWith
+      : "__"
+
+  static #RENDER_DEFT =
+    GLOBAL_RENDER_DEFAULT !== undefined ? GLOBAL_RENDER_DEFAULT : false
+  static #TYPE_DEFT =
+    GLOBAL_TYPE_DEFAULT !== undefined ? GLOBAL_TYPE_DEFAULT : "String"
+  static #DEFAULT_DEFT =
+    GLOBAL_DEFAULT_DEFAULT !== undefined ? GLOBAL_DEFAULT_DEFAULT : ""
+  static #VALUE_DEFT =
+    GLOBAL_VALUE_DEFAULT !== undefined ? GLOBAL_VALUE_DEFAULT : ""
+  static #IGNORE_DEFT =
+    GLOBAL_IGNORE_DEFAULT !== undefined ? GLOBAL_IGNORE_DEFAULT : false
+  static #PARSE_DEFT =
+    GLOBAL_PARSE_DEFAULT !== undefined ? GLOBAL_PARSE_DEFAULT : true
+  static #INTERNAL_DEFT =
+    GLOBAL_INTERNAL_DEFAULT !== undefined ? GLOBAL_INTERNAL_DEFAULT : false
+  static #FLAT_DEFT =
+    GLOBAL_FLAT_DEFAULT !== undefined ? GLOBAL_FLAT_DEFAULT : false
+  static #LOCAL_DEFT =
+    GLOBAL_LOCAL_DEFAULT !== undefined ? GLOBAL_LOCAL_DEFAULT : false
+  static #ONCE_DEFT =
+    GLOBAL_ONCE_DEFAULT !== undefined ? GLOBAL_ONCE_DEFAULT : false
+  static #REPEAT_DEFT =
+    GLOBAL_REPEAT_DEFAULT !== undefined ? GLOBAL_REPEAT_DEFAULT : false
+  static #DEFAULTS_DEFT =
+    GLOBAL_DEFAULTS_DEFAULT !== undefined ? GLOBAL_DEFAULTS_DEFAULT : {}
   //#endregion member variables
   /**
    * @classdesc Essence is unrecognizable except through me.
-   * Reads and stores specification properties and removes them from literal.
-   * So __SPEC becomes essence and nobody will no longer be bothered by it.
-   * Essence is always there. Either as found in __SPEC or as given from parent (if one)
-   * or hardcoded default. If some __SPEC entry has wrong  {@link Gene} it will be
-   * {@link Essence#skipped|skipped} and parent essence or (if no parent)
-   * hardcoded essence will be used.
+   * Reads and removes specification properties from literal and stores
+   * them as tokens. Specification
+   * properties are found in specification sections, which are  objects with a certain
+   * specification key. The hardcoded default of this key is
+   * {@link Essence#DEFAULT_HARDCODED_SPEC_KEY|Essence.#DEFAULT_HARDCODED_SPEC_KEY}.
+   * On construction a different key can be set.
+   * <p>
+   * <p> There exists a set of predefined tokens.  Tokens can be individual or
+   * inherited.  After initialization of an
+   * Essence instance, each token is always there.
+   * Either as found in specification section or as
+   * given from parent if one and if inherited or at least as hardcoded default.
+   * They have to be of certain {@link Gene}, e.g. the value for the
+   * {@link Essence.getRENDER|RENDER} token has to be a Boolean. If some
+   * specification  entry
+   * has wrong  {@link Gene} it will be {@link Essence#skipped|skipped} and
+   * parent token value if inherited or if no parent or individual
+   * hardcoded value will be used.
    * <p>
    * Essence has to do with two {@link GenePool}s. The one that it is and that it's
-   * subclasses will be. And the user pool, the one it uses to remove
-   * _SPEC from the literal given to it.
+   * subclasses will be. The other is the
+   * {@link Essence#specificationPool|Essence.specificationPool}.
+   * This one it uses to check the specification properties in the literal given
+   * to it.
    * <p>
-   * All known keys in the literals __SPEC object are changed to invisible and unremovable
-   * properties of this instance, which represents the literal for subclass instances.
-   * They also are added to the literal containing the __SPEC object as invisible
+   * All known specification properties in the literals specification object
+   * are changed to invisible and unremovable properties, the tokens, of this instance,
+   * which represents the literal for subclass instances.
+   * They also are added to the literal containing the specification object as invisible
    * and unremovable properties. Those can be questioned using static get functions
    * ({@link Essence.getDEFAULT} - {@link Essence.getVALUE})
    * of {@link Essence}
    * <p>
-   * <b>For clarity</b>
-   * In fact, this is not Essence but a Essence, as it is specialized. It could be
-   * called UserEssence. But as I only need this special case of Essence, I do not
-   * build the general class. I even do not know, how I should realize it, so that
-   * the members are described generalized and could be created specialized. I would
-   * need a member generation procedure in the general Essence, to build the
-   * members used in the special essence, e.g. for this UserEssence ROOT or RENDER.
+   * This class is pure essence. Without filling some {@link Gene}s in
+   * {@link Essence#specificationPool|Essence.specificationPool} it only produces
+   * default token values.
    * @mermaid
    *  classDiagram
    *      GenePool <|-- Essence
@@ -2163,29 +2257,36 @@ class Essence extends GenePool {
    * <p>
    * Adds {@link Object}, {@link Gene}, {@link GenePool} and {@link Essence}
    * to its pool as Genes with {@link GeneCallback|callback} {@link cbkInstanceOf}.
+   * @param {String} spec_key - no type check, but only implemented for
+   * {@type String} and tested against {@type String}.
+   */
+  constructor(spec_key = Essence.#DEFAULT_HARDCODED_SPEC_KEY) {
+    super()
+    this.#SPEC_KEY = spec_key
+    this.addGene(Object)
+    this.addGene(Gene)
+    this.addGene(GenePool)
+    this.addGene(Essence)
+  }
+  /**
+   * Creates the tokens.
    * <p>
-   * Adds <code>"String"</code>, <code>"Number"</code>, <code>"Boolean"</code>,
-   * <code>"Function"</code> and <code>"Object"</code>
-   * to user pool as Genes with {@link GeneCallback|callback} {@link cbkTypeOfLc}.
-   * Adds <code>"Date"</code>
-   * to user pool as Genes with {@link GeneCallback|callback} {@link cbkIsDate}.
+   * Removes {@link Essence#SPEC_KEY|this.SPEC_KEY} property from {@link literal} and
+   * removes all <code>specification properties</code> from literal if value of
+   * {@link Essence#SPEC_KEY|this.SPEC_KEY} property is not of type <code>Boolean</code>.
    * <p>
-   * <p>
-   * Removes {@link Essence.SPEC_KEY|__SPEC} property from {@link literal} and
-   * removes all <code>__SPEC properties</code> from literal if value of
-   * {@link Essence.SPEC_KEY|__SPEC} property is no <code>Boolean</code>.
-   * <p>
-   * Adds recognized <code class="bordered"><a href="#zweitens">__SPEC properties</a> </code>
-   * from {@link literal} as hidden properties
+   * Adds recognized <code class="bordered"><a href="#zweitens">
+   * specification properties</a> </code>
+   * from {@link literal} as hidden properties (tokens)
    * to this instance and {@link literal}.<br>
    * Adds hidden properties which are not given in {@link literal}
    * with parent value (if inherited) or hardcoded default value
    * to this instance and {@link literal}.
    * <p>
-   * Values in literal with wrong type (e.g. if value of Essence#RENDER|RENDER}
+   * Values in literal with wrong type (e.g. if value of {@link Essence#IGNORE|IGNORE}
    * is <code>yes</code>) will be skipped and added to {@link skipped}.
    * <p id="zweitens">
-   * Recognized <code  class="bordered">{@link Essence#SPEC_KEY|__SPEC} properties</code> are:
+   * Recognized <code  class="bordered">{@link this#SPEC_KEY|__SPEC} properties</code> are:
    * {@link Essence#RENDER|RENDER} (inherited),
    * {@link Essence#TYPE|TYPE} (inherited),
    * {@link Essence#DEFAULT|DEFAULT},
@@ -2196,39 +2297,24 @@ class Essence extends GenePool {
    * {@link Essence#ONCE|ONCE},
    * {@link Essence#REPEAT|REPEAT} (individual) and
    * {@link Essence#DEFAULTS|DEFAULTS}.
-   * Additionally {@link Essence#ROOT|ROOT} is added, with value dependent
+   * Also {@link Essence#ROOT|ROOT} is added, with value dependent
    * whether {@link parent}
-   * is defined. Other entries in {@link literal} are ignored.<br>
-   * {@link Essence#SPEC_KEY|__SPEC} properties are never undefined, even not
+   * is defined. There are some more <code>specification properties</code> for
+   * internal use. Other entries in {@link literal} are ignored.<br>
+   * Tokens are never undefined, even not
    * it they make no sense. Essence is not about sense.
    * @param {(Undefined|Object)} literal
    * @param {(Undefined|GenePool)} parent
    * @param {(Undefined|String)} name - for checking tests
    * @throws TypeError
    */
-  constructor(literal, parent, name) {
-    super()
-    this.addGene(Object)
-    this.addGene(Gene)
-    this.addGene(GenePool)
-    if (parent != undefined && !this.isA(parent, GenePool))
-      throw new TypeError(
-        `function 'Essence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
-      )
-    if (literal != undefined && typeof literal != "object")
-      throw new TypeError(
-        `function 'Essence.constructor'${NL}1st parameter '${literal}' is not of type 'Object'`
-      )
-    this.addGene(Essence)
-    this.#userPool.addGene("Date", cbkIsDate)
-
-    /*========================================================================*/
+  parse(literal, parent, name) {
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
         name === undefined
           ? "undefined"
           : typeof name == "symbol"
-          ? "_Symbol_"
+          ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
           : name
       let literal_x =
         literal === undefined
@@ -2239,21 +2325,27 @@ class Essence extends GenePool {
           ? JSON.stringify(literal, null, 4)
           : flatten(literal)
       let specLit_x =
-        literal != undefined ? flatten(literal[Essence.#SPEC_KEY]) : "undefined"
+        literal != undefined ? flatten(literal[this.SPEC_KEY]) : "undefined"
       let line_x = ""
       if (parent == undefined)
         line_x = "----------------------------------------------------"
       aut(
-        `START Essence ---------  ${name_x}  ${line_x}---------\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
+        `START Essence parse----  ${name_x}  ${line_x}---------\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
         lime
       )
     }
-    /*========================================================================*/
-
+    if (parent != undefined && !this.isA(parent, GenePool))
+      throw new TypeError(
+        `function 'Essence.parse'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
+      )
+    if (literal != undefined && typeof literal != "object")
+      throw new TypeError(
+        `function 'Essence.parse'${NL}1st parameter '${literal}' is not of type 'Object'`
+      )
     let un
     let p = parent
     let specLit = {}
-    if (literal != un) specLit = literal[Essence.#SPEC_KEY]
+    if (literal != un) specLit = literal[this.#SPEC_KEY]
     if (typeof specLit == "boolean") {
       specLit = literal
       specLit["FLAT"] = true
@@ -2310,14 +2402,13 @@ class Essence extends GenePool {
     hide(this, l, s, "DEFAULT", this.TYPE, un, Essence.#DEFAULT_DEFT, un, n)
     hide(this, l, s, "VALUE", this.TYPE, un, Essence.#VALUE_DEFT, un, n)
     hide(this, l, s, "DEFAULTS", "Object", un, Essence.#DEFAULTS_DEFT, un, n)
-    if (literal != un) delete literal[Essence.#SPEC_KEY]
-    /*========================================================================*/
+    if (literal != un) delete literal[this.#SPEC_KEY]
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
         name === undefined
           ? "undefined"
           : typeof name == "symbol"
-          ? "_Symbol_"
+          ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
           : name
       let literal_x =
         literal === undefined
@@ -2367,15 +2458,14 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
         lime
       )
       aut(
-        `ENDE Essence ---------  ${name_x}  \
+        `ENDE Essence parse----  ${name_x}  \
 --------------------------------------------------------------`,
         lime
       )
     }
-    /*========================================================================*/
   }
   #validateOrInform(value, type, name) {
-    let ok = value === undefined || this.#userPool.isA(value, type)
+    let ok = value === undefined || this.#specificationPool.isA(value, type)
     if (!ok) {
       let errObj = {}
       errObj.name = name
@@ -2521,10 +2611,12 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
   static test(outputObj) {
     let _ = null
     if(_ = new TestSuite("Essence", outputObj)) {
+      _.run(getterSPEC_KEYTest)
+      _.run(getterSpecificationPoolTest)
       _.run(getterEssencesTest)
-      _.run(getterSpecKeyTest)
       _.run(constructorTest)
       _.run(isATest)
+      _.run(parseTest)
       _.run(setDoNotParseTest)
       _.run(doParseTest)
       _.run(removeDoNotParseTest)
@@ -2532,60 +2624,110 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.destruct()
       _ = null
     }
-    function constructorTest() {
-      let un
-      _.assert(1,_tryConstruct1,{__SPEC: {RENDER:true}},"Should construct")
-      _.assert(2,_tryConstruct1,{__SPEC: {IGNORE:true}},"Should construct")
-      _.assert(3,_tryConstruct1,{__SPEC: {ONCE:true}},"Should construct")
-      _.assert(4,_tryConstruct1,{__SPEC: {FLAT:true}},"Should construct")
-      _.assert(5,_tryConstruct1,{__SPEC: {LOCAL:true}},"Should construct")
-      _.assert(6,_tryConstruct1,{__SPEC: {REPEAT:true}},"Should construct")
-      _.assert(7,_tryConstruct1,{__SPEC: {TYPE:"Boolean"}},"Should construct")
-      _.assert(8,_tryConstruct1,{__SPEC: {DEFAULT:""}},"Should construct")
-      _.assert(9,_tryConstruct1,{__SPEC: {VALUE:""}},"Should construct")
-      _.assert(10,_tryConstruct1,{__SPEC: {NO_SPEC_KEY:""}},"Should construct")
-      _.assert(11,_tryConstruct1,{__SPEC: {RENDER:"abc"}},"Should construct")
-      _.assert(12,_tryConstruct1,{__SPEC: {IGNORE:"abc"}},"Should construct")
-      _.assert(13,_tryConstruct1,{__SPEC: {ONCE:"abc"}},"Should construct")
-      _.assert(14,_tryConstruct1,{__SPEC: {FLAT:"abc"}},"Should construct")
-      _.assert(15,_tryConstruct1,{__SPEC: {LOCAL:"abc"}},"Should construct")
-      _.assert(16,_tryConstruct1,{__SPEC: {REPEAT:"abc"}},"Should construct")
-      _.assert(17,_tryConstruct1,{__SPEC: {TYPE:false}},"Should construct")
-      _.assert(18,_tryConstruct1,{__SPEC: {DEFAULT:false}},"Should construct")
-      _.assert(19,_tryConstruct1,{__SPEC: {VALUE:false}},"Should construct")
-      let wrong1 = new Essence({__SPEC: {RENDER:"abc"}},un,"Essence:constructorTestWrong1")
-      let wrong2 = new Essence({__SPEC: {IGNORE:"abc"}},un,"Essence:constructorTestWrong2")
-      let wrong3 = new Essence({__SPEC: {ONCE:"abc"}},un,"Essence:constructorTestWrong3")
-      let wrong4 = new Essence({__SPEC: {FLAT:"abc"}},un,"Essence:constructorTestWrong4")
-      let wrong5 = new Essence({__SPEC: {LOCAL:"abc"}},un,"Essence:constructorTestWrong5")
-      let wrong6 = new Essence({__SPEC: {REPEAT:"abc"}},un,"Essence:constructorTestWrong6")
-      let wrong7 = new Essence({__SPEC: {TYPE:false}},un,"Essence:constructorTestWrong7")
-      let wrong8 = new Essence({__SPEC: {DEFAULT:false}},un,"Essence:constructorTestWrong8")
-      let wrong9 = new Essence({__SPEC: {VALUE:false}},un,"Essence:constructorTestWrong9")
-      let wrong10 = new Essence({__SPEC: {NO_SPEC_KEY:false}},un,"Essence:constructorTestWrong10")
-      _.bassert(21,wrong1.skipped[0]["name"]==="RENDER","RENDER should be skipped")
-      _.bassert(22,wrong2.skipped[0]["name"]==="IGNORE","IGNORE should be skipped")
-      _.bassert(23,wrong3.skipped[0]["name"]==="ONCE","ONCE should be skipped")
-      _.bassert(24,wrong4.skipped[0]["name"]==="FLAT","FLAT should be skipped")
-      _.bassert(25,wrong5.skipped[0]["name"]==="LOCAL","LOCAL should be skipped")
-      _.bassert(26,wrong6.skipped[0]["name"]==="REPEAT","REPEAT should be skipped")
-      _.bassert(27,wrong7.skipped[0]["name"]==="TYPE","TYPE should be skipped")
-      _.bassert(28,wrong8.skipped[0]["name"]==="DEFAULT","DEFAULT should be skipped")
-      _.bassert(29,wrong9.skipped[0]["name"]==="VALUE","VALUE should be skipped")
-      _.bassert(30,wrong10.skipped.length ===0,"unknown SPEC entries should be skipped silently")
-      let lit = {__SPEC: {RENDER:true},myValue:"22"}
-      _.bassert(31,lit.__SPEC != undefined,"just to show it is defined")
-      _.bassert(32,lit.myValue != undefined,"just to show it is defined")
-      let ess1 = new Essence(lit,un,"Essence:ConstructorTestEss1")
-      _.bassert(33,lit.__SPEC === undefined,"SPEC should no longer be defined")
-      _.bassert(34,lit.myValue != undefined,"just to show it is still defined")
+    function getterSPEC_KEYTest() {
+      let ess1 = new Essence()
+      let ess2 = new Essence("x")
+      _.bassert(1,ess1.SPEC_KEY == "_S_P_E_C_", "Default hardcoded SPEC key")
+      _.bassert(2,ess2.SPEC_KEY == "x", "x given as SPEC key")
+    }
+    function getterSpecificationPoolTest(){
+      let ess1 = new Essence("x")
+      let specPool = ess1.specificationPool
+      _.bassert(1,specPool.length() == 0, "no genes in specification pool")
 
-      _.shouldAssert(41,_tryConstruct3,{__SPEC: {RENDER:true}},new Error(),"Should not be constructed")
-      _.assert(42,_tryConstruct3,{__SPEC: {RENDER:true}},ess1,"Should be constructed")    
     }
     function getterEssencesTest() {
       let un
-      let ess0 = new Essence(un,un,"Essence:getterEssencesTest0")
+      let ess0 = new Essence(un)
+      _.bassert(1,ess0.ROOT===undefined,"Should not be defined after construction")
+      _.bassert(2,ess0.RENDER===undefined,"Should not be defined after construction")
+      _.bassert(3,ess0.IGNORE===undefined,"Should not be defined after construction")
+      _.bassert(4,ess0.ONCE===undefined,"Should not be defined after construction")
+      _.bassert(5,ess0.FLAT===undefined,"Should not be defined after construction")
+      _.bassert(6,ess0.LOCAL===undefined,"Should not be defined after construction")
+      _.bassert(7,ess0.REPEAT===undefined,"Should not be defined after construction")
+      _.bassert(8,ess0.TYPE===undefined,"Should not be defined after construction")
+      _.bassert(9,ess0.DEFAULT===undefined,"Should not be defined after construction")
+      _.bassert(10,ess0.VALUE===undefined,"Should not be defined after construction")
+      _.bassert(11,areEqual(ess0.DEFAULTSundefined),"Should not be defined after construction")
+      _.bassert(12,ess0.PARSE===undefined,"Should not be defined after construction")
+      _.bassert(13,ess0.INTERNAL===undefined,"Should not be defined after construction")
+      ess0.parse(un,un,"Essence.getterEssencesTest21")
+      _.bassert(21,ess0.ROOT===true,"Should always be defined")
+      _.bassert(22,ess0.RENDER===false,"Should always be defined")
+      _.bassert(23,ess0.IGNORE===false,"Should always be defined")
+      _.bassert(24,ess0.ONCE===false,"Should always be defined")
+      _.bassert(25,ess0.FLAT===false,"Should always be defined")
+      _.bassert(26,ess0.LOCAL===false,"Should always be defined")
+      _.bassert(27,ess0.REPEAT===false,"Should always be defined")
+      _.bassert(28,ess0.TYPE==="String","Should always be defined")
+      _.bassert(29,ess0.DEFAULT==="","Should always be defined")
+      _.bassert(30,ess0.VALUE==="","Should always be defined")
+      _.bassert(31,areEqual(ess0.DEFAULTS,{}),"Should always be defined")
+      _.bassert(32,ess0.PARSE===true,"Should always be defined")
+      _.bassert(33,ess0.INTERNAL===false,"Should always be defined")
+      let lit1 = {__SPEC: {RENDER:true,
+                           IGNORE:true,
+                           ONCE:true,
+                           FLAT:true,
+                           LOCAL:true,
+                           REPEAT:true,
+                           TYPE:"Boolean",
+                           DEFAULT:false,
+                           INTERNAL:true,
+                           VALUE:false}}
+      let ess1 = new Essence("__SPEC")
+      ess1.parse(lit1,un,"Essence:getterEssencesTest1")
+      _.bassert(31,ess1.ROOT===true,"Should be set automatically")
+      _.bassert(32,ess1.RENDER===false,"Should stay at default value")
+      _.bassert(33,ess1.IGNORE===false,"Should stay at default value")
+      _.bassert(34,ess1.ONCE===false,"Should stay at default value")
+      _.bassert(35,ess1.FLAT===false,"Should stay at default value")
+      _.bassert(36,ess1.LOCAL===false,"Should stay at default value")
+      _.bassert(37,ess1.REPEAT===false,"Should stay at default value")
+      _.bassert(38,ess1.TYPE==="String","Should stay at default value")
+      _.bassert(39,ess1.DEFAULT==="","Should stay at default value")
+      _.bassert(40,ess1.VALUE==="","Should stay at default value")
+      _.bassert(41,ess1.INTERNAL===false,"Should stay at default value")
+      _.bassert(42,ess1.PARSE===true,"Should stay at default value")
+      _.bassert(43,areEqual(ess1.DEFAULTS,{}),"Should stay at default value")      
+      let lit2 = {_S_P_E_C_: {RENDER:true,
+                           IGNORE:true,
+                           ONCE:true,
+                           FLAT:true,
+                           LOCAL:true,
+                           REPEAT:true,
+                           TYPE:"Boolean",
+                           DEFAULT:false,
+                           INTERNAL:true,
+                           VALUE:false}}
+      let ess2 = new Essence()
+      ess2.parse(lit2,un,"Essence:getterEssencesTest51")
+      _.bassert(50,ess2.SPEC_KEY == "_S_P_E_C_", "Reason that nothing works is not the SPEC key")
+      _.bassert(51,ess2.ROOT===true,"Should be set automatically")
+      _.bassert(52,ess2.RENDER===false,"Should stay at default value")
+      _.bassert(53,ess2.IGNORE===false,"Should stay at default value")
+      _.bassert(54,ess2.ONCE===false,"Should stay at default value")
+      _.bassert(55,ess2.FLAT===false,"Should stay at default value")
+      _.bassert(56,ess2.LOCAL===false,"Should stay at default value")
+      _.bassert(57,ess2.REPEAT===false,"Should stay at default value")
+      _.bassert(58,ess2.TYPE==="String","Should stay at default value")
+      _.bassert(59,ess2.DEFAULT==="","Should stay at default value")
+      _.bassert(60,ess2.VALUE==="","Should stay at default value")
+      _.bassert(61,ess2.INTERNAL===false,"Should stay at default value")
+      _.bassert(62,ess2.PARSE===true,"Should stay at default value")
+      _.bassert(63,areEqual(ess2.DEFAULTS,{}),"Should stay at default value")      
+    }
+    function constructorTest() {
+      let un
+      _.assert(1,_tryConstruct,un,"should construct with no parameter given")
+      _.assert(2,_tryConstruct,1,"should construct with number parameter")
+      _.assert(3,_tryConstruct,"name","should construct with string parameter")
+    }
+    function parseTest() {
+      let un
+      let ess0 = new Essence()
+      ess0.parse(un,un,"Essence parseTest1")
       _.bassert(1,ess0.ROOT===true,"Should always be defined")
       _.bassert(2,ess0.RENDER===false,"Should always be defined")
       _.bassert(3,ess0.IGNORE===false,"Should always be defined")
@@ -2599,7 +2741,7 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(11,areEqual(ess0.DEFAULTS,{}),"Should always be defined")
       _.bassert(12,ess0.PARSE===true,"Should always be defined")
       _.bassert(13,ess0.INTERNAL===false,"Should always be defined")
-      let lit1 = {__SPEC: {RENDER:true,
+      let lit1 = {_S_P_E_C_: {RENDER:true,
                            IGNORE:true,
                            ONCE:true,
                            FLAT:true,
@@ -2609,7 +2751,12 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
                            DEFAULT:false,
                            INTERNAL:true,
                            VALUE:false}}
-      let ess1 = new Essence(lit1,un,"Essence:getterEssencesTest1")
+      let ess1 = new Essence()     
+      _.bassert(20,ess1.SPEC_KEY=="_S_P_E_C_","Just to assure, we have correct SPEC KEY")
+      ess1.specificationPool.addGene("String", cbkTypeOfLc)
+      ess1.specificationPool.addGene("Boolean", cbkTypeOfLc)
+        
+      ess1.parse(lit1,un,"Essence:getterEssencesTest1")
       _.bassert(21,ess1.ROOT===true,"Should always be defined")
       _.bassert(22,ess1.RENDER===true,"Should be set to literal value")
       _.bassert(23,ess1.IGNORE===true,"Should be set to literal value")
@@ -2622,64 +2769,24 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(30,ess1.VALUE===false,"Should be set to literal value")
       _.bassert(31,ess1.INTERNAL===true,"Should be set to literal value")
       _.bassert(32,ess1.PARSE===true,"Should stay at default value")
-      _.bassert(33,areEqual(ess1.DEFAULTS,{}),"Has an extra test")
-      let ess2 = new Essence(undefined,ess1,"Essence:getterEssencesTest2")
-      _.bassert(41,ess2.ROOT===false,"Should always be defined")
-      _.bassert(42,ess2.RENDER===true,"Should be set to parent value")
-      _.bassert(43,ess2.IGNORE===true,"Should be set to parent value")
-      _.bassert(44,ess2.ONCE===false,"Should be set to default value")
-      _.bassert(45,ess2.FLAT===false,"Should be set to default value")
-      _.bassert(46,ess2.LOCAL===true,"Should be set to parent value")
-      _.bassert(47,ess2.REPEAT===false,"Should be set to default value")
-      _.bassert(48,ess2.TYPE==="Boolean","Should be set to parent value")
-      _.bassert(49,ess2.DEFAULT==="","Should be set to default value")
-      _.bassert(50,ess2.VALUE==="","Should be set to default value")
-      _.bassert(51,ess2.INTERNAL===false,"Should be set to default value")
-      _.bassert(52,ess1.PARSE===true,"Should stay at default value")
-      _.bassert(53,areEqual(ess2.DEFAULTS,{}),"Has an extra test")
-      let lit3 = {__SPEC: {RENDER:true,
-        IGNORE:true,
-        ONCE:true,
-        FLAT:true,
-        LOCAL:true,
-        REPEAT:true,
-        TYPE:"Boolean",
-        DEFAULT:false,
-        INTERNAL:true,
-        PARSE:false,
-        VALUE:false}}
-      let ess3 = new Essence(lit3,un,"Essence:getterEssencesTest3")
-      _.bassert(61,ess3.ROOT===undefined,"No Essences should be added")
-      _.bassert(62,ess3.RENDER===undefined,"No Essences should be added")
-      _.bassert(63,ess3.IGNORE===undefined,"No Essences should be added")
-      _.bassert(64,ess3.ONCE===undefined,"No Essences should be added")
-      _.bassert(65,ess3.FLAT===undefined,"No Essences should be added")
-      _.bassert(66,ess3.LOCAL===undefined,"No Essences should be added")
-      _.bassert(67,ess3.REPEAT===undefined,"No Essences should be added")
-      _.bassert(68,ess3.TYPE===undefined,"No Essences should be added")
-      _.bassert(69,ess3.DEFAULT===undefined,"No Essences should be added")
-      _.bassert(70,ess3.VALUE===undefined,"No Essences should be added")
-      _.bassert(71,ess3.INTERNAL===undefined,"No Essences should be added")
-      _.bassert(72,ess3.PARSE===undefined,"No Essences should be added")
-      _.bassert(73,ess3.DEFAULTS===undefined,"No Essences should be added")
-    }
-    function getterSpecKeyTest() {
-      _.bassert(1,typeof(Essence.SPEC_KEY)==="string","Should be a string")
-    }
+      _.bassert(33,areEqual(ess1.DEFAULTS,{}),"Has an extra test") 
+           
+      _.shouldAssert(40,_tryParse,ess1,{}, new Error(),un,"Error no allowed parent")
+      _.shouldAssert(41,_tryParse,ess1,"string", un,un,"String no allowed literal")
+    }    
     function isATest() {
       let un
-      let ess1 = new Essence(un,un,"Essence:isATest1")
+      let ess1 = new Essence(un)
       let gn1 = new Gene("abc")
       // Object, Gene, GenePool, Essence added for each Essence instance
       _.bassert(1,ess1.isA(ess1,Essence),"Essence should be Essence")
-      _.bassert(2,ess1.isA(ess1,GenePool),"Essence should be GenePool")
-      _.bassert(3,ess1.isA(ess1,Object),"Essence should be Object")
-      _.bassert(4,ess1.isA(gn1,Object),"Gene should be Object")
-      _.bassert(5,ess1.isA(gn1,Gene),"Gene should be Gene")
-      _.bassert(6,!ess1.isA(ess1,Gene),"Essence should not be Gene")
-      _.bassert(7,!ess1.isA(gn1,GenePool),"Gene should not be GenePool")
-      _.bassert(8,!ess1.isA(gn1,Essence),"Gene should not be Essence")
-
+      _.bassert(3,ess1.isA(ess1,GenePool),"Essence should be GenePool")
+      _.bassert(4,ess1.isA(ess1,Object),"Essence should be Object")
+      _.bassert(5,ess1.isA(gn1,Object),"Gene should be Object")
+      _.bassert(6,ess1.isA(gn1,Gene),"Gene should be Gene")
+      _.bassert(7,!ess1.isA(ess1,Gene),"Essence should not be Gene")
+      _.bassert(8,!ess1.isA(gn1,GenePool),"Gene should not be GenePool")
+  
       _.bassert(11,!ess1.isA(new Error(),Error),"should return false for Error, as not in pool")
       _.bassert(12,!ess1.isA("String",String),"should return false for string, as not in pool")
       _.bassert(13,!ess1.isA("String","String"),"should return false for string, as not in pool")
@@ -2758,7 +2865,7 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(4,areEqual(lit4,exp4),"PARSE should be removed from Spec, no other changes")
       _.bassert(5,areEqual(lit5,exp5),"PARSE should be removed from Spec, no other changes")
     }
-    function getEssencesTest() {
+    function getEssencesTest(){
       let un
       let lit1 = {__SPEC: {RENDER:true,
                            IGNORE:true,
@@ -2783,7 +2890,11 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(11,Essence.getINTERNAL(lit1) === undefined, "Hidden properties not added")
       _.bassert(12,Essence.getPARSE(lit1) === undefined, "Hidden properties not added")
       _.bassert(13,Essence.getDEFAULTS(lit1) === undefined, "Hidden properties not added")
-      new Essence(lit1,un,"Essence:getEssencesTest")
+      let ess1 = new Essence("__SPEC")
+      ess1.specificationPool.addGene("String", cbkTypeOfLc)
+      ess1.specificationPool.addGene("Boolean", cbkTypeOfLc)
+      ess1.specificationPool.addGene("Number", cbkTypeOfLc)
+      ess1.parse(lit1,un,"Essence:getEssencesTest20")
       _.bassert(20,lit1.__SPEC === undefined, "__SPEC properties removed")
       _.bassert(21,Essence.getROOT(lit1) === true, "Hidden properties added")
       _.bassert(22,Essence.getRENDER(lit1) === true, "Hidden properties added")
@@ -2810,7 +2921,11 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
         INTERNAL:true,
         PARSE:false,
         VALUE:"No Boolean"}}
-      new Essence(lit2,un,"Essence:getEssencesTest")
+        let ess2 = new Essence("__SPEC")
+        ess2.specificationPool.addGene("String", cbkTypeOfLc)
+        ess2.specificationPool.addGene("Boolean", cbkTypeOfLc)
+        ess2.specificationPool.addGene("Number", cbkTypeOfLc)
+        ess2.parse(lit2,un,"Essence:getEssencesTest40")
       _.bassert(40,typeof lit2.__SPEC === "object", "__SPEC not changed")
       _.bassert(41,Essence.getROOT(lit2) === undefined, "Hidden properties not added")
       _.bassert(42,Essence.getRENDER(lit2) === undefined, "Hidden properties not added")
@@ -2836,28 +2951,346 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(62,lit2["__SPEC"]["DEFAULT"] === "No Boolean","SPEC not changed") 
       _.bassert(63,lit2["__SPEC"]["INTERNAL"] === true,"SPEC not changed") 
       _.bassert(64,lit2["__SPEC"]["PARSE"] === false,"SPEC not changed") 
-      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed") 
+      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed")       
     }
-    function _tryConstruct1(arg1) { 
-      new Essence(arg1) 
+    function _tryConstruct(arg1) {
+      new Essence(arg1)
     }
-    function _tryConstruct3(arg1, arg2, arg3) { 
-      if(arg3 == undefined) arg3 = "EssenceTest"
-      new Essence(arg1, arg2, arg3) 
+    function _tryParse(me,arg1,arg2,arg3) {
+      me.parse(arg1,arg2,arg3)
     }
   }
 }
 registeredTests.push(Essence.test)
 registeredExceptions.push(
-  "new Essence({}, new Error())",
-  "new Essence('thisIsNotAnObject')"
+  "new Essence().parse({}, new Error())",
+  "new Essence().parse('thisIsNotAnObject')"
 )
 
 //#endregion Gene, Pool and Essence
 //#region code
+class AEssence extends Essence {
+  static #SPEC_KEY = GLOBAL__SPEC !== undefined ? GLOBAL__SPEC : "__SPEC"
+  /** SPEC key
+   * @type {String}
+   */
+  static get SPEC_KEY() {
+    return AEssence.#SPEC_KEY
+  }
 
-class BreadCrumbs extends Essence {
-  static sep = " \u00BB " // breadcrumbs separator (or \u2192 ?)
+  /**
+   * @classdesc
+   * First superclass in tree, which is foty specific.
+   * @mermaid
+   *  classDiagram
+   *      GenePool <|-- Essence
+   *      Essence <|-- AEssence
+   * @extends Essence
+   * @constructor
+   * @description
+   * Creates foty tokens.
+   * <p>
+   * Adds self to its pool with {@link GeneCallback|default callback}}.
+   * Adds {@link String}, {@link Number}, {@link Boolean},
+   * {@link Function} and {@link Object} with
+   * {@link GeneCallback|callback} {@link cbkTypeOfLc}
+   * and {@link Date} with {@link GeneCallback|callback} {@link cbkIsDate}.
+   * <p>
+   * Sets {@link Essence#SPEC_KEY|supers SPEC_KEY} to {@link AEssence.SPEC_KEY}
+   * and calls {@link Essence#parse|supers parse}, which creates the tokens.
+   * @param {(Undefined|Object)} literal
+   * @param {(Undefined|GenePool)} parent
+   * @param {(Undefined|String)} name - for checking tests
+   * @throws TypeError
+   */
+  constructor(literal, parent, name) {
+    super(AEssence.#SPEC_KEY)
+    if (parent != undefined && !this.isA(parent, GenePool))
+      throw new TypeError(
+        `function 'AEssence.constructor'${NL}2nd parameter '${parent}' is not of type 'GenePool'`
+      )
+    if (literal != undefined && typeof literal != "object")
+      throw new TypeError(
+        `function 'AEssence.constructor'${NL}1st parameter '${literal}' is not of type 'Object'`
+      )
+
+    this.addGene(AEssence)
+    this.specificationPool.addGene("String", cbkTypeOfLc)
+    this.specificationPool.addGene("Number", cbkTypeOfLc)
+    this.specificationPool.addGene("Boolean", cbkTypeOfLc)
+    this.specificationPool.addGene("Function", cbkTypeOfLc)
+    this.specificationPool.addGene("Object", cbkTypeOfLc)
+    this.specificationPool.addGene("Date", cbkIsDate)
+    this.parse(
+      literal,
+      parent,
+      typeof name == "symbol" ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++ : name
+    )
+  }
+
+  //prettier-ignore
+  static test(outputObj) {
+    let _ = null
+    if(_ = new TestSuite("AEssence", outputObj)) {
+      _.run(getterEssencesTest)
+      _.run(constructorTest)
+      _.run(isATest)
+      _.run(getEssencesTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      let un
+      _.assert(1,_tryConstruct1,{__SPEC: {RENDER:true}},"Should construct")
+      _.assert(2,_tryConstruct1,{__SPEC: {IGNORE:true}},"Should construct")
+      _.assert(3,_tryConstruct1,{__SPEC: {ONCE:true}},"Should construct")
+      _.assert(4,_tryConstruct1,{__SPEC: {FLAT:true}},"Should construct")
+      _.assert(5,_tryConstruct1,{__SPEC: {LOCAL:true}},"Should construct")
+      _.assert(6,_tryConstruct1,{__SPEC: {REPEAT:true}},"Should construct")
+      _.assert(7,_tryConstruct1,{__SPEC: {TYPE:"Boolean"}},"Should construct")
+      _.assert(8,_tryConstruct1,{__SPEC: {DEFAULT:""}},"Should construct")
+      _.assert(9,_tryConstruct1,{__SPEC: {VALUE:""}},"Should construct")
+      _.assert(10,_tryConstruct1,{__SPEC: {NO_SPEC_KEY:""}},"Should construct")
+      _.assert(11,_tryConstruct1,{__SPEC: {RENDER:"abc"}},"Should construct")
+      _.assert(12,_tryConstruct1,{__SPEC: {IGNORE:"abc"}},"Should construct")
+      _.assert(13,_tryConstruct1,{__SPEC: {ONCE:"abc"}},"Should construct")
+      _.assert(14,_tryConstruct1,{__SPEC: {FLAT:"abc"}},"Should construct")
+      _.assert(15,_tryConstruct1,{__SPEC: {LOCAL:"abc"}},"Should construct")
+      _.assert(16,_tryConstruct1,{__SPEC: {REPEAT:"abc"}},"Should construct")
+      _.assert(17,_tryConstruct1,{__SPEC: {TYPE:false}},"Should construct")
+      _.assert(18,_tryConstruct1,{__SPEC: {DEFAULT:false}},"Should construct")
+      _.assert(19,_tryConstruct1,{__SPEC: {VALUE:false}},"Should construct")
+      let wrong1 = new AEssence({__SPEC: {RENDER:"abc"}},un,"AEssence:constructorTestWrong1")
+      let wrong2 = new AEssence({__SPEC: {IGNORE:"abc"}},un,"AEssence:constructorTestWrong2")
+      let wrong3 = new AEssence({__SPEC: {ONCE:"abc"}},un,"AEssence:constructorTestWrong3")
+      let wrong4 = new AEssence({__SPEC: {FLAT:"abc"}},un,"AEssence:constructorTestWrong4")
+      let wrong5 = new AEssence({__SPEC: {LOCAL:"abc"}},un,"AEssence:constructorTestWrong5")
+      let wrong6 = new AEssence({__SPEC: {REPEAT:"abc"}},un,"AEssence:constructorTestWrong6")
+      let wrong7 = new AEssence({__SPEC: {TYPE:false}},un,"AEssence:constructorTestWrong7")
+      let wrong8 = new AEssence({__SPEC: {DEFAULT:false}},un,"AEssence:constructorTestWrong8")
+      let wrong9 = new AEssence({__SPEC: {VALUE:false}},un,"AEssence:constructorTestWrong9")
+      let wrong10 = new AEssence({__SPEC: {NO_SPEC_KEY:false}},un,"AEssence:constructorTestWrong10")
+      _.bassert(21,wrong1.skipped[0]["name"]==="RENDER","RENDER should be skipped")
+      _.bassert(22,wrong2.skipped[0]["name"]==="IGNORE","IGNORE should be skipped")
+      _.bassert(23,wrong3.skipped[0]["name"]==="ONCE","ONCE should be skipped")
+      _.bassert(24,wrong4.skipped[0]["name"]==="FLAT","FLAT should be skipped")
+      _.bassert(25,wrong5.skipped[0]["name"]==="LOCAL","LOCAL should be skipped")
+      _.bassert(26,wrong6.skipped[0]["name"]==="REPEAT","REPEAT should be skipped")
+      _.bassert(27,wrong7.skipped[0]["name"]==="TYPE","TYPE should be skipped")
+      _.bassert(28,wrong8.skipped[0]["name"]==="DEFAULT","DEFAULT should be skipped")
+      _.bassert(29,wrong9.skipped[0]["name"]==="VALUE","VALUE should be skipped")
+      _.bassert(30,wrong10.skipped.length ===0,"unknown SPEC entries should be skipped silently")
+      let lit = {__SPEC: {RENDER:true},myValue:"22"}
+      _.bassert(31,lit.__SPEC != undefined,"just to show it is defined")
+      _.bassert(32,lit.myValue != undefined,"just to show it is defined")
+      let ess1 = new AEssence(lit,un,"AEssence:ConstructorTestEss1")
+      _.bassert(33,lit.__SPEC === undefined,"SPEC should no longer be defined")
+      _.bassert(34,lit.myValue != undefined,"just to show it is still defined")
+  
+      _.shouldAssert(41,_tryConstruct3,{__SPEC: {RENDER:true}},new Error(),"Should not be constructed")
+      _.assert(42,_tryConstruct3,{__SPEC: {RENDER:true}},ess1,"Should be constructed")    
+    }
+    function getterEssencesTest() {
+      let un
+      let ess0 = new AEssence(un,un,"AEssence:getterEssencesTest0")
+      _.bassert(1,ess0.ROOT===true,"Should always be defined")
+      _.bassert(2,ess0.RENDER===false,"Should always be defined")
+      _.bassert(3,ess0.IGNORE===false,"Should always be defined")
+      _.bassert(4,ess0.ONCE===false,"Should always be defined")
+      _.bassert(5,ess0.FLAT===false,"Should always be defined")
+      _.bassert(6,ess0.LOCAL===false,"Should always be defined")
+      _.bassert(7,ess0.REPEAT===false,"Should always be defined")
+      _.bassert(8,ess0.TYPE==="String","Should always be defined")
+      _.bassert(9,ess0.DEFAULT==="","Should always be defined")
+      _.bassert(10,ess0.VALUE==="","Should always be defined")
+      _.bassert(11,areEqual(ess0.DEFAULTS,{}),"Should always be defined")
+      _.bassert(12,ess0.PARSE===true,"Should always be defined")
+      _.bassert(13,ess0.INTERNAL===false,"Should always be defined")
+      let lit1 = {__SPEC: {RENDER:true,
+                           IGNORE:true,
+                           ONCE:true,
+                           FLAT:true,
+                           LOCAL:true,
+                           REPEAT:true,
+                           TYPE:"Boolean",
+                           DEFAULT:false,
+                           INTERNAL:true,
+                           VALUE:false}}
+      let ess1 = new AEssence(lit1,un,"AEssence:getterEssencesTest1")
+      _.bassert(21,ess1.ROOT===true,"Should always be defined")
+      _.bassert(22,ess1.RENDER===true,"Should be set to literal value")
+      _.bassert(23,ess1.IGNORE===true,"Should be set to literal value")
+      _.bassert(24,ess1.ONCE===true,"Should be set to literal value")
+      _.bassert(25,ess1.FLAT===true,"Should be set to literal value")
+      _.bassert(26,ess1.LOCAL===true,"Should be set to literal value")
+      _.bassert(27,ess1.REPEAT===true,"Should be set to literal value")
+      _.bassert(28,ess1.TYPE==="Boolean","Should be set to literal value")
+      _.bassert(29,ess1.DEFAULT===false,"Should be set to literal value")
+      _.bassert(30,ess1.VALUE===false,"Should be set to literal value")
+      _.bassert(31,ess1.INTERNAL===true,"Should be set to literal value")
+      _.bassert(32,ess1.PARSE===true,"Should stay at default value")
+      _.bassert(33,areEqual(ess1.DEFAULTS,{}),"Has an extra test")
+      let ess2 = new AEssence(undefined,ess1,"AEssence:getterEssencesTest2")
+      _.bassert(41,ess2.ROOT===false,"Should always be defined")
+      _.bassert(42,ess2.RENDER===true,"Should be set to parent value")
+      _.bassert(43,ess2.IGNORE===true,"Should be set to parent value")
+      _.bassert(44,ess2.ONCE===false,"Should be set to default value")
+      _.bassert(45,ess2.FLAT===false,"Should be set to default value")
+      _.bassert(46,ess2.LOCAL===true,"Should be set to parent value")
+      _.bassert(47,ess2.REPEAT===false,"Should be set to default value")
+      _.bassert(48,ess2.TYPE==="Boolean","Should be set to parent value")
+      _.bassert(49,ess2.DEFAULT==="","Should be set to default value")
+      _.bassert(50,ess2.VALUE==="","Should be set to default value")
+      _.bassert(51,ess2.INTERNAL===false,"Should be set to default value")
+      _.bassert(52,ess1.PARSE===true,"Should stay at default value")
+      _.bassert(53,areEqual(ess2.DEFAULTS,{}),"Has an extra test")
+      let lit3 = {__SPEC: {RENDER:true,
+        IGNORE:true,
+        ONCE:true,
+        FLAT:true,
+        LOCAL:true,
+        REPEAT:true,
+        TYPE:"Boolean",
+        DEFAULT:false,
+        INTERNAL:true,
+        PARSE:false,
+        VALUE:false}}
+      let ess3 = new AEssence(lit3,un,"AEssence:getterEssencesTest3")
+      _.bassert(61,ess3.ROOT===undefined,"No Essences should be added")
+      _.bassert(62,ess3.RENDER===undefined,"No Essences should be added")
+      _.bassert(63,ess3.IGNORE===undefined,"No Essences should be added")
+      _.bassert(64,ess3.ONCE===undefined,"No Essences should be added")
+      _.bassert(65,ess3.FLAT===undefined,"No Essences should be added")
+      _.bassert(66,ess3.LOCAL===undefined,"No Essences should be added")
+      _.bassert(67,ess3.REPEAT===undefined,"No Essences should be added")
+      _.bassert(68,ess3.TYPE===undefined,"No Essences should be added")
+      _.bassert(69,ess3.DEFAULT===undefined,"No Essences should be added")
+      _.bassert(70,ess3.VALUE===undefined,"No Essences should be added")
+      _.bassert(71,ess3.INTERNAL===undefined,"No Essences should be added")
+      _.bassert(72,ess3.PARSE===undefined,"No Essences should be added")
+      _.bassert(73,ess3.DEFAULTS===undefined,"No Essences should be added")
+    }
+    function isATest() {
+      let un
+      let ess1 = new AEssence(un,un,"AEssence:isATest1")
+      let gn1 = new Gene("abc")
+      // Object, Gene, GenePool, AEssence added for each AEssence instance
+      _.bassert(1,ess1.isA(ess1,AEssence),"AEssence should be AEssence")
+      _.bassert(2,ess1.isA(ess1,Essence),"AEssence should be Essence")
+      _.bassert(3,ess1.isA(ess1,GenePool),"AEssence should be GenePool")
+      _.bassert(4,ess1.isA(ess1,Object),"AEssence should be Object")
+      _.bassert(5,ess1.isA(gn1,Object),"Gene should be Object")
+      _.bassert(6,ess1.isA(gn1,Gene),"Gene should be Gene")
+      _.bassert(7,!ess1.isA(ess1,Gene),"AEssence should not be Gene")
+      _.bassert(8,!ess1.isA(gn1,GenePool),"Gene should not be GenePool")
+      _.bassert(9,!ess1.isA(gn1,AEssence),"Gene should not be AEssence")
+  
+      _.bassert(11,!ess1.isA(new Error(),Error),"should return false for Error, as not in pool")
+      _.bassert(12,!ess1.isA("String",String),"should return false for string, as not in pool")
+      _.bassert(13,!ess1.isA("String","String"),"should return false for string, as not in pool")
+      _.bassert(14,!ess1.isA("String","string"),"should return false for string, as not in pool")
+      _.bassert(15,!ess1.isA("String",Object),"should return false as string is not an Object")
+    }
+    function getEssencesTest() {
+      let un
+      let lit1 = {__SPEC: {RENDER:true,
+                           IGNORE:true,
+                           ONCE:true,
+                           FLAT:true,
+                           LOCAL:true,
+                           REPEAT:true,
+                           TYPE:"Number",
+                           DEFAULT:126,
+                           VALUE:127 }}
+      _.bassert(0,lit1.__SPEC !== undefined, "__SPEC properties not removed")
+      _.bassert(1,AEssence.getROOT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(2,AEssence.getRENDER(lit1) === undefined, "Hidden properties not added")
+      _.bassert(3,AEssence.getIGNORE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(4,AEssence.getONCE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(5,AEssence.getFLAT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(6,AEssence.getLOCAL(lit1) === undefined, "Hidden properties not added")
+      _.bassert(7,AEssence.getREPEAT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(8,AEssence.getTYPE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(9,AEssence.getDEFAULT(lit1) === undefined, "Hidden properties not added")
+      _.bassert(10,AEssence.getVALUE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(11,AEssence.getINTERNAL(lit1) === undefined, "Hidden properties not added")
+      _.bassert(12,AEssence.getPARSE(lit1) === undefined, "Hidden properties not added")
+      _.bassert(13,AEssence.getDEFAULTS(lit1) === undefined, "Hidden properties not added")
+      new AEssence(lit1,un,"AEssence:getEssencesTest")
+      _.bassert(20,lit1.__SPEC === undefined, "__SPEC properties removed")
+      _.bassert(21,AEssence.getROOT(lit1) === true, "Hidden properties added")
+      _.bassert(22,AEssence.getRENDER(lit1) === true, "Hidden properties added")
+      _.bassert(23,AEssence.getIGNORE(lit1) === true, "Hidden properties added")
+      _.bassert(24,AEssence.getONCE(lit1) === true, "Hidden properties added")
+      _.bassert(25,AEssence.getFLAT(lit1) === true, "Hidden properties added")
+      _.bassert(26,AEssence.getLOCAL(lit1) === true, "Hidden properties added")
+      _.bassert(27,AEssence.getREPEAT(lit1) === true, "Hidden properties added")
+      _.bassert(28,AEssence.getTYPE(lit1) === "Number", "Hidden properties added")
+      _.bassert(29,AEssence.getDEFAULT(lit1) === 126, "Hidden properties added")
+      _.bassert(30,AEssence.getVALUE(lit1) === 127, "Hidden properties added")
+      _.bassert(31,AEssence.getINTERNAL(lit1) === false, "Hidden properties added")
+      _.bassert(32,AEssence.getPARSE(lit1) === true, "Hidden properties added")
+      _.bassert(31,areEqual(AEssence.getDEFAULTS(lit1),{}), "Hidden properties added")
+      _.bassert(32,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
+      let lit2 = {__SPEC: {RENDER:true,
+        IGNORE:true,
+        ONCE:true,
+        FLAT:true,
+        LOCAL:true,
+        REPEAT:true,
+        TYPE:"Boolean",
+        DEFAULT:"No Boolean",
+        INTERNAL:true,
+        PARSE:false,
+        VALUE:"No Boolean"}}
+      new AEssence(lit2,un,"AEssence:getEssencesTest")
+      _.bassert(40,typeof lit2.__SPEC === "object", "__SPEC not changed")
+      _.bassert(41,AEssence.getROOT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(42,AEssence.getRENDER(lit2) === undefined, "Hidden properties not added")
+      _.bassert(43,AEssence.getIGNORE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(44,AEssence.getONCE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(45,AEssence.getFLAT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(46,AEssence.getLOCAL(lit2) === undefined, "Hidden properties not added")
+      _.bassert(47,AEssence.getREPEAT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(48,AEssence.getTYPE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(49,AEssence.getDEFAULT(lit2) === undefined, "Hidden properties not added")
+      _.bassert(50,AEssence.getVALUE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(51,AEssence.getINTERNAL(lit2) === undefined, "Hidden properties not added")
+      _.bassert(52,AEssence.getPARSE(lit2) === undefined, "Hidden properties not added")
+      _.bassert(53,AEssence.getDEFAULTS(lit2) === undefined, "Hidden properties not added")
+      _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed") 
+      _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed") 
+      _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed") 
+      _.bassert(57,lit2["__SPEC"]["ONCE"] === true,"SPEC not changed") 
+      _.bassert(58,lit2["__SPEC"]["FLAT"] === true,"SPEC not changed") 
+      _.bassert(59,lit2["__SPEC"]["LOCAL"] === true,"SPEC not changed") 
+      _.bassert(60,lit2["__SPEC"]["REPEAT"] === true,"SPEC not changed") 
+      _.bassert(61,lit2["__SPEC"]["TYPE"] === "Boolean","SPEC not changed") 
+      _.bassert(62,lit2["__SPEC"]["DEFAULT"] === "No Boolean","SPEC not changed") 
+      _.bassert(63,lit2["__SPEC"]["INTERNAL"] === true,"SPEC not changed") 
+      _.bassert(64,lit2["__SPEC"]["PARSE"] === false,"SPEC not changed") 
+      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed") 
+    }
+    function _tryConstruct1(arg1) { 
+      new AEssence(arg1) 
+    }
+    function _tryConstruct3(arg1, arg2, arg3) { 
+      if(arg3 == undefined) arg3 = "EssenceTest"
+      new AEssence(arg1, arg2, arg3) 
+    }
+  }
+}
+registeredTests.push(AEssence.test)
+registeredExceptions.push(
+  "new AEssence({}, new Error())",
+  "new AEssence('thisIsNotAnObject')"
+)
+
+class BreadCrumbs extends AEssence {
+  static sep =
+    GLOBAL_BREADCRUMBS_SEPARATOR !== undefined
+      ? GLOBAL_BREADCRUMBS_SEPARATOR
+      : " \u00BB "
   #name
   #parent
   #literal
@@ -2897,9 +3330,10 @@ class BreadCrumbs extends Essence {
    * As shorthand {@link BC} can be used.
    * @mermaid
    *  classDiagram
-   *      GenePool <|-- Essence
-   *      Essence <|-- BreadCrumbs
-   * @extends Essence
+   *      GenePool <|-- AEssence
+   *      Essence <|-- AEssence
+   *      AEssence <|-- BreadCrumbs
+   * @extends AEssence
    * @constructor
    * @description
    * Creates new BreadCrumbs instance.
@@ -2921,7 +3355,11 @@ class BreadCrumbs extends Essence {
    * @param {(Undefined|BreadCrumbs)} parent
    */
   constructor(literal, name, parent) {
-    super(literal, parent, typeof name == "symbol" ? "_Symbol_" : name)
+    super(
+      literal,
+      parent,
+      typeof name == "symbol" ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++ : name
+    )
     this.addGene(BreadCrumbs)
     this.addGene("undefined", cbkTypeOf)
     this.addGene("null", cbkIsNull)
@@ -2939,7 +3377,8 @@ class BreadCrumbs extends Essence {
     this.#parent = parent
     this.throwIfUndefined(name, "name")
     this.throwIfNotOfType(name, "name", "(string|symbol)")
-    if (typeof name === "symbol") this.#name = "_Symbol_"
+    if (typeof name === "symbol")
+      this.#name = "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
     this.#name = name
     if (!this.isA(literal, "undefined"))
       this.throwIfNotOfType(literal, "literal", "object")
@@ -2968,7 +3407,13 @@ Skipped values are: `
     if (typeof this.#name === "string")
       return "°°°" + this.constructor.name + " " + this.#name
     else if (typeof this.#name === "symbol")
-      return "°°°" + this.constructor.name + " " + "_Symbol_"
+      return (
+        "°°°" +
+        this.constructor.name +
+        " " +
+        "_Symbol_" +
+        GLOBAL_SYMBOL_COUNTER++
+      )
   }
 
   /**
@@ -3150,7 +3595,7 @@ Skipped values are: `
       _.bassert(103,breadcrumbs.constructor === BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
     }
     function isATest() {
-      // Object, Gene, GenePool, Essence added for each Essence instance
+      // Object, Gene, GenePool, AEssence added for each AEssence instance
       // BreadCrumbs added for each BreadCrumbs instance
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
@@ -3185,6 +3630,13 @@ Skipped values are: `
       _.bassert(40,!bc.isA({},"array"),"should be registered and fail")
       _.bassert(41,!bc.isA({},"date"),"should be registered and fail")
       _.bassert(42,!bc.isA(null,"object"),"should be registered and fail")
+
+      _.bassert(51,bc.isA(new BreadCrumbs(un, "BreadCrumbs:NameIsATest"),BreadCrumbs),"BreadCrumbs instance should be a BreadCrumbs")
+      _.bassert(52,bc.isA(new BreadCrumbs(un, "BreadCrumbs:NameIsATest"),AEssence),"BreadCrumbs instance should be a AEssence")
+      _.bassert(53,bc.isA(new BreadCrumbs(un, "BreadCrumbs:NameIsATest"),Essence),"BreadCrumbs instance should be a Essence")
+      _.bassert(54,bc.isA(new BreadCrumbs(un, "BreadCrumbs:NameIsATest"),GenePool),"BreadCrumbs instance should be a GenePool")
+      _.bassert(55,bc.isA(new BreadCrumbs(un, "BreadCrumbs:NameIsATest"),Object),"BreadCrumbs instance should be a Object")
+
     }
     function toStringTest() {
       let str = new BreadCrumbs(undefined, "BrRrEadCrumbs:my name11").toString()
@@ -3246,9 +3698,11 @@ registeredExceptions.push(
 )
 
 class Setting extends BreadCrumbs {
-  static #ROOT_KEY = "/"
+  static #ROOT_KEY = GLOBAL_ROOT_KEY !== undefined ? GLOBAL_ROOT_KEY : "/"
   static #generalType =
-    "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
+    GLOBAL_GENERAL_TYPE !== undefined
+      ? GLOBAL_GENERAL_TYPE
+      : "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
   #workersTypeForChildren
   static #workers = {} // and managers
   #works = {}
@@ -3297,7 +3751,7 @@ class Setting extends BreadCrumbs {
    * null with callback cbkIsNull and
    * array with callback cbkIsNull to this pool.
    *<p>
-   * Essence:<br>
+   * AEssence:<br>
    * - Adds "String", "Number", "Boolean", "Function" and "Object" to user pool
    *   as Genes with callback cbkTypeOfLc.<br>
    * - Adds "Date" to user pool as Genes with callback cbkIsDate.
@@ -3309,15 +3763,15 @@ class Setting extends BreadCrumbs {
    * <i>In German, id do not understand it in English. I suppose, other people
    * would not understand it in my English, so not translated. </i>
    * <p>
-   * Essence:<br>
+   * AEssence:<br>
    * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
    *     Vergleicht den Typ des Wertes des SPEC_Eintrags im __SPEC Node mit
    *     einem hardcoded Typ ("String", "Boolean" oder "Object" werden zur
    *     Zeit verwendet) oder, für DEFAULT und VALUE, dem Typ der in TYPE
    *     gegeben wird. Für den Vergleich benutzt er den user pool.<br>
    *     Wenn der Typ nicht stimmt, verwirft er den Wert und verwendet den
-   *     Wert der Parent Essence, falls der SPEC_Eintrag inherited ist und
-   *     eine Parent Essence existiert, sonst den hardcoded Default Wert.<br>
+   *     Wert der Parent AEssence, falls der SPEC_Eintrag inherited ist und
+   *     eine Parent AEssence existiert, sonst den hardcoded Default Wert.<br>
    *     - Löscht alle SPEC_Einträge aus __SPEC Node.<br>
    *     - Löscht den Eintrag __SPEC aus dem ParentNode<br>
    *     - erzeugt für jeden SPEC_Eintrag (auch nicht angegebene) einen Wert
@@ -3331,7 +3785,7 @@ class Setting extends BreadCrumbs {
    *<p>
    * Setting:<br>
    * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
-   *    Wie Essence für Nodes.<br>
+   *    Wie AEssence für Nodes.<br>
    * Für Atoms:<br>
    *    Für spezifizierte Atoms: (bedeutet: Der Wert ist ein Object und es
    *                              enthält einen __SPEC Eintrag und
@@ -3344,12 +3798,13 @@ class Setting extends BreadCrumbs {
    *       erzeugt ein spezifiziertes Atom mit VALUE: Wert und __SPEC true
    *       (damit wird TYPE zu #generalType)
    *<p>
-   *    Dann wie Essence für Atoms.<br>
-   *    Danach wird VALUE aus der erzeugten Essence zum Wert des Atoms.<br>
+   *    Dann wie AEssence für Atoms.<br>
+   *    Danach wird VALUE aus der erzeugten AEssence zum Wert des Atoms.<br>
    * @mermaid
    *  classDiagram
    *      GenePool <|-- Essence
    *      Essence <|-- BreadCrumbs
+   *      AEssence <|-- BreadCrumbs
    *      BreadCrumbs <|-- Setting
    * @extends BreadCrumbs
    * @constructor
@@ -3361,7 +3816,7 @@ class Setting extends BreadCrumbs {
    * Recurses into {@link Object} entries and creates {@link Setting} instances
    * for them with <code>this</code> instance as parent and entry key as {@link key}.
    * <p>
-   * Creates {@link Essence} instances for all other entries.
+   * Creates {@link AEssence} instances for all other entries.
    * <p>
    * If {@link tp} is not correctly set for root frontmatter callbacks using
    * templater will throw. If no such callbacks are used, there is no problem.
@@ -3381,13 +3836,12 @@ class Setting extends BreadCrumbs {
     templater = undefined,
     add2parent = false
   ) {
-    /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
         key === undefined
           ? "undefined"
           : typeof key == "symbol"
-          ? "_Symbol_"
+          ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
           : key
       let literal_x =
         literal === undefined
@@ -3413,7 +3867,6 @@ class Setting extends BreadCrumbs {
         lime
       )
     }
-    /*========================================================================*/
     super(literal, key === undefined ? Setting.#ROOT_KEY : key, parent)
     this.addGene(Setting)
     this.throwIfUndefined(literal, "literal")
@@ -3428,13 +3881,12 @@ class Setting extends BreadCrumbs {
     if (add2parent && !this.ROOT) this.parent.#children[key] = this
 
     this.#parse()
-    /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
         this.name === undefined
           ? "undefined"
           : typeof this.name == "symbol"
-          ? "_Symbol_"
+          ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
           : this.name
       let literal_x =
         this.literal === undefined
@@ -3454,7 +3906,6 @@ class Setting extends BreadCrumbs {
         lime
       )
     }
-    /*========================================================================*/
   }
   #parse() {
     let un
@@ -3463,7 +3914,7 @@ class Setting extends BreadCrumbs {
         ? this.parent.#workersTypeForChildren
         : Setting.#generalType
     for (const [key, value] of Object.entries(this.literal)) {
-      if (!Essence.doParse(value)) continue
+      if (!AEssence.doParse(value)) continue
       if (Setting.#isWorkerKey(key)) {
         // constructs a workers instance
         this.#works[key] = new Setting.#workers[key](value, key, this)
@@ -3480,37 +3931,37 @@ class Setting extends BreadCrumbs {
   }
 
   /**
-   * Returns {@link Essence} for <code>atomic literal</code>,
+   * Returns {@link AEssence} for <code>atomic literal</code>,
    * <code>undefined</code> for <code>node literal</code>
    * <p>
-   * If value of {@link Essence#SPEC_KEY|__SPEC} property
+   * If value of {@link this.#SPEC_KEY|__SPEC} property
    * of {@link literal}[{@link key}] is
    * <code>undefined</code> or an {@link Object}
    * {@link literal} is <code>node literal</code>,
    * in any other case it is <code>atomic literal</code>
    * <p>
    * For atomic literals:<br>
-   * If value of {@link Essence#SPEC_KEY|__SPEC} is true,
-   * {@link Essence#TYPE|TYPE} property with value  {@link type}
+   * If value of {@link this.#SPEC_KEY|__SPEC} is true,
+   * {@link AEssence#TYPE|TYPE} property with value  {@link type}
    * is added to {@link literal}[{@link key}]. This only if {@link type}
    * is a <code>String</code>. Nothing is added in any other case.<br>
-   * A new {@link Essence} from (possibly changed, see above){@link literal}[{@link key}]
+   * A new {@link AEssence} from (possibly changed, see above){@link literal}[{@link key}]
    * is created with <code>this</code> instance as parent.<br>
-   * Value of {@link literal}[{@link key}] becomes {@link Essence#VALUE|VALUE} of
+   * Value of {@link literal}[{@link key}] becomes {@link AEssence#VALUE|VALUE} of
    * this newly created instance.
    * <p>
    * Returns <code>undefined</code> on wrong parameter types
    * <p><b>Simply said:</b> Changes value of {@link literal}[{@link key}]
-   * to given {@link Essence#VALUE|VALUE}.
+   * to given {@link AEssence#VALUE|VALUE}.
    * @param {Object} literal
    * @param {*} key
    * @param {String} type
-   * @returns {(Essence|Undefined)}
+   * @returns {(AEssence|Undefined)}
    */
   #essenceOfAtom(literal, key, type) {
     if (typeof literal != "object") return undefined
     let aEss = undefined
-    let specLit = literal[key][Essence.SPEC_KEY]
+    let specLit = literal[key][AEssence.SPEC_KEY]
     if (typeof specLit == "boolean") {
       if (
         specLit == true &&
@@ -3518,7 +3969,7 @@ class Setting extends BreadCrumbs {
         literal[key]["TYPE"] == undefined
       )
         literal[key]["TYPE"] = type
-      aEss = new Essence(literal[key], this, key)
+      aEss = new AEssence(literal[key], this, key)
       literal[key] = aEss.VALUE
     }
     return aEss
@@ -3526,7 +3977,7 @@ class Setting extends BreadCrumbs {
 
   /**
    * Iterator
-   * @returns {Essence}
+   * @returns {AEssence}
    */
   iterator() {
     /* don't know how to js document  [Symbol.iterator] otherwise*/
@@ -3549,7 +4000,7 @@ class Setting extends BreadCrumbs {
   /**
    * Returns entry for key
    * @param {(String|Symbol)} key
-   * @returns {(Essence|Setting)}
+   * @returns {(AEssence|Setting)}
    */
   at(key) {
     if (typeof key == "string") {
@@ -3594,13 +4045,14 @@ class Setting extends BreadCrumbs {
   }
   /**
    * Returns all frontmatter entries of this instance and descendants
+   * besides IGNORED ones.
    * @returns  {Object.<String.any>}
    */
   getFrontmatterYAML() {
     let frontmatterYAML = {}
     for (const [key, value] of Object.entries(this.#children)) {
       if (value.FLAT) {
-        if (!value.RENDER) frontmatterYAML[key] = value.VALUE
+        if (!value.RENDER && !value.IGNORE) frontmatterYAML[key] = value.VALUE
       } else Object.assign(frontmatterYAML, value.getFrontmatterYAML())
     }
     return frontmatterYAML
@@ -3608,13 +4060,14 @@ class Setting extends BreadCrumbs {
 
   /**
    * Returns all render entries of this instance and descendants
+   * besides IGNORED ones.
    * @returns  {Object.<String.any>}
    */
   getRenderYAML() {
     let renderYAML = {}
     for (const [key, value] of Object.entries(this.#children)) {
       if (value.FLAT) {
-        if (value.RENDER) renderYAML[key] = value.VALUE
+        if (value.RENDER && !value.IGNORE) renderYAML[key] = value.VALUE
       } else Object.assign(renderYAML, value.getRenderYAML())
     }
     return renderYAML
@@ -3757,7 +4210,7 @@ class Setting extends BreadCrumbs {
       _.bassert(104,setting.constructor === Setting,"the constructor property is not 'Setting'")
     }
     function isATest() {
-      // Object, Gene, GenePool, Essence added for each Essence instance
+      // Object, Gene, GenePool, AEssence added for each AEssence instance
       // BreadCrumbs added for each BreadCrumbs instance
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
@@ -3766,10 +4219,13 @@ class Setting extends BreadCrumbs {
       let setting1 = new Setting({},"Setting:NameIsATest",un)
       _.bassert(1,setting1.isA(setting1,"object"), "'" + setting1 + "' should be a " + "object")
       _.bassert(2,setting1.isA(setting1,Object), "'" + setting1 + "' should be a " + "Object")
-      _.bassert(3,setting1.isA(setting1,BreadCrumbs), "'" + setting1 + "' should be a " + "BreadCrumbs")
-      _.bassert(4,setting1.isA(setting1,Setting), "'" + setting1 + "' should be a " + "Setting")
-      _.bassert(5,!setting1.isA(setting1,Error), "'" + setting1 + "' should not be a " + "Error")
-      _.bassert(7,!setting1.isA(setting1,Gene), "'" + setting1 + "' should not be a " + "Gene")
+      _.bassert(3,setting1.isA(setting1,GenePool), "'" + setting1 + "' should be a " + "GenePool")
+      _.bassert(4,setting1.isA(setting1,Essence), "'" + setting1 + "' should be a " + "Essence")
+      _.bassert(5,setting1.isA(setting1,AEssence), "'" + setting1 + "' should be a " + "AEssence")
+      _.bassert(6,setting1.isA(setting1,BreadCrumbs), "'" + setting1 + "' should be a " + "BreadCrumbs")
+      _.bassert(7,setting1.isA(setting1,Setting), "'" + setting1 + "' should be a " + "Setting")
+      _.bassert(8,!setting1.isA(setting1,Error), "'" + setting1 + "' should not be a " + "Error")
+      _.bassert(9,!setting1.isA(setting1,Gene), "'" + setting1 + "' should not be a " + "Gene")
     }
     function toStringTest() {
       let un
@@ -4084,7 +4540,7 @@ class Setting extends BreadCrumbs {
         h: undefined,
        }
       if(false){
-      let ess0 = new Essence({},un,"atomsTest")
+      let ess0 = new AEssence({},un,"atomsTest")
       console.log(`ess0: '${ess0}'`) 
       console.log(`ess0.DEFAULT: '${ess0.DEFAULT}'`) 
       console.log(`ess0.DEFAULTS: '${ess0.DEFAULTS}'`) 
@@ -4356,9 +4812,16 @@ registeredExceptions.push(
   "new Setting()"
 )
 //  #region workers
+
 class DialogWorker extends Setting {
-  static #KEY = "__DIALOG_SETTINGS"
-  static #localType = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
+  static #KEY =
+    GLOBAL_DIALOG_WORKER_KEY !== undefined
+      ? GLOBAL_DIALOG_WORKER_KEY
+      : "__DIALOG_SETTINGS"
+  static #localType =
+    GLOBAL_DIALOG_TYPE !== undefined
+      ? GLOBAL_DIALOG_TYPE
+      : "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
   /**
    * Key which this worker will handle
    * @type {String}
@@ -4428,7 +4891,7 @@ class DialogWorker extends Setting {
       _.bassert(104,dlgMan.constructor === DialogWorker,"the constructor property is not 'DialogWorker'")
     }
     function isATest() {
-      // Object, Gene, GenePool, Essence added for each Essence instance
+      // Object, Gene, GenePool, AEssence added for each AEssence instance
       // BreadCrumbs added for each BreadCrumbs instance
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
@@ -4502,8 +4965,14 @@ registeredExceptions.push(
 )
 
 class LocalizationWorker extends Setting {
-  static #KEY = "__TRANSLATE"
-  static #localType = "(String|Array.<String>|Array.<Array.<String>>)"
+  static #KEY =
+    GLOBAL_LOCALIZATION_WORKER_KEY !== undefined
+      ? GLOBAL_LOCALIZATION_WORKER_KEY
+      : "__TRANSLATE"
+  static #localType =
+    GLOBAL_LOCALIZATION_TYPE !== undefined
+      ? GLOBAL_LOCALIZATION_TYPE
+      : "(String|Array.<String>|Array.<Array.<String>>)"
   static #defaultLang = "en"
   /** Key which this worker will handle
    * @type {String}
@@ -4640,7 +5109,7 @@ class LocalizationWorker extends Setting {
       _.bassert(104,locMan.constructor === LocalizationWorker,"the constructor property is not 'LocalizationWorker'")
     }
     function isATest() {
-      // Object, Gene, GenePool, Essence added for each Essence instance
+      // Object, Gene, GenePool, AEssence added for each AEssence instance
       // BreadCrumbs added for each BreadCrumbs instance
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
@@ -4779,9 +5248,14 @@ registeredExceptions.push(
 )
 
 class TypesManager extends Setting {
-  static #KEY = "__NOTE_TYPES"
+  static #KEY =
+    GLOBAL_TYPES_MANAGER_KEY !== undefined
+      ? GLOBAL_TYPES_MANAGER_KEY
+      : "__NOTE_TYPES"
   static #localType =
-    "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
+    GLOBAL_TYPES_TYPE !== undefined
+      ? GLOBAL_TYPES_TYPE
+      : "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
   /** Key which this worker will handle
    * @type {String}
    */
@@ -4800,13 +5274,12 @@ class TypesManager extends Setting {
    * @param {Setting} parent
    */
   constructor(literal, key, parent) {
-    /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
         key === undefined
           ? "undefined"
           : typeof key == "symbol"
-          ? "_Symbol_"
+          ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
           : key
       let literal_x =
         literal === undefined
@@ -4817,7 +5290,7 @@ class TypesManager extends Setting {
           ? JSON.stringify(literal, null, 4)
           : flatten(literal)
       let specLit_x =
-        literal != undefined ? flatten(literal[Essence.SPEC_KEY]) : "undefined"
+        literal != undefined ? flatten(literal[AEssence.SPEC_KEY]) : "undefined"
       if (parent == undefined)
         aut(
           `========================================================================================`,
@@ -4832,7 +5305,6 @@ class TypesManager extends Setting {
         pink
       )
     }
-    /*========================================================================*/
     parent.workersTypeForChildren = TypesManager.#localType
     TypesManager.#setDoNotParse(literal)
     super(literal, key, parent)
@@ -4843,13 +5315,12 @@ class TypesManager extends Setting {
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
     this.#parse()
-    /*========================================================================*/
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
         this.name === undefined
           ? "undefined"
           : typeof this.name == "symbol"
-          ? "_Symbol_"
+          ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
           : this.name
       let literal_x =
         this.literal === undefined
@@ -4861,7 +5332,7 @@ class TypesManager extends Setting {
           : flatten(this.literal)
       let specLit_x =
         this.literal != undefined
-          ? flatten(this.literal[Essence.SPEC_KEY])
+          ? flatten(this.literal[AEssence.SPEC_KEY])
           : "undefined"
       aut(
         `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE TypesManager ======  ${name_x}  \
@@ -4869,25 +5340,24 @@ class TypesManager extends Setting {
         pink
       )
     }
-    /*========================================================================*/
   }
   #parse() {
     if (!this.REPEAT) return
     for (const [key, value] of Object.entries(this.literal)) {
       if (key == "DEFAULTS") continue
-      Essence.removeDoNotParse(value)
+      AEssence.removeDoNotParse(value)
       new Setting(value, key, this, undefined, true)
     }
   }
   static #setDoNotParse(literal) {
     if (typeof literal != "object" || literal == null) return
-    let spec = literal[Essence.SPEC_KEY]
+    let spec = literal[AEssence.SPEC_KEY]
     if (typeof spec != "object" || spec == null) return
 
     if (literal["DEFAULTS"] != undefined && spec["REPEAT"] === true) {
       for (const [key, value] of Object.entries(literal)) {
-        if (key == Essence.SPEC_KEY || key == "DEFAULTS") continue
-        Essence.setDoNotParse(value)
+        if (key == AEssence.SPEC_KEY || key == "DEFAULTS") continue
+        AEssence.setDoNotParse(value)
       }
     }
   }
@@ -4931,7 +5401,7 @@ class TypesManager extends Setting {
       _.bassert(104,typesMan.constructor === TypesManager,"the constructor property is not 'TypesManager'")
     }
     function isATest() {
-      // Object, Gene, GenePool, Essence added for each Essence instance
+      // Object, Gene, GenePool, AEssence added for each AEssence instance
       // BreadCrumbs added for each BreadCrumbs instance
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
@@ -5004,6 +5474,7 @@ registeredExceptions.push(
 )
 //  #endregion workers
 //#endregion code
+
 /** exported function.
  * <p>
  * Name does not matter for templater, but if named 'main' interferes with jsdoc.
@@ -5023,21 +5494,10 @@ async function foty(tp, app) {
   }
   test(testYAML)
   try {
-    // let lit = onne
-    // let setting = new Setting(lit, undefined, undefined, tp)
-    // frontmatterYAML = setting.getFrontmatterYAML()
-    // Object.assign(renderYAML, setting.getRenderYAML())
-    // for (const [key, val] of setting) {
-    //   //   if (!val.FLAT)
-    //   //     for (const [key2, val2] of val) {
-    //   //       vaut("   " + key2, val2.VALUE)
-    //   //     }
-    //   //   else vaut(key, val.VALUE)
-    //   //aut(key)
-    // }
-    // vaut('setting.at("a").at("A").VALUE', setting.at("a").at("A").VALUE)
-    // aut(setting.getValue("__TRANSLATE", "TYPE_PROMPT"))
-    // aut(this.literal["date_created"](this.tp))
+    let lit = onne
+    let setting = new Setting(lit, undefined, undefined, tp)
+    frontmatterYAML = setting.getFrontmatterYAML()
+    Object.assign(renderYAML, setting.getRenderYAML())
   } catch (e) {
     if (e instanceof FotyError) {
       let errYAML = {}
