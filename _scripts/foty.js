@@ -1260,9 +1260,10 @@ function testGlobals(outputObj) {
     _.bassert(1,flat0 == exp0, "empty object should be same as toString output")
   }
   function areEqualTest() {
+    let un
     let obj1 = {}
     let obj1_0 = {}
-    let obj1_1 = {a}
+    let obj1_1 = {un}
     let obj1_2 = {a:true}
     _.assert(1,_tryAreEqual,22,obj1,"any arguments allowed")
     _.assert(2,_tryAreEqual,obj1, "a","any arguments allowed")
@@ -1336,7 +1337,6 @@ function testGlobals(outputObj) {
     _.bassert(132,!areEqual(arr3, arr3_1),"arrays are not equal - see code")
     _.bassert(133,!areEqual(arr3, arr3_2),"arrays are not equal - see code")      
 
-    let un
     _.bassert(141,areEqual(un, undefined),"undefined is equal undefined")
     _.bassert(142,!areEqual(un, arr3),"undefined not equal array")
     _.bassert(143,!areEqual(arr3,un),"undefined not equal array")
