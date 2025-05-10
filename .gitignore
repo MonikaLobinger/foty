@@ -1,9 +1,6 @@
-/_resources_unused/
 /_resources/
-*-platzeins.*
-*-platzeinsu.*
-*Kopie von*
 *
+
 !LICENSE.html
 !.gitignore
 !README.md
@@ -12,8 +9,10 @@
 !/_vorlagen
 !/_vorlagen/atest_Vorlage.md
 !/_vorlagen/One_Vorlage.md
+!/_vorlagen/foty_Vorlage.md
 !/_scripts
 !/_scripts/foty.js
+!/_scripts/atest.js
 !/_scripts/jsdocconf.json
 !/jsdoccon*.js
 !/_scripts/onne.js

@@ -8,7 +8,7 @@
   let prevname   = "";
   let nextname   = "";
   let lastline   = "";
-  let results    = await tp.user.atest(tp, app); 
+  let results    = await tp.user.foty(tp, app); 
   for (const [key, value] of Object.entries(results)) {
     if(value == undefined) continue;
     if(key == "____") rendermode = true;
