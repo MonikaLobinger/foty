@@ -246,7 +246,11 @@ const TYPES = {
     isDiary: false,
     name_prompt: "Autornachname - Buchtitel",
   },
-  /*@convert*/ garten: {marker: "", isDiary: false, name_prompt: "Gartenthema"},
+  /*@convert*/ garten: {
+    marker: "", 
+    isDiary: false, 
+    name_prompt: "Gartenthema"
+  },
   /*@convert*/ gartentagebuch: {
     marker: "",
     isDiary: true,
@@ -3901,8 +3905,8 @@ class Setting extends BreadCrumbs {
           ? flatten(this.literal["__SPEC"])
           : "undefined"
       aut(
-        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE Setting =========  ${name_x}  \
-=============================================================`,
+        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE Setting =====\
+====  ${name_x}  =============================================================`,
         lime
       )
     }
@@ -5335,8 +5339,8 @@ class TypesManager extends Setting {
           ? flatten(this.literal[AEssence.SPEC_KEY])
           : "undefined"
       aut(
-        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE TypesManager ======  ${name_x}  \
-=========================================================`,
+        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE TypesManager ===\
+===  ${name_x}  =========================================================`,
         pink
       )
     }
