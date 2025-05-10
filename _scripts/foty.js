@@ -533,7 +533,7 @@ var DEBUG = false
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -3339,8 +3339,6 @@ class BreadCrumbs extends AEssence {
 
   /**
    * @classdesc Parsing tree superclass.
-   * <p>
-   * As shorthand {@link BC} can be used.
    * @mermaid
    *  classDiagram
    *      GenePool <|-- AEssence
@@ -3443,7 +3441,7 @@ Skipped values are: `
       if (this.isA(this.#parent, BreadCrumbs))
         breadcrumbs += this.#parent.toBreadcrumbs()
       else breadcrumbs += "(" + this.#parent + ")"
-      sep = BC.sep
+      sep = BreadCrumbs.sep
     }
     breadcrumbs += sep + this.#name
     return breadcrumbs
@@ -3660,7 +3658,7 @@ Skipped values are: `
       _.bassert(4,str.includes("BreadCrumbs"),"result does not contain class name")
     }
     function toBreadCrumbsTest() {
-      let sep = BC.sep
+      let sep = BreadCrumbs.sep
       let parent = new BreadCrumbs(undefined, "BreadCrumbs:parent1")
       let child = new BreadCrumbs(undefined, "BreadCrumbs:child1", parent)
       let grandChild = new BreadCrumbs(undefined, "BreadCrumbs:grandChild1", child)
@@ -3699,9 +3697,6 @@ Skipped values are: `
     }
   }
 }
-/**
- * shorthand for {@link BreadCrumbs} */
-var BC = BreadCrumbs
 registeredTests.push(BreadCrumbs.test)
 registeredExceptions.push(
   "new BreadCrumbs({},'goodName', new GenePool())",
