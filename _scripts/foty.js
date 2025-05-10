@@ -3721,12 +3721,26 @@ class Setting extends BreadCrumbs {
     Setting.#workers[workerClass.workerKey] = workerClass
   }
   /**
+   * Returns workersTypeForChildren 
+   * @type (Undefined|Setting)
+   */
+  get workersTypeForChildren() {
+    return this.#workersTypeForChildren
+  }
+  /**
    * Type to be used for workers children construction
    * @param {String} type
    * @type {String}
    */
   set workersTypeForChildren(type) {
     this.#workersTypeForChildren = type
+  }
+  /**
+   * Returns children 
+   * @type Object
+   */
+  get children() {
+    return this.#children
   }
   /**
    * Templater Object
@@ -3881,8 +3895,8 @@ class Setting extends BreadCrumbs {
       this.throwIfNotOfType(parent, "parent", Setting)
     this.#tp = this.ROOT ? templater : undefined
     if (!this.ROOT)
-      this.#workersTypeForChildren = this.parent.#workersTypeForChildren
-    if (add2parent && !this.ROOT) this.parent.#children[key] = this
+      this.#workersTypeForChildren = this.parent.workersTypeForChildren
+    if (add2parent && !this.ROOT) this.parent.children[key] = this
 
     this.#parse()
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
@@ -3914,8 +3928,8 @@ class Setting extends BreadCrumbs {
   #parse() {
     let un
     let type =
-      !this.ROOT && this.parent.#workersTypeForChildren !== undefined
-        ? this.parent.#workersTypeForChildren
+      !this.ROOT && this.parent.workersTypeForChildren !== undefined
+        ? this.parent.workersTypeForChildren
         : Setting.#generalType
     for (const [key, value] of Object.entries(this.literal)) {
       if (!AEssence.doParse(value)) continue
@@ -5595,7 +5609,6 @@ if (false) {
     soso: {VALUE: "naja", __SPEC: true, RENDER: false},
     c: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}},
   }
-
   let test_2 = {
     //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
     __DIALOG_SETTINGS: {
@@ -5613,7 +5626,6 @@ if (false) {
       msg: "ja ja",
     },
   }
-
   let test_4 = {
     __NOTE_TYPES: {
       //localType:(Number|String|Boolean|Array.<Number>|Array.<String>|
