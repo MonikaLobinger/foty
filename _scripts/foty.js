@@ -340,8 +340,9 @@ const TYPES = {
 //  #region onne => foty
 /**
  * Defaults
- * __DIALOG_SETTINGS: //hardcoded localType: (Number|Array.<Number>)
+ * __GENERAL_SETTINGS://hardcoded localType: (Number|String|Boolean)
  * __TRANSLATE:       //hardcoded localType: (String|Array.<String>|Array.<Array.<String>>)
+ * __DIALOG_SETTINGS: //hardcoded localType: (Number|Array.<Number>)
  * __NOTE_TYPES:  REPEAT: true
  * __FOLDER2TYPE: REPEAT: true
  * __SPEC:
@@ -378,6 +379,10 @@ const TYPES = {
  */
 //prettier-ignore
 let onne = {
+  __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
+  { 
+    LANGAUGE: "de",
+  },
   __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
   { 
     TYPE_PROMPT:         "Typ wählen",
@@ -448,22 +453,26 @@ const Dialog = {
   Ok: "Ok",
   Cancel: "Cancel",
 }
-// TypesManager
+// TypesWorker
 let GLOBAL_TYPES_MANAGER_KEY = "__NOTE_TYPES"
 let GLOBAL_TYPES_TYPE =
   "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
-
-// LocalizationWorker
-let GLOBAL_LOCALIZATION_WORKER_KEY = "__TRANSLATE"
-let GLOBAL_LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
 
 // DialogWorker
 let GLOBAL_DIALOG_WORKER_KEY = "__DIALOG_SETTINGS"
 let GLOBAL_DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
 
+// LocalizationWorker
+let GLOBAL_LOCALIZATION_WORKER_KEY = "__TRANSLATE"
+let GLOBAL_LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
+
+// GeneralWorker
+let GLOBAL_GENERAL_WORKER_KEY = "__GENERAL_SETTINGS"
+let GLOBAL_GENERAL_TYPE = "(Number|String|Boolean)"
+
 // Setting
 let GLOBAL_ROOT_KEY = "/"
-let GLOBAL_GENERAL_TYPE =
+let GLOBAL_OVERALL_TYPE =
   "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
 
 // BreadCrumbs
@@ -524,7 +533,7 @@ var DEBUG = false
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = false
+var TESTING = true
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -3704,8 +3713,8 @@ registeredExceptions.push(
 class Setting extends BreadCrumbs {
   static #ROOT_KEY = GLOBAL_ROOT_KEY !== undefined ? GLOBAL_ROOT_KEY : "/"
   static #generalType =
-    GLOBAL_GENERAL_TYPE !== undefined
-      ? GLOBAL_GENERAL_TYPE
+    GLOBAL_OVERALL_TYPE !== undefined
+      ? GLOBAL_OVERALL_TYPE
       : "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
   #workersTypeForChildren
   static #workers = {} // and managers
@@ -4831,21 +4840,21 @@ registeredExceptions.push(
 )
 //  #region workers
 
-class DialogWorker extends Setting {
+class GeneralWorker extends Setting {
   static #KEY =
-    GLOBAL_DIALOG_WORKER_KEY !== undefined
-      ? GLOBAL_DIALOG_WORKER_KEY
-      : "__DIALOG_SETTINGS"
+    GLOBAL_GENERAL_WORKER_KEY !== undefined
+      ? GLOBAL_GENERAL_WORKER_KEY
+      : "__GENERAL_SETTINGS"
   static #localType =
-    GLOBAL_DIALOG_TYPE !== undefined
-      ? GLOBAL_DIALOG_TYPE
-      : "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
+    GLOBAL_GENERAL_TYPE !== undefined
+      ? GLOBAL_GENERAL_TYPE
+      : "(Number|String|Boolean)"
   /**
    * Key which this worker will handle
    * @type {String}
    */
   static get workerKey() {
-    return DialogWorker.#KEY
+    return GeneralWorker.#KEY
   }
   /**
    * @classdesc For note types
@@ -4853,16 +4862,16 @@ class DialogWorker extends Setting {
    * @constructor
    * @description
    *
-   * Creates a DialogWorker instance
+   * Creates a GeneralWorker instance
    * @extends Setting
    * @param {Object} literal
    * @param {String} key
    * @param {Setting} parent
    */
   constructor(literal, key, parent) {
-    parent.workersTypeForChildren = DialogWorker.#localType
+    parent.workersTypeForChildren = GeneralWorker.#localType
     super(literal, key, parent)
-    this.addGene(DialogWorker)
+    this.addGene(GeneralWorker)
     // literal {(Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
     // parent {(Undefined|Setting)} checked by superclass
@@ -4871,9 +4880,9 @@ class DialogWorker extends Setting {
   }
 
   //prettier-ignore
-  static test(outputObj) { // DialogWorker
+  static test(outputObj) { // GeneralWorker
     let _ = null
-    if(_ = new TestSuite("DialogWorker", outputObj)) {
+    if(_ = new TestSuite("GeneralWorker", outputObj)) {
       _.run(constructorTest)
       _.run(isATest)
       _.run(toStringTest)
@@ -4883,103 +4892,103 @@ class DialogWorker extends Setting {
     }
     function constructorTest() {
       let un
-      let b = new BreadCrumbs(un, "DialogWorker:constructorTest", un)
-      let dlgMan0 = new DialogWorker({}, "DialogWorker:constructorTest1", new Setting({},"parent"))
-      _.assert(1,_tryConstruct,{},"DialogWorker:cTest1",new Setting({},"parent"),"should be created, all parameters ok")
-      _.shouldAssert(2,_tryConstruct,un,"DialogWorker:cTest2",new Setting({},"parent"),"should not be created, literal is undefined")
-      _.shouldAssert(3,_tryConstruct,22,"DialogWorker:cTest3",new Setting({},"parent"),"should not be created, literal is number")
-      _.shouldAssert(4,_tryConstruct,"literal","DialogWorker:cTest4",new Setting({},"parent"),"should not be created, literal is string")
-      _.shouldAssert(5,_tryConstruct,null,"DialogWorker:cTest5",new Setting({},"parent"),"should not be created, literal is null")
+      let b = new BreadCrumbs(un, "GeneralWorker:constructorTest", un)
+      let dlgMan0 = new GeneralWorker({}, "GeneralWorker:constructorTest1", new Setting({},"parent"))
+      _.assert(1,_tryConstruct,{},"GeneralWorker:cTest1",new Setting({},"parent"),"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"GeneralWorker:cTest2",new Setting({},"parent"),"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"GeneralWorker:cTest3",new Setting({},"parent"),"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","GeneralWorker:cTest4",new Setting({},"parent"),"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"GeneralWorker:cTest5",new Setting({},"parent"),"should not be created, literal is null")
       _.shouldAssert(6,_tryConstruct,{},un,new Setting({},"parent"),"should not be created, key is undefined")
       _.shouldAssert(7,_tryConstruct,{},22,new Setting({},"parent"),"should not be created, key is number")
       _.shouldAssert(8,_tryConstruct,{},{},new Setting({},"parent"),"should not be created, key is object")
       _.shouldAssert(9,_tryConstruct,{},b,new Setting({},"parent"),"should not be created, key is Object")
       _.assert(10,_tryConstruct,{},Symbol("a"),new Setting({},"parent"),"should be created, key is Symbol")
-      _.shouldAssert(11,_tryConstruct,{},"DialogWorker:cTest11",un,"should  not be created, undefined parent is not ok")
-      _.shouldAssert(12,_tryConstruct,{},"DialogWorker:cTest12",new Error(),"should not be be created, parent is Error")
-      _.shouldAssert(13,_tryConstruct,{},"DialogWorker:cTest13",{},"should not be be created, parent is object")
-      _.shouldAssert(14,_tryConstruct,{},"DialogWorker:cTest14","ring","should not be be created, parent is string")
-      _.shouldAssert(15,_tryConstruct,{},"DialogWorker:cTest15",22,"should not be be created, parent is number")
-      _.shouldAssert(16,_tryConstruct,{},"DialogWorker:cTest16",null,"should not be be created, parent is null")
-      _.shouldAssert(16,_tryConstruct,{},"DialogWorker:cTest16",b,"should not be be created, parent is BreadCrumbs")
-      let dlgMan = new DialogWorker({},"DialogWorker:constructorTest101", new Setting({},"parent"))
-      _.bassert(101,dlgMan instanceof Object,"'DialogWorker' has to be an instance of 'Object'")
-      _.bassert(102,dlgMan instanceof BreadCrumbs,"'DialogWorker' has to be an instance of 'BreadCrumbs'")
-      _.bassert(103,dlgMan instanceof DialogWorker,"'DialogWorker' has to be an instance of 'DialogWorker'")
-      _.bassert(104,dlgMan.constructor === DialogWorker,"the constructor property is not 'DialogWorker'")
+      _.shouldAssert(11,_tryConstruct,{},"GeneralWorker:cTest11",un,"should  not be created, undefined parent is not ok")
+      _.shouldAssert(12,_tryConstruct,{},"GeneralWorker:cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"GeneralWorker:cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"GeneralWorker:cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"GeneralWorker:cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"GeneralWorker:cTest16",null,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"GeneralWorker:cTest16",b,"should not be be created, parent is BreadCrumbs")
+      let dlgMan = new GeneralWorker({},"GeneralWorker:constructorTest101", new Setting({},"parent"))
+      _.bassert(101,dlgMan instanceof Object,"'GeneralWorker' has to be an instance of 'Object'")
+      _.bassert(102,dlgMan instanceof BreadCrumbs,"'GeneralWorker' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,dlgMan instanceof GeneralWorker,"'GeneralWorker' has to be an instance of 'GeneralWorker'")
+      _.bassert(104,dlgMan.constructor === GeneralWorker,"the constructor property is not 'GeneralWorker'")
     }
     function isATest() {
       // Object, Gene, GenePool, AEssence added for each AEssence instance
       // BreadCrumbs added for each BreadCrumbs instance
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
-      // DialogWorker added for each DialogWorker instance
-      let dlgMan1 = new DialogWorker({},"DialogWorker:NameIsATest",new Setting({},"parent"))
+      // GeneralWorker added for each GeneralWorker instance
+      let dlgMan1 = new GeneralWorker({},"GeneralWorker:NameIsATest",new Setting({},"parent"))
       _.bassert(1,dlgMan1.isA(dlgMan1,"object"), "'" + dlgMan1 + "' should be a " + "object")
       _.bassert(2,dlgMan1.isA(dlgMan1,Object), "'" + dlgMan1 + "' should be a " + "Object")
       _.bassert(3,dlgMan1.isA(dlgMan1,BreadCrumbs), "'" + dlgMan1 + "' should be a " + "BreadCrumbs")
       _.bassert(4,dlgMan1.isA(dlgMan1,Setting), "'" + dlgMan1 + "' should be a " + "Setting")
-      _.bassert(5,dlgMan1.isA(dlgMan1,DialogWorker), "'" + dlgMan1 + "' should be a " + "DialogWorker")
+      _.bassert(5,dlgMan1.isA(dlgMan1,GeneralWorker), "'" + dlgMan1 + "' should be a " + "GeneralWorker")
       _.bassert(6,!dlgMan1.isA(dlgMan1,Error), "'" + dlgMan1 + "' should not be a " + "Error")
       _.bassert(7,!dlgMan1.isA(dlgMan1,Gene), "'" + dlgMan1 + "' should not be a " + "Gene")
     }
     function toStringTest() {
-      let dlgMan1 = new DialogWorker({},"DlgWrk:toStringTest1",new Setting({},"parent"))
+      let dlgMan1 = new GeneralWorker({},"DlgWrk:toStringTest1",new Setting({},"parent"))
       _.bassert(1,dlgMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,dlgMan1.toString().includes("DialogWorker"),"result does not contain class string"    )
+      _.bassert(2,dlgMan1.toString().includes("GeneralWorker"),"result does not contain class string"    )
     }
     function getValueTest() {
-      let par = new Setting({},"DialogWorker:getValueTest:parent")
+      let par = new Setting({},"GeneralWorker:getValueTest:parent")
       /**********************************************************************/{        
       let lit = {pos:22}
-      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
+      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest1",par)
       let val = dlg.getValue("pos")
-      _.bassert(1,val == 22,"get the value via DialogWorker")
-      let litS = { __DIALOG_SETTINGS:{pos:22}}
-      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.pos")
+      _.bassert(1,val == 22,"get the value via GeneralWorker")
+      let litS = { __GENERAL_SETTINGS:{pos:22}}
+      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
+      let valS = set.getValue("__GENERAL_SETTINGS.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { line: {pos:22}}
-      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
+      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
       let val = dlg.getValue("line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
-      let litS = { __DIALOG_SETTINGS:{line: {pos:22}}}
-      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
+      let litS = { __GENERAL_SETTINGS:{line: {pos:22}}}
+      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
+      let valS = set.getValue("__GENERAL_SETTINGS.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
-      let lit = {pos:[22,14]}
-      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
-      let val = dlg.getValue("pos")
-      _.bassert(21,areEqual(val,[22,14]),"get the value via DialogWorker")
-      let litS = { __DIALOG_SETTINGS:{pos:[22,14]}}
-      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.pos")
-      _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
+      let lit = {globwert:"wicchtik"}
+      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest1",par)
+      let val = dlg.getValue("globwert")
+      _.bassert(21,areEqual(val,"wicchtik"),"get the value via GeneralWorker")
+      let litS = { __GENERAL_SETTINGS:{globwert:"wicchtik"}}
+      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
+      let valS = set.getValue("__GENERAL_SETTINGS.globwert")
+      _.bassert(22,areEqual(valS,"wicchtik"),"get the value via Setting")
       }/**********************************************************************/{        
-      let lit = { line: {pos:[22,14]}}
-      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
-      let val = dlg.getValue("line.pos")
-      _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
-      let litS = { __DIALOG_SETTINGS:{line: {pos:[22,14]}}}
-      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
-      _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
+      let lit = { globsect: {globwert:"wicchtik"}}
+      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
+      let val = dlg.getValue("globsect.globwert")
+      _.bassert(31,areEqual(val,"wicchtik"),"get the value via Setting")
+      let litS = { __GENERAL_SETTINGS:{globsect: {globwert:"wicchtik"}}}
+      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
+      let valS = set.getValue("__GENERAL_SETTINGS.globsect.globwert")
+      _.bassert(32,areEqual(valS,"wicchtik"),"get the value via Setting")
       }/**********************************************************************/{        
       }/**********************************************************************/         
     }
 
     function _tryConstruct(arg1, arg2,arg3) {
-      new DialogWorker(arg1,arg2,arg3)
+      new GeneralWorker(arg1,arg2,arg3)
     }
   }
 }
-Setting.worker = DialogWorker
-registeredTests.push(DialogWorker.test)
+Setting.worker = GeneralWorker
+registeredTests.push(GeneralWorker.test)
 registeredExceptions.push(
-  "new DialogWorker({},'goodName', undefined)",
-  "new DialogWorker({},undefined, new Setting({},'parent'))"
+  "new GeneralWorker({},'goodName', undefined)",
+  "new GeneralWorker({},undefined, new Setting({},'parent'))"
 )
 
 class LocalizationWorker extends Setting {
@@ -5265,7 +5274,158 @@ registeredExceptions.push(
   "new LocalizationWorker({},undefined, new Setting({},'parent'))"
 )
 
-class TypesManager extends Setting {
+class DialogWorker extends Setting {
+  static #KEY =
+    GLOBAL_DIALOG_WORKER_KEY !== undefined
+      ? GLOBAL_DIALOG_WORKER_KEY
+      : "__DIALOG_SETTINGS"
+  static #localType =
+    GLOBAL_DIALOG_TYPE !== undefined
+      ? GLOBAL_DIALOG_TYPE
+      : "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
+  /**
+   * Key which this worker will handle
+   * @type {String}
+   */
+  static get workerKey() {
+    return DialogWorker.#KEY
+  }
+  /**
+   * @classdesc For note types
+   * @extends Setting
+   * @constructor
+   * @description
+   *
+   * Creates a DialogWorker instance
+   * @extends Setting
+   * @param {Object} literal
+   * @param {String} key
+   * @param {Setting} parent
+   */
+  constructor(literal, key, parent) {
+    parent.workersTypeForChildren = DialogWorker.#localType
+    super(literal, key, parent)
+    this.addGene(DialogWorker)
+    // literal {(Object)} checked by superclass
+    // key {(String|Symbol)} checked by superclass
+    // parent {(Undefined|Setting)} checked by superclass
+    this.throwIfUndefined(parent, "parent")
+    this.throwIfUndefined(key, "key")
+  }
+
+  //prettier-ignore
+  static test(outputObj) { // DialogWorker
+    let _ = null
+    if(_ = new TestSuite("DialogWorker", outputObj)) {
+      _.run(constructorTest)
+      _.run(isATest)
+      _.run(toStringTest)
+      _.run(getValueTest)
+      _.destruct()
+      _ = null
+    }
+    function constructorTest() {
+      let un
+      let b = new BreadCrumbs(un, "DialogWorker:constructorTest", un)
+      let dlgMan0 = new DialogWorker({}, "DialogWorker:constructorTest1", new Setting({},"parent"))
+      _.assert(1,_tryConstruct,{},"DialogWorker:cTest1",new Setting({},"parent"),"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"DialogWorker:cTest2",new Setting({},"parent"),"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"DialogWorker:cTest3",new Setting({},"parent"),"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","DialogWorker:cTest4",new Setting({},"parent"),"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"DialogWorker:cTest5",new Setting({},"parent"),"should not be created, literal is null")
+      _.shouldAssert(6,_tryConstruct,{},un,new Setting({},"parent"),"should not be created, key is undefined")
+      _.shouldAssert(7,_tryConstruct,{},22,new Setting({},"parent"),"should not be created, key is number")
+      _.shouldAssert(8,_tryConstruct,{},{},new Setting({},"parent"),"should not be created, key is object")
+      _.shouldAssert(9,_tryConstruct,{},b,new Setting({},"parent"),"should not be created, key is Object")
+      _.assert(10,_tryConstruct,{},Symbol("a"),new Setting({},"parent"),"should be created, key is Symbol")
+      _.shouldAssert(11,_tryConstruct,{},"DialogWorker:cTest11",un,"should  not be created, undefined parent is not ok")
+      _.shouldAssert(12,_tryConstruct,{},"DialogWorker:cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"DialogWorker:cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"DialogWorker:cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"DialogWorker:cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"DialogWorker:cTest16",null,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"DialogWorker:cTest16",b,"should not be be created, parent is BreadCrumbs")
+      let dlgMan = new DialogWorker({},"DialogWorker:constructorTest101", new Setting({},"parent"))
+      _.bassert(101,dlgMan instanceof Object,"'DialogWorker' has to be an instance of 'Object'")
+      _.bassert(102,dlgMan instanceof BreadCrumbs,"'DialogWorker' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,dlgMan instanceof DialogWorker,"'DialogWorker' has to be an instance of 'DialogWorker'")
+      _.bassert(104,dlgMan.constructor === DialogWorker,"the constructor property is not 'DialogWorker'")
+    }
+    function isATest() {
+      // Object, Gene, GenePool, AEssence added for each AEssence instance
+      // BreadCrumbs added for each BreadCrumbs instance
+      // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
+      // "function", "object", "array" added for each BreadCrumbs instance
+      // DialogWorker added for each DialogWorker instance
+      let dlgMan1 = new DialogWorker({},"DialogWorker:NameIsATest",new Setting({},"parent"))
+      _.bassert(1,dlgMan1.isA(dlgMan1,"object"), "'" + dlgMan1 + "' should be a " + "object")
+      _.bassert(2,dlgMan1.isA(dlgMan1,Object), "'" + dlgMan1 + "' should be a " + "Object")
+      _.bassert(3,dlgMan1.isA(dlgMan1,BreadCrumbs), "'" + dlgMan1 + "' should be a " + "BreadCrumbs")
+      _.bassert(4,dlgMan1.isA(dlgMan1,Setting), "'" + dlgMan1 + "' should be a " + "Setting")
+      _.bassert(5,dlgMan1.isA(dlgMan1,DialogWorker), "'" + dlgMan1 + "' should be a " + "DialogWorker")
+      _.bassert(6,!dlgMan1.isA(dlgMan1,Error), "'" + dlgMan1 + "' should not be a " + "Error")
+      _.bassert(7,!dlgMan1.isA(dlgMan1,Gene), "'" + dlgMan1 + "' should not be a " + "Gene")
+    }
+    function toStringTest() {
+      let dlgMan1 = new DialogWorker({},"DlgWrk:toStringTest1",new Setting({},"parent"))
+      _.bassert(1,dlgMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
+      _.bassert(2,dlgMan1.toString().includes("DialogWorker"),"result does not contain class string"    )
+    }
+    function getValueTest() {
+      let par = new Setting({},"DialogWorker:getValueTest:parent")
+      /**********************************************************************/{        
+      let lit = {pos:22}
+      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
+      let val = dlg.getValue("pos")
+      _.bassert(1,val == 22,"get the value via DialogWorker")
+      let litS = { __DIALOG_SETTINGS:{pos:22}}
+      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
+      let valS = set.getValue("__DIALOG_SETTINGS.pos")
+      _.bassert(2,valS == 22,"get the value via Setting")
+      }/**********************************************************************/{        
+      let lit = { line: {pos:22}}
+      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
+      let val = dlg.getValue("line.pos")
+      _.bassert(11,val == 22,"get the value via Setting")
+      let litS = { __DIALOG_SETTINGS:{line: {pos:22}}}
+      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
+      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
+      _.bassert(12,valS == 22,"get the value via Setting")
+      }/**********************************************************************/{        
+      let lit = {pos:[22,14]}
+      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
+      let val = dlg.getValue("pos")
+      _.bassert(21,areEqual(val,[22,14]),"get the value via DialogWorker")
+      let litS = { __DIALOG_SETTINGS:{pos:[22,14]}}
+      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
+      let valS = set.getValue("__DIALOG_SETTINGS.pos")
+      _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
+      }/**********************************************************************/{        
+      let lit = { line: {pos:[22,14]}}
+      let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
+      let val = dlg.getValue("line.pos")
+      _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
+      let litS = { __DIALOG_SETTINGS:{line: {pos:[22,14]}}}
+      let set = new Setting(litS,"DialogWorker:getValueTest12",par)
+      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
+      _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
+      }/**********************************************************************/{        
+      }/**********************************************************************/         
+    }
+
+    function _tryConstruct(arg1, arg2,arg3) {
+      new DialogWorker(arg1,arg2,arg3)
+    }
+  }
+}
+Setting.worker = DialogWorker
+registeredTests.push(DialogWorker.test)
+registeredExceptions.push(
+  "new DialogWorker({},'goodName', undefined)",
+  "new DialogWorker({},undefined, new Setting({},'parent'))"
+)
+
+class TypesWorker extends Setting {
   static #KEY =
     GLOBAL_TYPES_MANAGER_KEY !== undefined
       ? GLOBAL_TYPES_MANAGER_KEY
@@ -5278,7 +5438,7 @@ class TypesManager extends Setting {
    * @type {String}
    */
   static get workerKey() {
-    return TypesManager.#KEY
+    return TypesWorker.#KEY
   }
 
   /**
@@ -5286,7 +5446,7 @@ class TypesManager extends Setting {
    * @extends Setting
    * @constructor
    * @description
-   * Creates a TypesManager instance
+   * Creates a TypesWorker instance
    * @param {Object} literal
    * @param {String} key
    * @param {Setting} parent
@@ -5319,14 +5479,14 @@ class TypesManager extends Setting {
         pink
       )
       aut(
-        `START TypesManager ======  ${name_x}  =======\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
+        `START TypesWorker ======  ${name_x}  =======\n   SPEC: ${specLit_x}\n   Literal :${literal_x}`,
         pink
       )
     }
-    parent.workersTypeForChildren = TypesManager.#localType
-    TypesManager.#setDoNotParse(literal)
+    parent.workersTypeForChildren = TypesWorker.#localType
+    TypesWorker.#setDoNotParse(literal)
     super(literal, key, parent)
-    this.addGene(TypesManager)
+    this.addGene(TypesWorker)
     // literal {(Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
     // parent {(Undefined|Setting)} checked by superclass
@@ -5353,7 +5513,7 @@ class TypesManager extends Setting {
           ? flatten(this.literal[AEssence.SPEC_KEY])
           : "undefined"
       aut(
-        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE TypesManager ===\
+        `   SPEC: ${specLit_x}\n   Literal :${literal_x}\nENDE TypesWorker ===\
 ===  ${name_x}  =========================================================`,
         pink
       )
@@ -5381,9 +5541,9 @@ class TypesManager extends Setting {
   }
 
   //prettier-ignore
-  static test(outputObj) { // TypesManager
+  static test(outputObj) { // TypesWorker
     let _ = null
-    if(_ = new TestSuite("TypesManager", outputObj)) {
+    if(_ = new TestSuite("TypesWorker", outputObj)) {
       _.run(constructorTest)
       _.run(isATest)
       _.run(toStringTest)
@@ -5393,102 +5553,102 @@ class TypesManager extends Setting {
     }
     function constructorTest() {
       let un
-      let b = new BreadCrumbs(un, "TypesManager:constructorTest", un)
-      let typesMan0 = new TypesManager({}, "TypesManager:constructorTest1", new Setting({},"parent"))
-      _.assert(1,_tryConstruct,{},"TypesManager:cTest1",new Setting({},"parent"),"should be created, all parameters ok")
-      _.shouldAssert(2,_tryConstruct,un,"TypesManager:cTest2",new Setting({},"parent"),"should not be created, literal is undefined")
-      _.shouldAssert(3,_tryConstruct,22,"TypesManager:cTest3",new Setting({},"parent"),"should not be created, literal is number")
-      _.shouldAssert(4,_tryConstruct,"literal","TypesManager:cTest4",new Setting({},"parent"),"should not be created, literal is string")
-      _.shouldAssert(5,_tryConstruct,null,"TypesManager:cTest5",new Setting({},"parent"),"should not be created, literal is null")
+      let b = new BreadCrumbs(un, "TypesWorker:constructorTest", un)
+      let typesMan0 = new TypesWorker({}, "TypesWorker:constructorTest1", new Setting({},"parent"))
+      _.assert(1,_tryConstruct,{},"TypesWorker:cTest1",new Setting({},"parent"),"should be created, all parameters ok")
+      _.shouldAssert(2,_tryConstruct,un,"TypesWorker:cTest2",new Setting({},"parent"),"should not be created, literal is undefined")
+      _.shouldAssert(3,_tryConstruct,22,"TypesWorker:cTest3",new Setting({},"parent"),"should not be created, literal is number")
+      _.shouldAssert(4,_tryConstruct,"literal","TypesWorker:cTest4",new Setting({},"parent"),"should not be created, literal is string")
+      _.shouldAssert(5,_tryConstruct,null,"TypesWorker:cTest5",new Setting({},"parent"),"should not be created, literal is null")
       _.shouldAssert(6,_tryConstruct,{},un,new Setting({},"parent"),"should not be created, key is undefined")
       _.shouldAssert(7,_tryConstruct,{},22,new Setting({},"parent"),"should not be created, key is number")
       _.shouldAssert(8,_tryConstruct,{},{},new Setting({},"parent"),"should not be created, key is object")
       _.shouldAssert(9,_tryConstruct,{},b,new Setting({},"parent"),"should not be created, key is Object")
       _.assert(10,_tryConstruct,{},Symbol("a"),new Setting({},"parent"),"should be created, key is Symbol")
-      _.shouldAssert(11,_tryConstruct,{},"TypesManager:cTest11",un,"should  not be created, undefined parent is not ok")
-      _.shouldAssert(12,_tryConstruct,{},"TypesManager:cTest12",new Error(),"should not be be created, parent is Error")
-      _.shouldAssert(13,_tryConstruct,{},"TypesManager:cTest13",{},"should not be be created, parent is object")
-      _.shouldAssert(14,_tryConstruct,{},"TypesManager:cTest14","ring","should not be be created, parent is string")
-      _.shouldAssert(15,_tryConstruct,{},"TypesManager:cTest15",22,"should not be be created, parent is number")
-      _.shouldAssert(16,_tryConstruct,{},"TypesManager:cTest16",null,"should not be be created, parent is null")
-      _.shouldAssert(16,_tryConstruct,{},"TypesManager:cTest16",b,"should not be be created, parent is BreadCrumbs")
-      let typesMan = new TypesManager({},"TypesManager:constructorTest101", new Setting({},"parent"))
-      _.bassert(101,typesMan instanceof Object,"'TypesManager' has to be an instance of 'Object'")
-      _.bassert(102,typesMan instanceof BreadCrumbs,"'TypesManager' has to be an instance of 'BreadCrumbs'")
-      _.bassert(103,typesMan instanceof TypesManager,"'TypesManager' has to be an instance of 'TypesManager'")
-      _.bassert(104,typesMan.constructor === TypesManager,"the constructor property is not 'TypesManager'")
+      _.shouldAssert(11,_tryConstruct,{},"TypesWorker:cTest11",un,"should  not be created, undefined parent is not ok")
+      _.shouldAssert(12,_tryConstruct,{},"TypesWorker:cTest12",new Error(),"should not be be created, parent is Error")
+      _.shouldAssert(13,_tryConstruct,{},"TypesWorker:cTest13",{},"should not be be created, parent is object")
+      _.shouldAssert(14,_tryConstruct,{},"TypesWorker:cTest14","ring","should not be be created, parent is string")
+      _.shouldAssert(15,_tryConstruct,{},"TypesWorker:cTest15",22,"should not be be created, parent is number")
+      _.shouldAssert(16,_tryConstruct,{},"TypesWorker:cTest16",null,"should not be be created, parent is null")
+      _.shouldAssert(16,_tryConstruct,{},"TypesWorker:cTest16",b,"should not be be created, parent is BreadCrumbs")
+      let typesMan = new TypesWorker({},"TypesWorker:constructorTest101", new Setting({},"parent"))
+      _.bassert(101,typesMan instanceof Object,"'TypesWorker' has to be an instance of 'Object'")
+      _.bassert(102,typesMan instanceof BreadCrumbs,"'TypesWorker' has to be an instance of 'BreadCrumbs'")
+      _.bassert(103,typesMan instanceof TypesWorker,"'TypesWorker' has to be an instance of 'TypesWorker'")
+      _.bassert(104,typesMan.constructor === TypesWorker,"the constructor property is not 'TypesWorker'")
     }
     function isATest() {
       // Object, Gene, GenePool, AEssence added for each AEssence instance
       // BreadCrumbs added for each BreadCrumbs instance
       // "undefined", "null", "boolean", "number", "bigint", "string", "symbol",
       // "function", "object", "array" added for each BreadCrumbs instance
-      // TypesManager added for each TypesManager instance
-      let typesMan1 = new TypesManager({},"TypesManager:NameIsATest",new Setting({},"parent"))
+      // TypesWorker added for each TypesWorker instance
+      let typesMan1 = new TypesWorker({},"TypesWorker:NameIsATest",new Setting({},"parent"))
       _.bassert(1,typesMan1.isA(typesMan1,"object"), "'" + typesMan1 + "' should be a " + "object")
       _.bassert(2,typesMan1.isA(typesMan1,Object), "'" + typesMan1 + "' should be a " + "Object")
       _.bassert(3,typesMan1.isA(typesMan1,BreadCrumbs), "'" + typesMan1 + "' should be a " + "BreadCrumbs")
       _.bassert(4,typesMan1.isA(typesMan1,Setting), "'" + typesMan1 + "' should be a " + "Setting")
-      _.bassert(5,typesMan1.isA(typesMan1,TypesManager), "'" + typesMan1 + "' should be a " + "TypesManager")
+      _.bassert(5,typesMan1.isA(typesMan1,TypesWorker), "'" + typesMan1 + "' should be a " + "TypesWorker")
       _.bassert(6,!typesMan1.isA(typesMan1,Error), "'" + typesMan1 + "' should not be a " + "Error")
       _.bassert(7,!typesMan1.isA(typesMan1,Gene), "'" + typesMan1 + "' should not be a " + "Gene")
     }
     function toStringTest() {
-      let typesMan1 = new TypesManager({},"TypMan:toStringTest1",new Setting({},"parent"))
+      let typesMan1 = new TypesWorker({},"TypMan:toStringTest1",new Setting({},"parent"))
       _.bassert(1,typesMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,typesMan1.toString().includes("TypesManager"),"result does not contain class string"    )
+      _.bassert(2,typesMan1.toString().includes("TypesWorker"),"result does not contain class string"    )
     }
     function getValueTest() {
-      let par = new Setting({},"TypesManager:getValueTest:parent")
+      let par = new Setting({},"TypesWorker:getValueTest:parent")
       /**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {pos:22}}
-      let typ = new TypesManager(lit,"TypesManager:getValueTest1",par)
+      let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
       let val = typ.getValue("DEFAULTS.pos")
-      _.bassert(1,val == 22,"get the value via TypesManager")
+      _.bassert(1,val == 22,"get the value via TypesWorker")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {pos:22}}}
-      let set = new Setting(litS,"TypesManager:getValueTest12",par)
+      let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.DEFAULTS.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}
-      let typ = new TypesManager(lit,"TypesManager:getValueTest11",par)
+      let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
       let val = typ.getValue("DEFAULTS.line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}}
-      let set = new Setting(litS,"TypesManager:getValueTest12",par)
+      let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.DEFAULTS.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {pos:[22,14]}}
-      let typ = new TypesManager(lit,"TypesManager:getValueTest1",par)
+      let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
       let val = typ.getValue("DEFAULTS.pos")
-      _.bassert(21,areEqual(val,[22,14]),"get the value via TypesManager")
+      _.bassert(21,areEqual(val,[22,14]),"get the value via TypesWorker")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {pos:[22,14]}}}
-      let set = new Setting(litS,"TypesManager:getValueTest12",par)
+      let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.DEFAULTS.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}
-      let typ = new TypesManager(lit,"TypesManager:getValueTest11",par)
+      let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
       let val = typ.getValue("DEFAULTS.line.pos")
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
       let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}}
-      let set = new Setting(litS,"TypesManager:getValueTest12",par)
+      let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.DEFAULTS.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/         
     }
 
     function _tryConstruct(arg1, arg2,arg3) {
-      new TypesManager(arg1,arg2,arg3)
+      new TypesWorker(arg1,arg2,arg3)
     }
   }
 }
-Setting.worker = TypesManager
-registeredTests.push(TypesManager.test)
+Setting.worker = TypesWorker
+registeredTests.push(TypesWorker.test)
 registeredExceptions.push(
-  "new TypesManager({},'goodName', undefined)",
-  "new TypesManager({},undefined, new Setting({},'parent'))"
+  "new TypesWorker({},'goodName', undefined)",
+  "new TypesWorker({},undefined, new Setting({},'parent'))"
 )
 //  #endregion workers
 //#endregion code
