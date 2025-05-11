@@ -82,11 +82,17 @@ module.exports = foty // templater call: "await tp.user.foty(tp, app)"
  */
 //#region CONFIGURATION
 // This region simulates a configuration dialog
-// It contains a configuration defining section, which user would never
-// see in a configuration dialog, so it is named DO_NOT_TOUCH.
+// It contains a section with code to be used in configuration, which user would 
+// never see in a configuration dialog, so it is named DO_NOT_TOUCH. 
+// Unfortunately the callback functions defined there have to be written in
+// JavaScript file before they can be used.
+//
 // And it contains the value section, which user can edit, so it is
 // named USER CONFIGURATION.
 //
+// Additionally in a section named EXAMPLE_CONFIGURATIONS it contains example 
+// configurations
+// 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Only make changes in region USER CONFIGURATION
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -155,239 +161,17 @@ function cbkFmtCssClass(tp, noteName, noteType) {
 }
 //  #endregion DO_NOT_TOUCH
 //  #region USER CONFIGURATION
-//  #endregion USER CONFIGURATION
-//  #region onne configuration data
-/*@convert*/ function onne_createCbk(tp, noteName, type) {
-  return tp.date.now()
-}
-/*@convert*/ function onne_autoTagCbk(tp, noteName, type) {
-  return "0/" + type
-}
-/*@convert*/ function onne_aliasCbk(tp, noteName, type) {
-  let alias = noteName
-  if (type != "ort" && type != "person") {
-    alias = noteName.replace(/,/g, ` `).replace(/  /g, ` `)
-  } else {
-    // ort, person
-    alias = noteName.replace(/, /g, `,`)
-    let strArr = alias.split(",")
-    alias = strArr[0]
-    strArr.shift()
-    if (type == "ort") {
-      alias += "(" + strArr.join(" ") + ")"
-    } else if (type == "person") {
-      alias = strArr.join(" ") + " " + alias
-    }
-  }
-  return alias
-}
-/*@convert*/ function onne_cssClsCbk(tp, noteName, type) {
-  return type
-}
-
-const ONNE_FRONTMATTER_ENTRIES = {
-  /*@convert*/ aliases: {isList: true, defaultValue: onne_aliasCbk},
-  /*@convert*/ date_created: {isList: false, defaultValue: onne_createCbk},
-  /*@convert*/ tags: {isList: true, defaultValue: onne_autoTagCbk},
-  /*@convert*/ publish: {isList: false, defaultValue: false},
-  /*@convert*/ cssclass: {isList: true, defaultValue: onne_cssClsCbk},
-  /*@convert*/ private: {isList: false, defaultValue: false},
-  /*@convert*/ position: {ignore: true},
-}
-const TYPES = {
-  /*@convert*/ audio: {
-    marker: "{a}",
-    isDiary: false,
-    photo: "pexels-foteros-352505_200.jpg",
-    name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
-  },
-  /*@convert*/ buch: {
-    marker: "{b}",
-    isDiary: false,
-    photo: "pexels-gül-işık-2203051_200.jpg",
-    name_prompt: "Autornachname - Buchtitel",
-  },
-  /*@convert*/ ort: {
-    marker: "",
-    isDiary: false,
-    photo: "pexels-dzenina-lukac-1563005_200.jpg",
-    name_prompt: "Ortsname, Land",
-  },
-  /*@convert*/ person: {
-    marker: "",
-    isDiary: false,
-    photo: "pexels-lucas-andrade-14097235_200.jpg",
-    name_prompt: "Personnachname, Personvorname ?Geburtsdatum",
-  },
-  /*@convert*/ video: {
-    marker: "{v}",
-    isDiary: false,
-    photo: "pexels-vlad-vasnetsov-2363675_200.jpg",
-    name_prompt: "?Reihe - ?Autornachname - Videotitel",
-  },
-  /*@convert*/ web: {
-    marker: "{w}",
-    isDiary: false,
-    photo: "pexels-sururi-ballıdağ-_200.jpeg",
-    name_prompt: "?Autor - Webseitentitel - ?Datum",
-  },
-  /*@convert*/ zitat: {
-    marker: "°",
-    isDiary: false,
-    name_prompt: "Titel Autornachname",
-  },
-  /*@convert*/ zitate: {
-    marker: "°°",
-    isDiary: false,
-    name_prompt: "Titel Autornachname",
-  },
-  /*@convert*/ exzerpt: {
-    marker: "$",
-    isDiary: false,
-    name_prompt: "Autornachname - Buchtitel",
-  },
-  /*@convert*/ garten: {
-    marker: "", 
-    isDiary: false, 
-    name_prompt: "Gartenthema"
-  },
-  /*@convert*/ gartentagebuch: {
-    marker: "",
-    isDiary: true,
-    dateformat: "YY-MM-DD",
-    before_date: "Garten ",
-  },
-  /*@convert*/ lesetagebuch: {
-    marker: "",
-    isDiary: true,
-    firstline: "## ArticleTitle\n[NtvZdf]link\n\n",
-    dateformat: "YY-MM-DD",
-    before_date: "Lesetagebucheintrag ",
-  },
-  /*@convert*/ pflanze: {
-    marker: "",
-    isDiary: false,
-    name_prompt: "Pflanzenname",
-  },
-  /*@convert*/ unbedacht: {
-    marker: "",
-    isDiary: true,
-    dateformat: "YY-MM-DD",
-    before_date: "Unbedacht ",
-  },
-  /*@convert*/ verwaltung: {
-    marker: "",
-    isDiary: false,
-    name_prompt: "Verwaltungsthema",
-  },
-  /*@convert*/ diary: {marker: "", isDiary: true, dateformat: "YYYY-MM-DD"},
-  /*@convert*/ note: {marker: "", isDiary: false, name_prompt: "Notizthema"},
-}
-/*@convert*/ TYPES["diary"].frontmatter = {private: true}
-/*@convert*/ TYPES["verwaltung"].frontmatter = {private: true}
-/*@convert*/ TYPES["gartentagebuch"].frontmatter = {
-  cssclass: "garten, tagebuch",
-}
-/*@convert*/ TYPES["pflanze"].frontmatter = {
-  cssclass: "garten",
-  Name: "",
-  Sorte: "",
-  Firma: "",
-  vorhanden: "",
-  Aussaat_geschützt: "-FM---------",
-  Aussaat_Freiland: "",
-  Auspflanzen: "",
-  Ernte_geschützt: "",
-  Ernte_Freiland: "",
-  Keimtemperatur_Grad: "",
-  Keimdauer_Tage: "",
-  Standort: "",
-  Boden: "",
-  Dauer: "",
-  Saattiefe_cm: "",
-  Abstand_x_cm: "",
-  Abstand_y_cm: "",
-}
-/*@convert*/ TYPES["lesetagebuch"].frontmatter = {cssclass: "tagebuch"}
-/*@convert*/ TYPES["unbedacht"].frontmatter = {cssclass: "tagebuch"}
-/*@convert*/ const FOLDER2TYPES = {
-  exzerpte: ["exzerpt"],
-  garten: ["garten"],
-  gartentagebuch: ["gartentagebuch"],
-  lesetagebuch: ["lesetagebuch"],
-  pflanzen: ["pflanze"],
-  unbedacht: ["unbedacht"],
-  verwaltung: ["verwaltung"],
-  zwischenreich: [
-    "audio",
-    "buch",
-    "ort",
-    "person",
-    "video",
-    "web",
-    "zitat",
-    "zitate",
-  ],
-  diary: ["diary"],
-  vaultroot: ["note"],
-  temp: ["diary", "garten"],
-}
-/*@convert*/ const DEFAULT_TYPE = "note"
-/*@convert*/ const ROOT_KEY = "vaultRoot"
-/*@convert*/ const RESOURCE_FOLDER = "_resources/"
-/*@convert*/ const RESOURCE_TYPES = ["jpg", "jpeg", "png", "mp3", "midi"]
-//  #endregion onne configuration data
-//  #region onne => foty
-/**
- * Defaults
- * __GENERAL_SETTINGS://hardcoded localType: (Number|String|Boolean)
- * __TRANSLATE:       //hardcoded localType: (String|Array.<String>|Array.<Array.<String>>)
- * __DIALOG_SETTINGS: //hardcoded localType: (Number|Array.<Number>)
- * __NOTE_TYPES:  REPEAT: true
- * __FOLDER2TYPE: REPEAT: true
- * __SPEC:
- * - __SPEC explicit for atoms is anything but an Object
- *   -- generalType: (Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)
- *   -- true means: just convert to spec'd atom, use generalType or TYPE given as sibling
- *      so ignoring inherited and default TYPE
- *   -- anything else means: I have thought about this and care of TYPE by myself
- *   - if true generalType is added as TYPE (or TYPE given as sibling of __SPEC)
- *   - else (anything but not true) TYPE is the given, inherited or default TYPE
- *   - has to contain value as VALUE property, if missing, default VALUE is used
- * - __SPEC implicit for atoms (is created always for atoms or FLAT values)
- *   - __SPEC is set to TRUE
- *   - generalType is added as TYPE
- *   - value is added as VALUE
- * - __SPEC for nodes is an Object
- * ESSENCE  |for what   |type    |default |inherited |impl|remark|
- * ------------------------------------------------------------
- *  ROOT    |Node       |Boolean |false   |automatic |yes | |
- *  RENDER  |Node Atom  |Boolean |false   |inherited |yes | |
- *  TYPE    |Node Atom  |String  |"String"|inherited |yes | |
- *  DEFAULT |Node Atom  |TYPE/cbk|""      |individual|yes | |
- *          |in DEFAULTS|        |        |          | "  | |
- *  VALUE   |     Atom  |TYPE    |""      |individual|yes | |
- *  IGNORE  |Node Atom  |Boolean |false   |inherited |yes |It is possible to IGNORE ancestors, but not descendants|
- *          |           |        |        |          | "  |Some Workers/Managers ignore IGNORE, makes no sense for them|
- *  FLAT    |Node Atom  |Boolean |false   |individual|yes |set automatically, if specified in literal: |
- *          |           |        |        |          | "  |values are not parsed, even if they are objects|
- *  ONCE    |Node Atom  |Boolean |false   |individual|    |Not used|
- *  REPEAT  |Node       |Boolean |false   |individual|yes |same entryType can be added several times under diff. keys|
- *  LOCAL   |Node Atom  |Boolean |false   |inherited |    |Not used|
- *  DEFAULTS|if REPEAT  |Object  |object  |individual|yes |makes only sense for REPEAT: sections|
- * @ignore
- */
 //prettier-ignore
-let onne = {
+let user_configuration = {
   __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
   { 
-    LANGAUGE: "de",
+    LANGUAGE: "de",
   },
   __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
   { 
-    TYPE_PROMPT:         "Typ wählen",
-    TITLE_NEW_FILE:      ["Unbenannt", "Untitled"],
-    DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
+    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
+    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+    DEFAULT_NAME_PROMPT: [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
   },
   __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
   { 
@@ -416,7 +200,6 @@ let onne = {
       date: true,
       dateformat: "YYYY-MM-DD",
       frontmatter: {private: true},
-      language: "Portuguese", /* will be ignored */
     },
     citation: {
       marker: "°",
@@ -426,12 +209,12 @@ let onne = {
   soso: {VALUE: "naja", __SPEC: true, RENDER: false},
   c:    {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
 }
-//  #endregion  onne => foty
-//  #region test configurations
+//  #endregion USER CONFIGURATION
+//  #region EXAMPLE CONFIGURATIONS
 
 //prettier-ignore
 
-//  #endregion test configurations
+//  #endregion EXAMPLE CONFIGURATIONS
 //#endregion CONFIGURATION
 //#region globals and externals
 var GLOBAL_SYMBOL_COUNTER = 0
@@ -453,48 +236,42 @@ const Dialog = {
   Ok: "Ok",
   Cancel: "Cancel",
 }
+
 // TypesWorker
-let GLOBAL_TYPES_MANAGER_KEY = "__NOTE_TYPES"
-let GLOBAL_TYPES_TYPE =
+const GLOBAL_TYPES_MANAGER_KEY = "__NOTE_TYPES"
+const GLOBAL_TYPES_TYPE =
   "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
-
 // DialogWorker
-let GLOBAL_DIALOG_WORKER_KEY = "__DIALOG_SETTINGS"
-let GLOBAL_DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
-
+const GLOBAL_DIALOG_WORKER_KEY = "__DIALOG_SETTINGS"
+const GLOBAL_DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
 // LocalizationWorker
-let GLOBAL_LOCALIZATION_WORKER_KEY = "__TRANSLATE"
-let GLOBAL_LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
-
+const GLOBAL_LOCALIZATION_WORKER_KEY = "__TRANSLATE"
+const GLOBAL_LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
 // GeneralWorker
-let GLOBAL_GENERAL_WORKER_KEY = "__GENERAL_SETTINGS"
-let GLOBAL_GENERAL_TYPE = "(Number|String|Boolean)"
-
+const GLOBAL_GENERAL_WORKER_KEY = "__GENERAL_SETTINGS"
+const GLOBAL_GENERAL_TYPE = "(Number|String|Boolean)"
 // Setting
-let GLOBAL_ROOT_KEY = "/"
-let GLOBAL_OVERALL_TYPE =
+const GLOBAL_ROOT_KEY = "/"
+const GLOBAL_SETTING_TYPE =
   "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
-
 // BreadCrumbs
-let GLOBAL_BREADCRUMBS_SEPARATOR = " \u00BB "
-
+const GLOBAL_BREADCRUMBS_SEPARATOR = " \u00BB "
 // AEssence
-let GLOBAL__SPEC = "__SPEC"
-
+const GLOBAL__SPEC = "__SPEC"
 // Essence
-let GLOBAL_namePartHiddenPropertiesStartWith = "__"
-let GLOBAL_RENDER_DEFAULT = false
-let GLOBAL_TYPE_DEFAULT = "String"
-let GLOBAL_DEFAULT_DEFAULT = ""
-let GLOBAL_VALUE_DEFAULT = ""
-let GLOBAL_IGNORE_DEFAULT = false
-let GLOBAL_PARSE_DEFAULT = true
-let GLOBAL_INTERNAL_DEFAULT = false
-let GLOBAL_FLAT_DEFAULT = false
-let GLOBAL_LOCAL_DEFAULT = false
-let GLOBAL_ONCE_DEFAULT = false
-let GLOBAL_REPEAT_DEFAULT = false
-let GLOBAL_DEFAULTS_DEFAULT = {}
+const GLOBAL_namePartHiddenPropertiesStartWith = "__"
+const GLOBAL_RENDER_DEFAULT = false
+const GLOBAL_TYPE_DEFAULT = "String"
+const GLOBAL_DEFAULT_DEFAULT = ""
+const GLOBAL_VALUE_DEFAULT = ""
+const GLOBAL_IGNORE_DEFAULT = false
+const GLOBAL_PARSE_DEFAULT = true
+const GLOBAL_INTERNAL_DEFAULT = false
+const GLOBAL_FLAT_DEFAULT = false
+const GLOBAL_LOCAL_DEFAULT = false
+const GLOBAL_ONCE_DEFAULT = false
+const GLOBAL_REPEAT_DEFAULT = false
+const GLOBAL_DEFAULTS_DEFAULT = {}
 
 //  #region Colors
 /** Color, to be used without quotation marks during development. */
@@ -504,9 +281,9 @@ const cyan = "cyan"
 /** Color, to be used without quotation marks during development. */
 const red = "orange"
 /** Color, to be used without quotation marks during development. */
-let rose = "salmon"
+const rose = "salmon"
 /** Color, to be used without quotation marks during development. */
-let pink = "pink"
+const pink = "pink"
 /** Color, to be used without quotation marks during development. */
 const blue = "deepskyblue"
 /** Color, to be used without quotation marks during development. */
@@ -2192,35 +1969,19 @@ class Essence extends GenePool {
     return this[Essence.#pre + "DEFAULTS"]
   }
 
-  static #pre =
-    GLOBAL_namePartHiddenPropertiesStartWith !== undefined
-      ? GLOBAL_namePartHiddenPropertiesStartWith
-      : "__"
-
-  static #RENDER_DEFT =
-    GLOBAL_RENDER_DEFAULT !== undefined ? GLOBAL_RENDER_DEFAULT : false
-  static #TYPE_DEFT =
-    GLOBAL_TYPE_DEFAULT !== undefined ? GLOBAL_TYPE_DEFAULT : "String"
-  static #DEFAULT_DEFT =
-    GLOBAL_DEFAULT_DEFAULT !== undefined ? GLOBAL_DEFAULT_DEFAULT : ""
-  static #VALUE_DEFT =
-    GLOBAL_VALUE_DEFAULT !== undefined ? GLOBAL_VALUE_DEFAULT : ""
-  static #IGNORE_DEFT =
-    GLOBAL_IGNORE_DEFAULT !== undefined ? GLOBAL_IGNORE_DEFAULT : false
-  static #PARSE_DEFT =
-    GLOBAL_PARSE_DEFAULT !== undefined ? GLOBAL_PARSE_DEFAULT : true
-  static #INTERNAL_DEFT =
-    GLOBAL_INTERNAL_DEFAULT !== undefined ? GLOBAL_INTERNAL_DEFAULT : false
-  static #FLAT_DEFT =
-    GLOBAL_FLAT_DEFAULT !== undefined ? GLOBAL_FLAT_DEFAULT : false
-  static #LOCAL_DEFT =
-    GLOBAL_LOCAL_DEFAULT !== undefined ? GLOBAL_LOCAL_DEFAULT : false
-  static #ONCE_DEFT =
-    GLOBAL_ONCE_DEFAULT !== undefined ? GLOBAL_ONCE_DEFAULT : false
-  static #REPEAT_DEFT =
-    GLOBAL_REPEAT_DEFAULT !== undefined ? GLOBAL_REPEAT_DEFAULT : false
-  static #DEFAULTS_DEFT =
-    GLOBAL_DEFAULTS_DEFAULT !== undefined ? GLOBAL_DEFAULTS_DEFAULT : {}
+  static #pre = GLOBAL_namePartHiddenPropertiesStartWith // "__"
+  static #RENDER_DEFT = GLOBAL_RENDER_DEFAULT // false
+  static #TYPE_DEFT = GLOBAL_TYPE_DEFAULT // "String"
+  static #DEFAULT_DEFT = GLOBAL_DEFAULT_DEFAULT // ""
+  static #VALUE_DEFT = GLOBAL_VALUE_DEFAULT // ""
+  static #IGNORE_DEFT = GLOBAL_IGNORE_DEFAULT // false
+  static #PARSE_DEFT = GLOBAL_PARSE_DEFAULT  // true
+  static #INTERNAL_DEFT = GLOBAL_INTERNAL_DEFAULT  // false
+  static #FLAT_DEFT = GLOBAL_FLAT_DEFAULT  // false
+  static #LOCAL_DEFT = GLOBAL_LOCAL_DEFAULT  // false
+  static #ONCE_DEFT = GLOBAL_ONCE_DEFAULT  // false
+  static #REPEAT_DEFT = GLOBAL_REPEAT_DEFAULT  // false
+  static #DEFAULTS_DEFT = GLOBAL_DEFAULTS_DEFAULT  // {}
   //#endregion member variables
   /**
    * @classdesc Essence is unrecognizable except through me.
@@ -2983,7 +2744,7 @@ registeredExceptions.push(
 //#endregion Gene, Pool and Essence
 //#region code
 class AEssence extends Essence {
-  static #SPEC_KEY = GLOBAL__SPEC !== undefined ? GLOBAL__SPEC : "__SPEC"
+  static #SPEC_KEY = GLOBAL__SPEC // "__SPEC"
   /** SPEC key
    * @type {String}
    */
@@ -3300,10 +3061,7 @@ registeredExceptions.push(
 )
 
 class BreadCrumbs extends AEssence {
-  static sep =
-    GLOBAL_BREADCRUMBS_SEPARATOR !== undefined
-      ? GLOBAL_BREADCRUMBS_SEPARATOR
-      : " \u00BB "
+  static sep = GLOBAL_BREADCRUMBS_SEPARATOR // " \u00BB "
   #name
   #parent
   #literal
@@ -3706,11 +3464,8 @@ registeredExceptions.push(
 )
 
 class Setting extends BreadCrumbs {
-  static #ROOT_KEY = GLOBAL_ROOT_KEY !== undefined ? GLOBAL_ROOT_KEY : "/"
-  static #generalType =
-    GLOBAL_OVERALL_TYPE !== undefined
-      ? GLOBAL_OVERALL_TYPE
-      : "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
+  static #ROOT_KEY = GLOBAL_ROOT_KEY //  "/"
+  static #globalType = GLOBAL_SETTING_TYPE //  "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
   #workersTypeForChildren
   static #workers = {} // and managers
   #works = {}
@@ -3779,7 +3534,7 @@ class Setting extends BreadCrumbs {
    * - Adds "Date" to user pool as Genes with callback cbkIsDate.
    *<p>
    * Setting:<br>
-   *  #generalType =
+   *  #globalType =
    * "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
    *<p>
    * <i>In German, id do not understand it in English. I suppose, other people
@@ -3812,13 +3567,13 @@ class Setting extends BreadCrumbs {
    *    Für spezifizierte Atoms: (bedeutet: Der Wert ist ein Object und es
    *                              enthält einen __SPEC Eintrag und
    *                              dessen Wert ist vom Typ Boolean)<br>
-   *       Falls __SPEC true ist: <br>TYPE wird auf #generalType gesetzt
+   *       Falls __SPEC true ist: <br>TYPE wird auf #globalType gesetzt
    *                              (außer er ist parallel zu __SPEC gesetzt)<br>
    *       Falls __SPEC false ist: <br>TYPE wird nicht gesetzt<br>
    *                               (!!NIE, auch wenn nicht vorhanden nicht)<br>
    *    Für reine Atoms: (bedeutet: der Wert ist kein Object)<br>
    *       erzeugt ein spezifiziertes Atom mit VALUE: Wert und __SPEC true
-   *       (damit wird TYPE zu #generalType)
+   *       (damit wird TYPE zu #globalType)
    *<p>
    *    Dann wie AEssence für Atoms.<br>
    *    Danach wird VALUE aus der erzeugten AEssence zum Wert des Atoms.<br>
@@ -3934,7 +3689,7 @@ class Setting extends BreadCrumbs {
     let type =
       !this.ROOT && this.parent.workersTypeForChildren !== undefined
         ? this.parent.workersTypeForChildren
-        : Setting.#generalType
+        : Setting.#globalType
     for (const [key, value] of Object.entries(this.literal)) {
       if (!AEssence.doParse(value)) continue
       if (Setting.#isWorkerKey(key)) {
@@ -4622,11 +4377,11 @@ class Setting extends BreadCrumbs {
       _.bassert(22,frontMY1["b"] === "stg","should be as given")
       _.bassert(23,frontMY1["c"] === true,"should be as given")
       _.bassert(24,frontMY1["d"] === false,"should be as given")
-      _.bassert(25,frontMY1["e"] === "","Value should be removed, 'undefined' no generalType")
-      _.bassert(26,frontMY1["f"] === "","Value should be removed, 'null' no generalType")
-      _.bassert(27,frontMY1["g"] === "","Value should be removed, 'symbol' no generalType")
-      _.bassert(28,frontMY1["h"] === "","Value should be removed, 'function' no generalType")
-      _.bassert(29,frontMY1["i"] === "","Value should be removed, 'bigint' no generalType")
+      _.bassert(25,frontMY1["e"] === "","Value should be removed, 'undefined' no globalType")
+      _.bassert(26,frontMY1["f"] === "","Value should be removed, 'null' no globalType")
+      _.bassert(27,frontMY1["g"] === "","Value should be removed, 'symbol' no globalType")
+      _.bassert(28,frontMY1["h"] === "","Value should be removed, 'function' no globalType")
+      _.bassert(29,frontMY1["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
         let lit2 = {  a:[],
@@ -4651,11 +4406,11 @@ class Setting extends BreadCrumbs {
       _.bassert(36,areEqual(frontMY2.b,[1,2,3]),"array of numbers should be returned as same array")
       _.bassert(37,areEqual(frontMY2.c,[false,false,true]),"array of booleans should be returned as same array")
       _.bassert(38,areEqual(frontMY2.d,["a"]),"array of strings should be returned as same array")
-      _.bassert(39,frontMY2["e"] === "","Value should be removed, array of 'undefined' no generalType")
-      _.bassert(40,frontMY2["f"] === "","Value should be removed, array of 'null' no generalType")
-      _.bassert(41,frontMY2["g"] === "","Value should be removed, array of 'symbol' no generalType")
-      _.bassert(42,frontMY2["h"] === "","Value should be removed, array of 'function' no generalType")
-      _.bassert(43,frontMY2["i"] === "","Value should be removed, array of 'bigint' no generalType")
+      _.bassert(39,frontMY2["e"] === "","Value should be removed, array of 'undefined' no globalType")
+      _.bassert(40,frontMY2["f"] === "","Value should be removed, array of 'null' no globalType")
+      _.bassert(41,frontMY2["g"] === "","Value should be removed, array of 'symbol' no globalType")
+      _.bassert(42,frontMY2["h"] === "","Value should be removed, array of 'function' no globalType")
+      _.bassert(43,frontMY2["i"] === "","Value should be removed, array of 'bigint' no globalType")
 
       }/************************************************************/if(true){
         let lit3 = { __SPEC: {TYPE: "Number"},
@@ -4674,14 +4429,14 @@ class Setting extends BreadCrumbs {
       let renderY3 = set3.getRenderYAML()
       _.bassert(50,Object.keys(renderY3).length == 0,"no render entries given")
       _.bassert(51,frontMY3["a"] === 2,"should be as given")
-      _.bassert(52,frontMY3["b"] === "stg","should be as given, generalType is used")
-      _.bassert(53,frontMY3["c"] === true,"should be as given, generalType is used")
-      _.bassert(54,frontMY3["d"] === false,"should be as given, generalType is used")
-      _.bassert(55,frontMY3["e"] === "","Value should be removed, 'undefined' no generalType")
-      _.bassert(56,frontMY3["f"] === "","Value should be removed, 'null' no generalType")
-      _.bassert(57,frontMY3["g"] === "","Value should be removed, 'symbol' no generalType")
-      _.bassert(58,frontMY3["h"] === "","Value should be removed, 'function' no generalType")
-      _.bassert(59,frontMY3["i"] === "","Value should be removed, 'bigint' no generalType")
+      _.bassert(52,frontMY3["b"] === "stg","should be as given, globalType is used")
+      _.bassert(53,frontMY3["c"] === true,"should be as given, globalType is used")
+      _.bassert(54,frontMY3["d"] === false,"should be as given, globalType is used")
+      _.bassert(55,frontMY3["e"] === "","Value should be removed, 'undefined' no globalType")
+      _.bassert(56,frontMY3["f"] === "","Value should be removed, 'null' no globalType")
+      _.bassert(57,frontMY3["g"] === "","Value should be removed, 'symbol' no globalType")
+      _.bassert(58,frontMY3["h"] === "","Value should be removed, 'function' no globalType")
+      _.bassert(59,frontMY3["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
         let lit4 = {  __SPEC: {TYPE: "Number"},
@@ -4699,19 +4454,19 @@ class Setting extends BreadCrumbs {
       let frontMY4 = set4.getFrontmatterYAML()
       let renderY4 = set4.getRenderYAML()
       _.bassert(60,Object.keys(renderY4).length === 0,"no render entries given")
-      _.bassert(61,Array.isArray(frontMY4.a),"should be as given, generalType is used")
-      _.bassert(62,Array.isArray(frontMY4.b),"should be as given, generalType is used")
-      _.bassert(63,Array.isArray(frontMY4.c),"should be as given, generalType is used")
-      _.bassert(64,Array.isArray(frontMY4.d),"should be as given, generalType is used")
+      _.bassert(61,Array.isArray(frontMY4.a),"should be as given, globalType is used")
+      _.bassert(62,Array.isArray(frontMY4.b),"should be as given, globalType is used")
+      _.bassert(63,Array.isArray(frontMY4.c),"should be as given, globalType is used")
+      _.bassert(64,Array.isArray(frontMY4.d),"should be as given, globalType is used")
       _.bassert(65,areEqual(frontMY4.a,[]),"empty array should be returned as empty array")
       _.bassert(66,areEqual(frontMY4.b,[1,2,3]),"array of numbers should be returned as same array")
       _.bassert(67,areEqual(frontMY4.c,[false,false,true]),"array of booleans should be returned as same array")
       _.bassert(68,areEqual(frontMY4.d,["a"]),"array of strings should be returned as same array")
-      _.bassert(69,frontMY4["e"] === "","Value should be removed, array of 'undefined' no generalType")
-      _.bassert(70,frontMY4["f"] === "","Value should be removed, array of 'null' no generalType")
-      _.bassert(71,frontMY4["g"] === "","Value should be removed, array of 'symbol' no generalType")
-      _.bassert(72,frontMY4["h"] === "","Value should be removed, array of 'function' no generalType")
-      _.bassert(73,frontMY4["i"] === "","Value should be removed, array of 'bigint' no generalType")
+      _.bassert(69,frontMY4["e"] === "","Value should be removed, array of 'undefined' no globalType")
+      _.bassert(70,frontMY4["f"] === "","Value should be removed, array of 'null' no globalType")
+      _.bassert(71,frontMY4["g"] === "","Value should be removed, array of 'symbol' no globalType")
+      _.bassert(72,frontMY4["h"] === "","Value should be removed, array of 'function' no globalType")
+      _.bassert(73,frontMY4["i"] === "","Value should be removed, array of 'bigint' no globalType")
 
       }/************************************************************/if(true){
         let lit5 = { __SPEC: {TYPE: "Number"},
@@ -4730,14 +4485,14 @@ class Setting extends BreadCrumbs {
       let renderY5 = set5.getRenderYAML()
       _.bassert(80,Object.keys(renderY5).length == 0,"no render entries given")
       _.bassert(81,frontMY5["a"] === 2,"should be as given")
-      _.bassert(82,frontMY5["b"] === "stg","should be as given, generalType is used")
-      _.bassert(83,frontMY5["c"] === true,"should be as given, generalType is used")
-      _.bassert(84,frontMY5["d"] === false,"should be as given, generalType is used")
-      _.bassert(85,frontMY5["e"] === "","Value should be removed, 'undefined' no generalType")
-      _.bassert(86,frontMY5["f"] === "","Value should be removed, 'null' no generalType")
-      _.bassert(87,frontMY5["g"] === "","Value should be removed, 'symbol' no generalType")
-      _.bassert(88,frontMY5["h"] === "","Value should be removed, 'function' no generalType")
-      _.bassert(89,frontMY5["i"] === "","Value should be removed, 'bigint' no generalType")
+      _.bassert(82,frontMY5["b"] === "stg","should be as given, globalType is used")
+      _.bassert(83,frontMY5["c"] === true,"should be as given, globalType is used")
+      _.bassert(84,frontMY5["d"] === false,"should be as given, globalType is used")
+      _.bassert(85,frontMY5["e"] === "","Value should be removed, 'undefined' no globalType")
+      _.bassert(86,frontMY5["f"] === "","Value should be removed, 'null' no globalType")
+      _.bassert(87,frontMY5["g"] === "","Value should be removed, 'symbol' no globalType")
+      _.bassert(88,frontMY5["h"] === "","Value should be removed, 'function' no globalType")
+      _.bassert(89,frontMY5["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
         let lit6 = {  __SPEC: {TYPE: "Number"},
@@ -4755,19 +4510,19 @@ class Setting extends BreadCrumbs {
       let frontMY6 = set6.getFrontmatterYAML()
       let renderY6 = set6.getRenderYAML()
       _.bassert(90,Object.keys(renderY6).length === 0,"no render entries given")
-      _.bassert(91,Array.isArray(frontMY6.a),"should be as given, generalType is used")
-      _.bassert(92,Array.isArray(frontMY6.b),"should be as given, generalType is used")
-      _.bassert(93,Array.isArray(frontMY6.c),"should be as given, generalType is used")
-      _.bassert(94,Array.isArray(frontMY6.d),"should be as given, generalType is used")
+      _.bassert(91,Array.isArray(frontMY6.a),"should be as given, globalType is used")
+      _.bassert(92,Array.isArray(frontMY6.b),"should be as given, globalType is used")
+      _.bassert(93,Array.isArray(frontMY6.c),"should be as given, globalType is used")
+      _.bassert(94,Array.isArray(frontMY6.d),"should be as given, globalType is used")
       _.bassert(95,areEqual(frontMY6.a,[]),"empty array should be returned as empty array")
       _.bassert(96,areEqual(frontMY6.b,[1,2,3]),"array of numbers should be returned as same array")
       _.bassert(97,areEqual(frontMY6.c,[false,false,true]),"array of booleans should be returned as same array")
       _.bassert(98,areEqual(frontMY6.d,["a"]),"array of strings should be returned as same array")
-      _.bassert(99,frontMY6["e"] === "","Value should be removed, array of 'undefined' no generalType")
-      _.bassert(100,frontMY6["f"] === "","Value should be removed, array of 'null' no generalType")
-      _.bassert(101,frontMY6["g"] === "","Value should be removed, array of 'symbol' no generalType")
-      _.bassert(102,frontMY6["h"] === "","Value should be removed, array of 'function' no generalType")
-      _.bassert(103,frontMY6["i"] === "","Value should be removed, array of 'bigint' no generalType")
+      _.bassert(99,frontMY6["e"] === "","Value should be removed, array of 'undefined' no globalType")
+      _.bassert(100,frontMY6["f"] === "","Value should be removed, array of 'null' no globalType")
+      _.bassert(101,frontMY6["g"] === "","Value should be removed, array of 'symbol' no globalType")
+      _.bassert(102,frontMY6["h"] === "","Value should be removed, array of 'function' no globalType")
+      _.bassert(103,frontMY6["i"] === "","Value should be removed, array of 'bigint' no globalType")
 
       }/************************************************************/if(true){
         let lit7 = { __SPEC: {TYPE: "Number"},
@@ -4786,14 +4541,14 @@ class Setting extends BreadCrumbs {
       let renderY7 = set7.getRenderYAML()
       _.bassert(110,Object.keys(renderY7).length == 0,"no render entries given")
       _.bassert(111,frontMY7["a"] === 2,"should be as given")
-      _.bassert(112,frontMY7["b"] === "","Value should be removed, generalType is not used")
-      _.bassert(113,frontMY7["c"] === "","Value should be removed, generalType is not used")
-      _.bassert(114,frontMY7["d"] === "","Value should be removed, generalType is not used")
-      _.bassert(115,frontMY7["e"] === "","Value should be removed, 'undefined' no generalType")
-      _.bassert(116,frontMY7["f"] === "","Value should be removed, 'null' no generalType")
-      _.bassert(117,frontMY7["g"] === "","Value should be removed, 'symbol' no generalType")
-      _.bassert(118,frontMY7["h"] === "","Value should be removed, 'function' no generalType")
-      _.bassert(119,frontMY7["i"] === "","Value should be removed, 'bigint' no generalType")
+      _.bassert(112,frontMY7["b"] === "","Value should be removed, globalType is not used")
+      _.bassert(113,frontMY7["c"] === "","Value should be removed, globalType is not used")
+      _.bassert(114,frontMY7["d"] === "","Value should be removed, globalType is not used")
+      _.bassert(115,frontMY7["e"] === "","Value should be removed, 'undefined' no globalType")
+      _.bassert(116,frontMY7["f"] === "","Value should be removed, 'null' no globalType")
+      _.bassert(117,frontMY7["g"] === "","Value should be removed, 'symbol' no globalType")
+      _.bassert(118,frontMY7["h"] === "","Value should be removed, 'function' no globalType")
+      _.bassert(119,frontMY7["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
         let lit8 = {  __SPEC: {TYPE: "Number"},
@@ -4811,15 +4566,15 @@ class Setting extends BreadCrumbs {
       let frontMY8 = set8.getFrontmatterYAML()
       let renderY8 = set8.getRenderYAML()
       _.bassert(120,Object.keys(renderY8).length === 0,"no render entries given")
-      _.bassert(111,frontMY8["a"] === "","Value should be removed, generalType is not used")
-      _.bassert(112,frontMY8["b"] === "","Value should be removed, generalType is not used")
-      _.bassert(113,frontMY8["c"] === "","Value should be removed, generalType is not used")
-      _.bassert(114,frontMY8["d"] === "","Value should be removed, generalType is not used")
-      _.bassert(115,frontMY8["e"] === "","Value should be removed, 'undefined' no generalType")
-      _.bassert(116,frontMY8["f"] === "","Value should be removed, 'null' no generalType")
-      _.bassert(117,frontMY8["g"] === "","Value should be removed, 'symbol' no generalType")
-      _.bassert(118,frontMY8["h"] === "","Value should be removed, 'function' no generalType")
-      _.bassert(119,frontMY8["i"] === "","Value should be removed, 'bigint' no generalType")
+      _.bassert(111,frontMY8["a"] === "","Value should be removed, globalType is not used")
+      _.bassert(112,frontMY8["b"] === "","Value should be removed, globalType is not used")
+      _.bassert(113,frontMY8["c"] === "","Value should be removed, globalType is not used")
+      _.bassert(114,frontMY8["d"] === "","Value should be removed, globalType is not used")
+      _.bassert(115,frontMY8["e"] === "","Value should be removed, 'undefined' no globalType")
+      _.bassert(116,frontMY8["f"] === "","Value should be removed, 'null' no globalType")
+      _.bassert(117,frontMY8["g"] === "","Value should be removed, 'symbol' no globalType")
+      _.bassert(118,frontMY8["h"] === "","Value should be removed, 'function' no globalType")
+      _.bassert(119,frontMY8["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/**********************************************************************/
     }
@@ -4833,17 +4588,11 @@ registeredExceptions.push(
   "new Setting({},'goodN', new BreadCrumbs({},'root'))",
   "new Setting()"
 )
-//  #region workers
 
+//  #region workers
 class GeneralWorker extends Setting {
-  static #KEY =
-    GLOBAL_GENERAL_WORKER_KEY !== undefined
-      ? GLOBAL_GENERAL_WORKER_KEY
-      : "__GENERAL_SETTINGS"
-  static #localType =
-    GLOBAL_GENERAL_TYPE !== undefined
-      ? GLOBAL_GENERAL_TYPE
-      : "(Number|String|Boolean)"
+  static #KEY =  GLOBAL_GENERAL_WORKER_KEY // "__GENERAL_SETTINGS"
+  static #localType =  GLOBAL_GENERAL_TYPE // "(Number|String|Boolean)"
   /**
    * Key which this worker will handle
    * @type {String}
@@ -4987,14 +4736,8 @@ registeredExceptions.push(
 )
 
 class LocalizationWorker extends Setting {
-  static #KEY =
-    GLOBAL_LOCALIZATION_WORKER_KEY !== undefined
-      ? GLOBAL_LOCALIZATION_WORKER_KEY
-      : "__TRANSLATE"
-  static #localType =
-    GLOBAL_LOCALIZATION_TYPE !== undefined
-      ? GLOBAL_LOCALIZATION_TYPE
-      : "(String|Array.<String>|Array.<Array.<String>>)"
+  static #KEY =  GLOBAL_LOCALIZATION_WORKER_KEY //  "__TRANSLATE"
+  static #localType =  GLOBAL_LOCALIZATION_TYPE // "(String|Array.<String>|Array.<Array.<String>>)"
   static #defaultLang = "en"
   /** Key which this worker will handle
    * @type {String}
@@ -5270,14 +5013,8 @@ registeredExceptions.push(
 )
 
 class DialogWorker extends Setting {
-  static #KEY =
-    GLOBAL_DIALOG_WORKER_KEY !== undefined
-      ? GLOBAL_DIALOG_WORKER_KEY
-      : "__DIALOG_SETTINGS"
-  static #localType =
-    GLOBAL_DIALOG_TYPE !== undefined
-      ? GLOBAL_DIALOG_TYPE
-      : "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
+  static #KEY = GLOBAL_DIALOG_WORKER_KEY // "__DIALOG_SETTINGS"
+  static #localType =  GLOBAL_DIALOG_TYPE // "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
   /**
    * Key which this worker will handle
    * @type {String}
@@ -5421,14 +5158,8 @@ registeredExceptions.push(
 )
 
 class TypesWorker extends Setting {
-  static #KEY =
-    GLOBAL_TYPES_MANAGER_KEY !== undefined
-      ? GLOBAL_TYPES_MANAGER_KEY
-      : "__NOTE_TYPES"
-  static #localType =
-    GLOBAL_TYPES_TYPE !== undefined
-      ? GLOBAL_TYPES_TYPE
-      : "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
+  static #KEY = GLOBAL_TYPES_MANAGER_KEY // "__NOTE_TYPES"
+  static #localType = GLOBAL_TYPES_TYPE  // "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
   /** Key which this worker will handle
    * @type {String}
    */
@@ -5667,7 +5398,7 @@ async function foty(tp, app) {
   }
   test(testYAML)
   try {
-    let lit = onne
+    let lit = user_configuration
     let setting = new Setting(lit, undefined, undefined, tp)
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(renderYAML, setting.getRenderYAML())
@@ -5700,7 +5431,7 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 
-if (false) {
+if (DEBUG) {
   let onne_x = {
     //localType: (String|Array.<String>|Array.<Array.<String>>)
     __TRANSLATE: {

@@ -53,7 +53,6 @@ let onne = {
       date: true,
       dateformat: "YYYY-MM-DD",
       frontmatter: {private: true},
-      language: "Portuguese",
     },
     citation: {
       marker: "°",
@@ -63,6 +62,188 @@ let onne = {
   soso: {VALUE: "naja", __SPEC: true, RENDER: false},
   c:    {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
 }
+//  #region data to be converted from onne
+/*@convert*/ function onne_createCbk(tp, noteName, type) {
+  return tp.date.now()
+}
+/*@convert*/ function onne_autoTagCbk(tp, noteName, type) {
+  return "0/" + type
+}
+/*@convert*/ function onne_aliasCbk(tp, noteName, type) {
+  let alias = noteName
+  if (type != "ort" && type != "person") {
+    alias = noteName.replace(/,/g, ` `).replace(/  /g, ` `)
+  } else {
+    // ort, person
+    alias = noteName.replace(/, /g, `,`)
+    let strArr = alias.split(",")
+    alias = strArr[0]
+    strArr.shift()
+    if (type == "ort") {
+      alias += "(" + strArr.join(" ") + ")"
+    } else if (type == "person") {
+      alias = strArr.join(" ") + " " + alias
+    }
+  }
+  return alias
+}
+/*@convert*/ function onne_cssClsCbk(tp, noteName, type) {
+  return type
+}
+
+const ONNE_FRONTMATTER_ENTRIES = {
+  /*@convert*/ aliases: {isList: true, defaultValue: onne_aliasCbk},
+  /*@convert*/ date_created: {isList: false, defaultValue: onne_createCbk},
+  /*@convert*/ tags: {isList: true, defaultValue: onne_autoTagCbk},
+  /*@convert*/ publish: {isList: false, defaultValue: false},
+  /*@convert*/ cssclass: {isList: true, defaultValue: onne_cssClsCbk},
+  /*@convert*/ private: {isList: false, defaultValue: false},
+  /*@convert*/ position: {ignore: true},
+}
+const TYPES = {
+  /*@convert*/ audio: {
+    marker: "{a}",
+    isDiary: false,
+    photo: "pexels-foteros-352505_200.jpg",
+    name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
+  },
+  /*@convert*/ buch: {
+    marker: "{b}",
+    isDiary: false,
+    photo: "pexels-gül-işık-2203051_200.jpg",
+    name_prompt: "Autornachname - Buchtitel",
+  },
+  /*@convert*/ ort: {
+    marker: "",
+    isDiary: false,
+    photo: "pexels-dzenina-lukac-1563005_200.jpg",
+    name_prompt: "Ortsname, Land",
+  },
+  /*@convert*/ person: {
+    marker: "",
+    isDiary: false,
+    photo: "pexels-lucas-andrade-14097235_200.jpg",
+    name_prompt: "Personnachname, Personvorname ?Geburtsdatum",
+  },
+  /*@convert*/ video: {
+    marker: "{v}",
+    isDiary: false,
+    photo: "pexels-vlad-vasnetsov-2363675_200.jpg",
+    name_prompt: "?Reihe - ?Autornachname - Videotitel",
+  },
+  /*@convert*/ web: {
+    marker: "{w}",
+    isDiary: false,
+    photo: "pexels-sururi-ballıdağ-_200.jpeg",
+    name_prompt: "?Autor - Webseitentitel - ?Datum",
+  },
+  /*@convert*/ zitat: {
+    marker: "°",
+    isDiary: false,
+    name_prompt: "Titel Autornachname",
+  },
+  /*@convert*/ zitate: {
+    marker: "°°",
+    isDiary: false,
+    name_prompt: "Titel Autornachname",
+  },
+  /*@convert*/ exzerpt: {
+    marker: "$",
+    isDiary: false,
+    name_prompt: "Autornachname - Buchtitel",
+  },
+  /*@convert*/ garten: {
+    marker: "", 
+    isDiary: false, 
+    name_prompt: "Gartenthema"
+  },
+  /*@convert*/ gartentagebuch: {
+    marker: "",
+    isDiary: true,
+    dateformat: "YY-MM-DD",
+    before_date: "Garten ",
+  },
+  /*@convert*/ lesetagebuch: {
+    marker: "",
+    isDiary: true,
+    firstline: "## ArticleTitle\n[NtvZdf]link\n\n",
+    dateformat: "YY-MM-DD",
+    before_date: "Lesetagebucheintrag ",
+  },
+  /*@convert*/ pflanze: {
+    marker: "",
+    isDiary: false,
+    name_prompt: "Pflanzenname",
+  },
+  /*@convert*/ unbedacht: {
+    marker: "",
+    isDiary: true,
+    dateformat: "YY-MM-DD",
+    before_date: "Unbedacht ",
+  },
+  /*@convert*/ verwaltung: {
+    marker: "",
+    isDiary: false,
+    name_prompt: "Verwaltungsthema",
+  },
+  /*@convert*/ diary: {marker: "", isDiary: true, dateformat: "YYYY-MM-DD"},
+  /*@convert*/ note: {marker: "", isDiary: false, name_prompt: "Notizthema"},
+}
+/*@convert*/ TYPES["diary"].frontmatter = {private: true}
+/*@convert*/ TYPES["verwaltung"].frontmatter = {private: true}
+/*@convert*/ TYPES["gartentagebuch"].frontmatter = {
+  cssclass: "garten, tagebuch",
+}
+/*@convert*/ TYPES["pflanze"].frontmatter = {
+  cssclass: "garten",
+  Name: "",
+  Sorte: "",
+  Firma: "",
+  vorhanden: "",
+  Aussaat_geschützt: "-FM---------",
+  Aussaat_Freiland: "",
+  Auspflanzen: "",
+  Ernte_geschützt: "",
+  Ernte_Freiland: "",
+  Keimtemperatur_Grad: "",
+  Keimdauer_Tage: "",
+  Standort: "",
+  Boden: "",
+  Dauer: "",
+  Saattiefe_cm: "",
+  Abstand_x_cm: "",
+  Abstand_y_cm: "",
+}
+/*@convert*/ TYPES["lesetagebuch"].frontmatter = {cssclass: "tagebuch"}
+/*@convert*/ TYPES["unbedacht"].frontmatter = {cssclass: "tagebuch"}
+/*@convert*/ const FOLDER2TYPES = {
+  exzerpte: ["exzerpt"],
+  garten: ["garten"],
+  gartentagebuch: ["gartentagebuch"],
+  lesetagebuch: ["lesetagebuch"],
+  pflanzen: ["pflanze"],
+  unbedacht: ["unbedacht"],
+  verwaltung: ["verwaltung"],
+  zwischenreich: [
+    "audio",
+    "buch",
+    "ort",
+    "person",
+    "video",
+    "web",
+    "zitat",
+    "zitate",
+  ],
+  diary: ["diary"],
+  vaultroot: ["note"],
+  temp: ["diary", "garten"],
+}
+/*@convert*/ const DEFAULT_TYPE = "note"
+/*@convert*/ const ROOT_KEY = "vaultRoot"
+/*@convert*/ const RESOURCE_FOLDER = "_resources/"
+/*@convert*/ const RESOURCE_TYPES = ["jpg", "jpeg", "png", "mp3", "midi"]
+//  #endregion data to be converted from onne
+
 var GLOBAL_SYMBOL_COUNTER = 0
 const Dialog = {
   Ok: "Ok",
