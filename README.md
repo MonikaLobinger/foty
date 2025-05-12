@@ -20,19 +20,16 @@ Every line of code you do not write is good
 
 ## JSDoc
 
-- `cd NotebookDirectory/..`
-- `mkdir Doc`
-- `cd Doc`
+- `cd NotebookDirectory/_`
 - `npm install -D jsdoc`
+- `npm install -D docdash`
 - `npm install -D jsdoc-mermaid`
 - Edit: `./node_modules/jsdoc-mermaid/index.js` replace `7.1.0` with `11.6.0`
   - OR: Download https://app.unpkg.com/mermaid@11.6.0/files/dist/mermaid.min.js
-  - to `.` (current directory which is `NotebookDirectory/Doc`)    
+  - to `.` (current directory which is `NotebookDirectory/_`)    
   - Edit: `./node_modules/jsdoc-mermaid/index.js` replace `https://unpkg.com/mermaid@7.1.0/dist` with `..`
   - So source would be `src="../mermaid.min.js">`
-- Edit: `../NotebookDirectory/_/jsdocconf.js` replace `Notes0` with `NotebookDirectory`
-- `ln ../NotebookDirectory/_/jsdocconf.js jsdocconf.js`
-- `ln ../NotebookDirectory/_/_scripts/foty.js foty.js`
-- `./node_modules/.bin/jsdoc -c jsdocconf.js foty.js`
+- `cp jsdoc.css node_modules/docdash/static/styles`
+- `./node_modules/.bin/jsdoc -c jsdocconf.js _scripts/foty.js`
 - open `./out/index.html` in Browser
-cd 
+

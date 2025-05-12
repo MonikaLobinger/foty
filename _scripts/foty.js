@@ -3106,12 +3106,13 @@ class BreadCrumbs extends AEssence {
   }
 
   /**
-   * @classdesc Parsing tree superclass.
+   * @classdesc 
+   * Parsing tree superclass.
    * @mermaid
    *  classDiagram
-   *      GenePool <|-- AEssence
+   *      GenePool <|-- Essence
    *      Essence <|-- AEssence
-   *      AEssence <|-- BreadCrumbs
+   *      AEssence <|-- Breadcrumbs
    * @extends AEssence
    * @constructor
    * @description
@@ -3123,7 +3124,7 @@ class BreadCrumbs extends AEssence {
    * <code>bigint</code>, <code>string</code>, <code>symbol</code>
    * and <code>function</code> to this pool with
    * {@link GeneCallback|callback} {@link cbkTypeOf}.<br>
-   * Adds <code>date</data> to this pool with
+   * Adds <code>date</code> to this pool with
    * {@link GeneCallback|callback} {@link cbkIsDate}.<br>
    * Adds <code>object</code> with {@link GeneCallback|callback} {@link cbkIsObjectNotNullNotArray},
    * <code>null</code> with {@link GeneCallback|callback} {@link cbkIsNull}
