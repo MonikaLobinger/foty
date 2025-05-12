@@ -1,5 +1,6 @@
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
+//@todo adapt paths for windows
 /**
  * @description
  * Script for obsidian, templater extension needed
@@ -165,7 +166,8 @@ function cbkFmtCssClass(tp, noteName, noteType) {
 let user_configuration = {
   __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
   { 
-    LANGUAGE: "de",
+    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"    
+    RELATIVE_PATH: true, // hardcoded:FALLBACK_RELATIVE_PATH true
   },
   __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
   { 
@@ -179,7 +181,7 @@ let user_configuration = {
   },
   __NOTE_TYPES: 
   {
-    __SPEC: {REPEAT: true, },
+    __SPEC: {REPEAT: true, DEFAULT: "note"},
     DEFAULTS: {
         marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
         date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
@@ -194,12 +196,18 @@ let user_configuration = {
         //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
         //     position: {__SPEC:false,IGNORE: true},
          },
-        language: {__SPEC:false,IGNORE:true, },
+         folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["/zwischenreich"]},
+        },
+    // If DEFAULT is not set in __SPEC, first entry is default
+    // If set and has all DEFAULTS, it has not to be listed here
+    note: {
+      folders: ["/"],
     },
     diary: {
       date: true,
       dateformat: "YYYY-MM-DD",
       frontmatter: {private: true},
+      folders: ["/diary", "/temp", "unbedacht"],
     },
     citation: {
       marker: "°",
@@ -238,18 +246,20 @@ const Dialog = {
 }
 
 // TypesWorker
-const GLOBAL_TYPES_MANAGER_KEY = "__NOTE_TYPES"
-const GLOBAL_TYPES_TYPE =
+const TYPES_WORKER_KEY = "__NOTE_TYPES"
+const TYPES_TYPE =
   "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
 // DialogWorker
-const GLOBAL_DIALOG_WORKER_KEY = "__DIALOG_SETTINGS"
-const GLOBAL_DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
+const DIALOG_WORKER_KEY = "__DIALOG_SETTINGS"
+const DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
 // LocalizationWorker
-const GLOBAL_LOCALIZATION_WORKER_KEY = "__TRANSLATE"
-const GLOBAL_LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
+const LOCALIZATION_WORKER_KEY = "__TRANSLATE"
+const LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
+const FALLBACK_LANGUAGE = "en"
+const FALLBACK_RELATIVE_PATHS = true
 // GeneralWorker
-const GLOBAL_GENERAL_WORKER_KEY = "__GENERAL_SETTINGS"
-const GLOBAL_GENERAL_TYPE = "(Number|String|Boolean)"
+const GENERAL_WORKER_KEY = "__GENERAL_SETTINGS"
+const GENERAL_TYPE = "(Number|String|Boolean)"
 // Setting
 const GLOBAL_ROOT_KEY = "/"
 const GLOBAL_SETTING_TYPE =
@@ -2742,7 +2752,7 @@ registeredExceptions.push(
 )
 
 //#endregion Gene, Pool and Essence
-//#region code
+//#region central code classes
 class AEssence extends Essence {
   static #SPEC_KEY = GLOBAL__SPEC // "__SPEC"
   /** SPEC key
@@ -3759,6 +3769,7 @@ class Setting extends BreadCrumbs {
   iterator() {
     /* don't know how to js document  [Symbol.iterator] otherwise*/
   }
+
   [Symbol.iterator]() {
     let index = 0
     return {
@@ -3795,17 +3806,21 @@ class Setting extends BreadCrumbs {
 
   /**
    * Returns value from worker, if {@link key} is registered worker, else from this
-   * @param {String} key - if not worker identifier, key can specify child keys by
-   *                       using commas, e.g. "grandParentKey,parentKey,childKey"
+   * @param {String} key - key can specify child keys by using points, 
+   *                       e.g. "grandParentKey.parentKey.childKey"
    * @param  {...any} params - for worker's getValue
    * @returns {*}
    */
   getValue(key, ...params) {
     let works = this.#getWorks(key)
     if (works !== undefined) {
-      return works[0].getValue(works[1], params)
+      if (params === undefined)
+        return works[0].getValue(works[1])
+      else
+        return works[0].getValue(works[1], ...params)
     } else if (this.at(key) !== undefined) return this.at(key).VALUE
   }
+
   #getWorks(key) {
     let answ
     if (typeof key == "string") {
@@ -3820,6 +3835,7 @@ class Setting extends BreadCrumbs {
     }
     return answ
   }
+
   /**
    * Returns all frontmatter entries of this instance and descendants
    * besides IGNORED ones.
@@ -4591,8 +4607,9 @@ registeredExceptions.push(
 
 //  #region workers
 class GeneralWorker extends Setting {
-  static #KEY =  GLOBAL_GENERAL_WORKER_KEY // "__GENERAL_SETTINGS"
-  static #localType =  GLOBAL_GENERAL_TYPE // "(Number|String|Boolean)"
+  static #KEY =  GENERAL_WORKER_KEY // "__GENERAL_SETTINGS"
+  static #localType =  GENERAL_TYPE // "(Number|String|Boolean)"
+  
   /**
    * Key which this worker will handle
    * @type {String}
@@ -4600,6 +4617,7 @@ class GeneralWorker extends Setting {
   static get workerKey() {
     return GeneralWorker.#KEY
   }
+
   /**
    * @classdesc For note types
    * @extends Setting
@@ -4623,6 +4641,42 @@ class GeneralWorker extends Setting {
     this.throwIfUndefined(key, "key")
   }
 
+  /**
+   * Returns value of {@link key} or {@link params} as caller fallback or 
+   * hardcoded  FALLBACK for {@link key} or undefined if none of them is found
+   * <p>
+   * keys with hardcoded fallback are:
+   * - LANGUAGE (FALLBACK_LANGUAGE)<br>
+   * - RELATIVE_PATHS (FALLBACK_RELATIVE_PATHS)<br>
+   * - 
+   * @param {String} key
+   * @param  {...any} params - 2nd parameter could be fallback value
+   * @returns {String}
+   */
+  getValue(key, ...params) {
+    let atom = this.at(key)
+    let value
+    if( atom !== undefined) {
+      value = atom.VALUE
+    } else {
+      if(params.length > 0) {
+        value = params[0]
+      } else {
+        switch(key) {
+          case "LANGUAGE" :
+            value = FALLBACK_LANGUAGE
+            break;
+          case "RELATIVE_PATHS" :
+            value = FALLBACK_RELATIVE_PATHS
+            break;
+          default:
+            break;
+        }
+      }        
+    }
+    return value
+  }
+  
   //prettier-ignore
   static test(outputObj) { // GeneralWorker
     let _ = null
@@ -4682,43 +4736,44 @@ class GeneralWorker extends Setting {
       _.bassert(2,dlgMan1.toString().includes("GeneralWorker"),"result does not contain class string"    )
     }
     function getValueTest() {
+      let un
       let par = new Setting({},"GeneralWorker:getValueTest:parent")
       /**********************************************************************/{        
-      let lit = {pos:22}
-      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest1",par)
-      let val = dlg.getValue("pos")
-      _.bassert(1,val == 22,"get the value via GeneralWorker")
-      let litS = { __GENERAL_SETTINGS:{pos:22}}
-      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
-      let valS = set.getValue("__GENERAL_SETTINGS.pos")
-      _.bassert(2,valS == 22,"get the value via Setting")
+      let lit = {LANGUAGE:"abcd"}
+      let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest1",par)
+      let val = gen.getValue("LANGUAGE")
+      _.bassert(1,areEqual(val,"abcd"),"get the LANGUAGE value via GeneralWorker")
+      let litS = { __GENERAL_SETTINGS:{LANGUAGE:"abcd"}}
+      let set = new Setting(litS)
+      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE")
+      _.bassert(2,areEqual(valS,"abcd"),"get the LANGUAGE value via Setting")
       }/**********************************************************************/{        
-      let lit = { line: {pos:22}}
-      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
-      let val = dlg.getValue("line.pos")
-      _.bassert(11,val == 22,"get the value via Setting")
-      let litS = { __GENERAL_SETTINGS:{line: {pos:22}}}
-      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
-      let valS = set.getValue("__GENERAL_SETTINGS.line.pos")
-      _.bassert(12,valS == 22,"get the value via Setting")
+      let lit = {NOLANGUAGE:"abcd"}
+      let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
+      let val = gen.getValue("LANGUAGE")
+      _.bassert(11,areEqual(val,FALLBACK_LANGUAGE),"get the hardcoded LANGUAGE value via GeneralWorker")
+      let litS = { __GENERAL_SETTINGS:{NOLANGUAGE:"abcd"}}
+      let set = new Setting(litS)
+      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE")
+      _.bassert(12,areEqual(valS,FALLBACK_LANGUAGE),"get the hardcoded LANGAUGE value via Setting") 
       }/**********************************************************************/{        
-      let lit = {globwert:"wicchtik"}
-      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest1",par)
-      let val = dlg.getValue("globwert")
-      _.bassert(21,areEqual(val,"wicchtik"),"get the value via GeneralWorker")
-      let litS = { __GENERAL_SETTINGS:{globwert:"wicchtik"}}
-      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
-      let valS = set.getValue("__GENERAL_SETTINGS.globwert")
-      _.bassert(22,areEqual(valS,"wicchtik"),"get the value via Setting")
+      let lit = {NOLANGUAGE:"abcd"}
+      let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest21",par)
+      let val = gen.getValue("LANGUAGE","ced")
+      _.bassert(21,areEqual(val,"ced"),"get the fallback LANGUAGE value via GeneralWorker")
+      let litS = { __GENERAL_SETTINGS:{NOLANGUAGE:"abcd"}}
+      let set = new Setting(litS)
+      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE","ced")
+      _.bassert(22,areEqual(valS,"ced"),"get the fallback LANGAUGE value via Setting") 
       }/**********************************************************************/{        
-      let lit = { globsect: {globwert:"wicchtik"}}
-      let dlg = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
-      let val = dlg.getValue("globsect.globwert")
-      _.bassert(31,areEqual(val,"wicchtik"),"get the value via Setting")
-      let litS = { __GENERAL_SETTINGS:{globsect: {globwert:"wicchtik"}}}
-      let set = new Setting(litS,"GeneralWorker:getValueTest12",par)
-      let valS = set.getValue("__GENERAL_SETTINGS.globsect.globwert")
-      _.bassert(32,areEqual(valS,"wicchtik"),"get the value via Setting")
+      let lit = {LANGUAGE:"abcd"}
+      let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest31",par)
+      let val = gen.getValue("notthere")
+      _.bassert(31,areEqual(val,un),"get value for non existing key via GeneralWorker")
+      let litS = { __GENERAL_SETTINGS:{LANGUAGE:"abcd"}}
+      let set = new Setting(litS)
+      let valS = set.getValue("__GENERAL_SETTINGS.notthere",)
+      _.bassert(32,areEqual(valS,un),"get value for non existing key via Setting") 
       }/**********************************************************************/{        
       }/**********************************************************************/         
     }
@@ -4736,9 +4791,9 @@ registeredExceptions.push(
 )
 
 class LocalizationWorker extends Setting {
-  static #KEY =  GLOBAL_LOCALIZATION_WORKER_KEY //  "__TRANSLATE"
-  static #localType =  GLOBAL_LOCALIZATION_TYPE // "(String|Array.<String>|Array.<Array.<String>>)"
-  static #defaultLang = "en"
+  static #KEY =  LOCALIZATION_WORKER_KEY //  "__TRANSLATE"
+  static #localType =  LOCALIZATION_TYPE // "(String|Array.<String>|Array.<Array.<String>>)"
+  static #defaultLang = FALLBACK_LANGUAGE // "en"
   /** Key which this worker will handle
    * @type {String}
    */
@@ -4921,7 +4976,7 @@ class LocalizationWorker extends Setting {
       let litS = { __TRANSLATE:{word: ["de","Wort"]}}
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.word")
-      _.bassert(22,areEqual(valS,"Wort"),"get the value via Setting")
+      _.bassert(22,areEqual(valS,["de","Wort"]),"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { chapter: {word: ["de","Wort"]}}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
@@ -4930,7 +4985,7 @@ class LocalizationWorker extends Setting {
       let litS = { __TRANSLATE:{chapter: {word: ["de","Wort"]}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.chapter.word")
-      _.bassert(32,areEqual(valS,"Wort"),"get the value via Setting")
+      _.bassert(32,areEqual(valS,["de","Wort"]),"get the value via Setting")
       }/**********************************************************************/        
       let lit = { word: "Wort", 
                   coffee: ["de","Kaffee"],
@@ -5013,8 +5068,8 @@ registeredExceptions.push(
 )
 
 class DialogWorker extends Setting {
-  static #KEY = GLOBAL_DIALOG_WORKER_KEY // "__DIALOG_SETTINGS"
-  static #localType =  GLOBAL_DIALOG_TYPE // "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
+  static #KEY = DIALOG_WORKER_KEY // "__DIALOG_SETTINGS"
+  static #localType =  DIALOG_TYPE // "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
   /**
    * Key which this worker will handle
    * @type {String}
@@ -5158,8 +5213,8 @@ registeredExceptions.push(
 )
 
 class TypesWorker extends Setting {
-  static #KEY = GLOBAL_TYPES_MANAGER_KEY // "__NOTE_TYPES"
-  static #localType = GLOBAL_TYPES_TYPE  // "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
+  static #KEY = TYPES_WORKER_KEY // "__NOTE_TYPES"
+  static #localType = TYPES_TYPE  // "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
   /** Key which this worker will handle
    * @type {String}
    */
@@ -5377,7 +5432,98 @@ registeredExceptions.push(
   "new TypesWorker({},undefined, new Setting({},'parent'))"
 )
 //  #endregion workers
-//#endregion code
+//#endregion central code classes
+//#region functions
+class doTheWork {
+  #gen
+  #loc
+  #dlg
+  #typ
+  #defaults
+
+  #filename
+  #path_relative
+  #path_absolute
+
+  constructor(setting, tp) {
+    this.#gen = setting.at(GENERAL_WORKER_KEY)
+    this.#loc = setting.at(LOCALIZATION_WORKER_KEY)
+    this.#dlg = setting.at(DIALOG_WORKER_KEY)
+    this.#typ = setting.at(TYPES_WORKER_KEY)
+    this.#defaults = this.#typ.at("DEFAULTS")
+
+    this.#filename = tp.file.title
+    this.#path_relative = tp.file.path(true)
+    this.#path_absolute = tp.file.path(false)
+  }
+  isNewNote() {
+    let answer = false
+    let lang_array = [FALLBACK_LANGUAGE]
+    let new_titles_array = []
+    let lang = this.#gen.getValue("LANGUAGE", FALLBACK_LANGUAGE)
+    if(0 != lang.localeCompare(FALLBACK_LANGUAGE)) {
+      lang_array.push(lang)
+    }
+    lang_array.forEach((lang) => {
+      new_titles_array.push(this.#loc.getValue("TITLE_NEW_FILE",lang))
+    })
+    new_titles_array.some(prefix => { 
+      answer = this.#filename.startsWith(prefix) ? true : false
+      return answer
+    });
+    return answer
+  } 
+  async findType(isNew) {
+    let type = this.defaultType()
+    let types_m = []
+    let types_f = this.typesFromFolder()
+    //if(!isNew) types_m = typesFromMarker()
+  }
+
+  defaultType() {
+    let def = this.#typ.DEFAULT
+    if(0 == def.length) {
+      for (const [key, val] of this.#typ) {
+        if(0 != key.localeCompare("DEFAULTS")) {
+          def = key
+          break
+        }
+      }
+    }
+    return def
+  }
+  typesFromFolder() {
+    let types = [];
+    let relative = this.#gen.getValue("RELATIVE_PATHS") 
+    let noteWithPath = relative ? this.#path_relative : this.#path_absolute
+    let folderParts = noteWithPath.split(GLOBAL_ROOT_KEY);
+    folderParts.unshift(GLOBAL_ROOT_KEY)
+    folderParts.pop()
+    folderParts.forEach((part)=> {
+      console.log("!" + part)
+    })
+    for (const [key, val] of this.#typ) {
+      if(0 == key.localeCompare("DEFAULTS")) {
+        continue
+      }
+      let folders = val.getValue("folders")
+      if(folders === undefined) {
+        folders = this.#defaults.at("folders").DEFAULT
+      }
+      console.log(">" + key + ":" + folders)
+    }
+    return types;
+  }
+    
+}
+async function findName(){
+  return "" 
+}
+async function rename(){
+  return "" 
+}
+
+//#endregion functions
 
 /** exported function.
  * <p>
@@ -5400,6 +5546,47 @@ async function foty(tp, app) {
   try {
     let lit = user_configuration
     let setting = new Setting(lit, undefined, undefined, tp)
+    let work = new doTheWork(setting, tp)
+    let isNew = work.isNewNote()
+    let type = await work.findType(isNew)
+    let name = await findName()
+    await rename()
+
+    let CONVERT_FROM_ONNE = false
+    if (CONVERT_FROM_ONNE) {
+    /**************************************************************************/
+      let activeFile = tp.config.active_file.path;
+      let runMode = tp.config.run_mode;
+      let notePath = tp.file.path(true/*relative*/);
+      let noteTitle = tp.file.title;
+      let onneFmPairs = copyValuesToExistingKeys(
+                        entries2pairs(ONNE_FRONTMATTER_ENTRIES), 
+                        tp.frontmatter);
+      let isNew
+      let type = 
+        await findType(tp, notePath, isNew, TYPES, DEFAULTTYPE, FOLDER2TYPES);
+      let name = 
+        await findName(tp, noteTitle, isNew, TYPES[type], DEFAULT_NAME_PROMPT);
+      await rename(tp, isNew, name, TYPES[type]);
+      setOnneValues(tp, onneFmPairs, name, type, ONNE_FRONTMATTER_ENTRIES, 
+                  TYPES[type]["frontmatter"]);
+      let renderPairs = { 
+        "____"      : "",
+        "foto"      : "",
+        "firstline" : "",
+        "prevdate"  : "",
+        "prevname"  : "",
+        "nextdate"  : "",
+        "nextname"  : "",
+      };
+      setRenderValues(tp, app, renderPairs, TYPES[type], RESOURCE_FOLDER, 
+                      RESOURCE_TYPES);
+    
+      return Object.assign({}, onneFmPairs, 
+                              getOtherPairs(tp, ONNE_FRONTMATTER_ENTRIES), 
+                              renderPairs);
+    /**************************************************************************/
+    }
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(renderYAML, setting.getRenderYAML())
   } catch (e) {
@@ -5427,7 +5614,12 @@ async function foty(tp, app) {
   }
 
   if (!DEBUG) dbgYAML = undefined
-
+  let DEBUG1 = false
+  if (DEBUG1) {
+    let lit = user_configuration
+    let setting = new Setting(lit, undefined, undefined, tp)
+  
+  }
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 
