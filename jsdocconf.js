@@ -22,7 +22,6 @@ module.exports = {
     sourceType: "module",
     tags: {
       allowUnknownTags: true,
-      dictionaries: ["jsdoc"]
     },
     templates: {
       cleverLinks: true,
@@ -30,15 +29,44 @@ module.exports = {
       default: {
         staticFiles: {
           include: [
-              "/home/monika/OneDrive/Notes/_/_scripts/static"
+              "../Notes0/_/_scripts/static"
           ]
         },
         outputSourceFiles: true
       }
-    }
-};
+    },
+    docdash: {
+      static: false,         // [false|true] Display the static members inside the navbar
+      sort: true,            // [false|true] Sort the methods in the navbar
+      sectionOrder: [               // Order the main section in the navbar (default order shown here)
+           "Classes",
+           "Externals",
+           "Events",
+           "Namespaces",
+           "Mixins",
+           "Tutorials",
+           "Modules",
+           "Interfaces"
+      ],
+      search: true,         // [false|true] Display seach box above navigation which allows to search/filter navigation items
+      commonNav: false,      // [false|true] Group all html code for <nav> in a nav.inc.html fetched on each page (instead of include it in each html page, save {navSize}×{nb html pages} which can be huge on big project)
+      collapse: true,   //  [false|true|top] Collapse navigation by default except current object's navigation of the current page, top for top level collapse
+      wrap: false,           // [false|true] Wrap long navigation names instead of trimming them
+      typedefs: false,       // [false|true] Include typedefs in menu
+      navLevel: 3,          // [integer] depth level to show in navbar, starting at 0 (false or -1 to disable)
+      private: false,        // [false|true] set to false to not show @private in navbar
+      removeQuotes: "none",// ["none"|"all"|"trim"] Remove single and double quotes, trim removes only surrounding ones
+      scripts: [],                  // Array of external (or relative local copied using templates.default.staticFiles.include) js or css files to inject into HTML,
+      ShortenTypes: false, // [false|true] If set to true this will resolve the display name of all types as the shortened name only (after the final period).
+      menu: {                       // Adding additional menu items after Home
+      },
+      scopeInOutputPath: true, // [false|true] Add scope from package file (if present) to the output path, true by default.
+      nameInOutputPath: true, // [false|true] Add name from package file to the output path, true by default.
+      versionInOutputPath: true // [false|true] Add package version to the output path, true by default. 
+  }
+
+}
 // BigInt JSON serialization.
 BigInt.prototype.toJSON = function() {
 	return this.toString() + 'n';
 }
-
