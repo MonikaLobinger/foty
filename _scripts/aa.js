@@ -5,6 +5,7 @@ let user_configuration = {
   { 
     language: "de",
     relative_path: true,
+    directory_seperator: "/" 
   },
   __TRANSLATE:
   { 
@@ -22,9 +23,9 @@ let user_configuration = {
       date: { DEFAULT:false, },
       aliases: {VALUE: "nochnname", RENDER: true,},
     },
+    DEFAULTNOTE: "note",
     note: {
       ISNOTETYPE: true,
-      folder: "/", 
       krummel: {VALUE: 2025, RENDER: true}
     },
     diary: {
@@ -33,7 +34,8 @@ let user_configuration = {
       VALUE: "WERT",
       showdate: true, 
       dateformat: "YYYY-MM-DD",
-      date: {VALUE: 2025, RENDER: true}
+      date: {VALUE: 2025, RENDER: true},
+      folder: "diary"
     },
     soso: {VALUE: "naja", RENDER: false,},
     c:    {pict2: "Russian-Matroshka2.jpg", RENDER: true, },
@@ -42,24 +44,23 @@ let user_configuration = {
 }
 
 class Setting {
-  //#region members, with getter
+  
   #tp
   #cfg
   #general
   #translate
   #dialog
   #notes
-
   get general() { return this.#general}
   get translate() { return this.#translate}
   get dialog() { return this.#dialog}
   get notes() { return this.#notes}
-  //#endregion members
+  
   constructor(cfg, tp) {
-    this.#cfg = cfg
     this.#tp = tp
+    this.#cfg = cfg
     this.#general = new GeneralSetting(this.#cfg.__GENERAL)
-    this.#translate = new TranslateSetting(this.#cfg.__TRANSLATE)
+    this.#translate = new TranslateSetting(this.#cfg.__TRANSLATE, this.#general)
     this.#dialog = new DialogSetting(this.#cfg.__DIALOG)
     this.#notes = new NotesSetting(this.#cfg.__NOTES)
     this.#cfg.__GENERAL = undefined
@@ -95,59 +96,99 @@ class Setting {
   }
 
   static showProps(rootkey, rootval) {
-    //console.log(rootval)
-    //return
+    
+    
     let result = "";
     for (const key in rootval) {
-      // Object.hasOwn() is used to exclude properties from the object's
-      // prototype chain and only show "own properties"
+      
+      
       if (Object.hasOwn(rootval, key)) {
         result += `${rootkey}.${key} = ${rootval[key]}\n`;
       }
     }
     console.log(result);
   }
+  static get(key, cfg, fallback) {
+    let answer = cfg[key]
+    return answer === undefined ? fallback : answer
+  }
 }
 
 class GeneralSetting {
-  //#region members
+  
   #cfg
-  //#endregion members
+  
   constructor(cfg) {
     this.#cfg = cfg
+  }
+  get(key,fallback) {
+    return Setting.get(key,this.#cfg,fallback)
   }
 }
 
 class TranslateSetting {
-  //#region members
+  
   #cfg
-  //#endregion members
-  constructor(cfg) {
+  #generalCfg
+  #lang
+  
+  constructor(cfg, generalCfg) {
     this.#cfg = cfg
+    this.#generalCfg = generalCfg
+    this.#lang = this.#generalCfg.get("language","en")
   }
 
-  translate(kenner) {
-    let translation = ""
+  doTranslate(kenner, language, fallback) {
+    let translation
+    let entry = this.#cfg[kenner]
+    if(typeof entry === "string") {
+      translation = entry
+    } else if(typeof entry === "object" && Array.isArray(entry)) {
+      for (const langPair of entry) {
+        if (Array.isArray(langPair) && langPair.length > 1) {
+          if (langPair[0] == language) {
+            translation = langPair[1]
+            break
+          }
+          if (fallback == undefined) {
+            fallback = langPair[1]
+          }
+        } else break
+      }
+    } 
+    if (translation === undefined) {
+      translation = fallback === undefined ? kenner : fallback
+    }
     return translation
+  }
+
+  translate(kenner, fallback) {
+    return this.doTranslate(kenner, this.#lang, fallback)
+  }
+  get(key,fallback) {
+    return Setting.get(key,this.#cfg,fallback)
   }
 }
 
 class DialogSetting {
-  //#region members
+  
   #cfg
-  //#endregion members
+  
   constructor(cfg) {
     this.#cfg = cfg
+  }
+  get(key, fallback) {
+    return Setting.get(key,this.#cfg,fallback)
   }
 }
 
 class NotesSetting {
-  //#region members
+  
   #cfg
   #types = {}
   #type
   #typecfg
-  //#endregion members
+  
   constructor(cfg) {
     this.#cfg = cfg
     for (const key in this.#cfg) {
@@ -179,6 +220,99 @@ class NotesSetting {
 
     return renderYAML
   }
+  get(key,fallback) {
+    return Setting.get(key,this.#cfg,fallback)
+  }
+  getMarker(fallback) {
+    let answer = this.#typecfg["marker"]
+    return answer === undefined ? fallback : answer
+  }
+  getFilename(fallback) {
+    return fallback
+  }
+  getTypes() {
+    return this.#types
+  }
+}
+class doTheWork {
+  #gen
+  #loc
+  #dlg
+  #typ
+  #defaults
+  #filename
+  #path_relative
+  #path_absolute
+  constructor(setting, tp) {
+    this.#gen = setting.at(GENERAL_WORKER_KEY)
+    this.#loc = setting.at(LOCALIZATION_WORKER_KEY)
+    this.#dlg = setting.at(DIALOG_WORKER_KEY)
+    this.#typ = setting.at(TYPES_WORKER_KEY)
+    this.#defaults = this.#typ.at("DEFAULTS")
+    this.#filename = tp.file.title
+    this.#path_relative = tp.file.path(true)
+    this.#path_absolute = tp.file.path(false)
+  }
+  isNewNote() {
+    let answer = false
+    let lang_array = [FALLBACK_LANGUAGE]
+    let new_titles_array = []
+    let lang = this.#gen.getValue("LANGUAGE", FALLBACK_LANGUAGE)
+    if(0 != lang.localeCompare(FALLBACK_LANGUAGE)) {
+      lang_array.push(lang)
+    }
+    lang_array.forEach((lang) => {
+      new_titles_array.push(this.#loc.getValue("TITLE_NEW_FILE",lang))
+    })
+    new_titles_array.some(prefix => {
+      answer = this.#filename.startsWith(prefix) ? true : false
+      return answer
+    });
+    return answer
+  }
+  async findType(isNew) {
+    let type = this.defaultType()
+    let types_m = []
+    let types_f = this.typesFromFolder()
+  }
+  defaultType() {
+    let def = this.#typ.DEFAULT
+    if(0 == def.length) {
+      for (const [key, val] of this.#typ) {
+        if(0 != key.localeCompare("DEFAULTS")) {
+          def = key
+          break
+        }
+      }
+    }
+    return def
+  }
+  typesFromFolder() {
+    let types = [];
+    let relative = this.#gen.getValue("RELATIVE_PATHS")
+    let noteWithPath = relative ? this.#path_relative : this.#path_absolute
+    let folderParts = noteWithPath.split(GLOBAL_ROOT_KEY);
+    folderParts.unshift(GLOBAL_ROOT_KEY)
+    folderParts.pop()
+    folderParts.forEach((part)=> {
+    })
+    for (const [key, val] of this.#typ) {
+      if(0 == key.localeCompare("DEFAULTS")) {
+        continue
+      }
+      let folders = val.getValue("folders")
+      if(folders === undefined) {
+        folders = this.#defaults.at("folders").DEFAULT
+      }
+    }
+    return types;
+  }
+}
+async function findName(){
+  return ""
+}
+async function rename(){
+  return ""
 }
 
 class Templater {
@@ -186,16 +320,35 @@ class Templater {
   #setting
   #translatesetting
   #generalsetting
+  #dialogsetting
+  #notessetting
   #isNew
-  #type
-  #name
+  #notizname
+  #filename
+  #relative
+  #path_relative
+  #path_absolute
+  #dirsep
+  #notetype
+  #types_f = []
+  #types_m = []
+  #marker = ""
 
   constructor(setting,tp) {
     this.#setting = setting
     this.#tp = tp
     this.#generalsetting = setting.general
     this.#translatesetting = setting.translate
-  }
+    this.#notessetting = setting.notes
+    this.#dialogsetting = setting.dialog
+
+    this.#filename = tp.file.title
+    this.#path_relative = tp.file.path(true)
+    this.#path_absolute = tp.file.path(false)
+    this.#relative = this.#generalsetting.get("relative_path", true)
+
+    this.#dirsep = this.#generalsetting.get("directory_seperator", "/")
+ }
   
   async doTheWork() {
     this.#checkIsNewNote()
@@ -204,26 +357,77 @@ class Templater {
     await this.#rename()
   }
 
-  getType() {
-    return this.#type
+
+  #checkIsNewNote() {   
+    let titles = []
+    titles[0] = this.#translatesetting.doTranslate("title_new_file","en","")
+    let title = this.#translatesetting.translate("title_new_file","")
+    if(title != "" && title != titles[0]) titles[1]=title
+    titles.some(prefix => { 
+      this.#isNew = this.#filename.startsWith(prefix) ? true : false
+      return this.#isNew
+    })
   }
 
-  #checkIsNewNote() {
-    this.#tp.file.title
-    this.#translatesetting.translate("type_prompt")
-    this.#isNew = true
-  }
+  async #findType() {   
+    let defaulttype = this.#notessetting.get("DEFAULTNOTE", "note")
+    this.typesFromFolder()
+    if(!this.#isNew) {
+      this.typesFromMarker()
+    }
+    let type_prompt = this.#translatesetting.translate("type_prompt", "Choose Type")
+    let type_max_entries = this.#dialogsetting.get("type_max_entries", 10)
+    if(this.#types_m.length > 1) {
+      this.#notetype = await this.#tp.system.suggester(this.#types_m, 
+        this.#types_m, false, type_prompt, type_max_entries);
+    } else if(this.#types_f.length > 1) {
+      this.#notetype = await this.#tp.system.suggester(this.#types_f, 
+        this.#types_f, false, type_prompt, type_max_entries);
+    } else { 
+      this.#notetype = this.#types_m.length > 0 ? this.#types_m[0] : 
+        this.#types_f.length > 0 ? this.#types_f[0] :
+        defaulttype;
+    }
+    this.#notessetting.setType(this.#notetype)
+    this.#marker = this.#notessetting.getMarker("")
 
-  async #findType() {
-    this.#type="diary"
+  }
+  typesFromFolder() {
+    let noteWithPath = this.#relative ? this.#path_relative : this.#path_absolute
+    let folderParts = noteWithPath.split(this.#dirsep);
+    folderParts.pop()
+    let noteTypes = this.#notessetting.getTypes()
+    for (const key in noteTypes) {
+      let folder = noteTypes[key].folder
+      if(folder == undefined) continue
+      folderParts.forEach(part => {
+        if(folder.localeCompare(part) == 0) {
+          this.#types_f.push(key)
+        } 
+      })
+    }
+  }
+  typesFromMarker() {
+    
+    this.#types_m
+
   }
 
   async #findName() {
-    this.#name = "Notizname"
+    this.#notizname = "";
+    if(!this.#isNew) {
+      this.#notizname = this.#filename.substring(this.#marker.length)
+    } else {
+        this.#notizname = this.#notessetting.getFilename("")
+    }
+    if(this.#notizname == "") {
+      let prompt = this.#translatesetting.translate("name_prompt", "Pure Name of Note")
+      this.#notizname = await this.#tp.system.prompt(prompt)
+    }     
   }
 
   async #rename() {
-
+    await(this.#tp.file.rename(this.#marker + this.#notizname))
   }
 
 }
@@ -237,8 +441,8 @@ async function aa(tp, app) {
     let cfg = user_configuration
     let setting = new Setting(cfg, tp)
     let templ = new Templater(setting, tp)
+
     await templ.doTheWork()
-    setting.notes.setType(templ.getType())
 
     frontmatterYAML = setting.notes.getFrontmatterYAML()
     Object.assign(renderYAML, setting.notes.getRenderYAML())
@@ -249,4 +453,3 @@ async function aa(tp, app) {
 
   return Object.assign({}, frontmatterYAML, renderYAML)
 }
-

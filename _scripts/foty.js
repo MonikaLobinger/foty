@@ -253,7 +253,7 @@ var DEBUG = false
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = false
+var TESTING = true
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -5254,40 +5254,40 @@ class TypesWorker extends Setting {
     function getValueTest() {
       let par = new Setting({},"TypesWorker:getValueTest:parent")
       /**********************************************************************/{        
-      let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {pos:22}}
+      let lit = { __SPEC: {REPEAT: true, },  section: {pos:22}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
-      let val = typ.getValue("DEFAULTS.pos")
+      let val = typ.getValue("section.pos")
       _.bassert(1,val == 22,"get the value via TypesWorker")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {pos:22}}}
+      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {pos:22}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.pos")
+      let valS = set.getValue("__NOTE_TYPES.section.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
-      let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}
+      let lit = { __SPEC: {REPEAT: true, },  section: {line: {pos:22}}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
-      let val = typ.getValue("DEFAULTS.line.pos")
+      let val = typ.getValue("section.line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:22}}}}
+      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {line: {pos:22}}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.line.pos")
+      let valS = set.getValue("__NOTE_TYPES.section.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{        
-      let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {pos:[22,14]}}
+      let lit = { __SPEC: {REPEAT: true, },  section: {pos:[22,14]}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
-      let val = typ.getValue("DEFAULTS.pos")
+      let val = typ.getValue("section.pos")
       _.bassert(21,areEqual(val,[22,14]),"get the value via TypesWorker")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {pos:[22,14]}}}
+      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {pos:[22,14]}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.pos")
+      let valS = set.getValue("__NOTE_TYPES.section.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{        
-      let lit = { __SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}
+      let lit = { __SPEC: {REPEAT: true, },  section: {line: {pos:[22,14]}}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
-      let val = typ.getValue("DEFAULTS.line.pos")
+      let val = typ.getValue("section.line.pos")
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  DEFAULTS: {line: {pos:[22,14]}}}}
+      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {line: {pos:[22,14]}}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.DEFAULTS.line.pos")
+      let valS = set.getValue("__NOTE_TYPES.section.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/         
     }
