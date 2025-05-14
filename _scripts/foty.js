@@ -97,6 +97,7 @@ function cbkFmtCssClass(tp, noteName, noteType) {
 //  #region USER CONFIGURATION
 //prettier-ignore
 let user_configuration = {
+  // General section has to be the first section
   __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
   { 
     LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"    
@@ -189,7 +190,6 @@ const DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
 const LOCALIZATION_WORKER_KEY = "__TRANSLATE"
 const LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
 const FALLBACK_LANGUAGE = "en"
-const FALLBACK_RELATIVE_PATHS = true
 // GeneralWorker
 const GENERAL_WORKER_KEY = "__GENERAL_SETTINGS"
 const GENERAL_TYPE = "(Number|String|Boolean)"
@@ -253,7 +253,7 @@ var DEBUG = false
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
-var TESTING = true
+var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
  * <p>
@@ -4504,38 +4504,21 @@ class GeneralWorker extends Setting {
   }
 
   /**
-   * Returns value of {@link key} or {@link params} as caller fallback or 
-   * hardcoded  FALLBACK for {@link key} or undefined if none of them is found
+   * Returns value of {@link key} or {@link fallback} as caller fallback
+   * or undefined if none of them is found
    * <p>
-   * keys with hardcoded fallback are:
-   * - LANGUAGE (FALLBACK_LANGUAGE)<br>
-   * - RELATIVE_PATHS (FALLBACK_RELATIVE_PATHS)<br>
-   * - 
    * @param {String} key
-   * @param  {...any} params - 2nd parameter could be fallback value
-   * @returns {String}
+   * @param  {...any} fallback
+   * @returns {...any}
    */
-  getValue(key, ...params) {
+  getValue(key, fallback) {
     let atom = this.at(key)
     let value
     if( atom !== undefined) {
       value = atom.VALUE
     } else {
-      if(params.length > 0) {
-        value = params[0]
-      } else {
-        switch(key) {
-          case "LANGUAGE" :
-            value = FALLBACK_LANGUAGE
-            break;
-          case "RELATIVE_PATHS" :
-            value = FALLBACK_RELATIVE_PATHS
-            break;
-          default:
-            break;
-        }
-      }        
-    }
+      value = fallback
+    }        
     return value
   }
   
@@ -4612,11 +4595,11 @@ class GeneralWorker extends Setting {
       }/**********************************************************************/{        
       let lit = {NOLANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
-      let val = gen.getValue("LANGUAGE")
+      let val = gen.getValue("LANGUAGE",FALLBACK_LANGUAGE)
       _.bassert(11,areEqual(val,FALLBACK_LANGUAGE),"get the hardcoded LANGUAGE value via GeneralWorker")
       let litS = { __GENERAL_SETTINGS:{NOLANGUAGE:"abcd"}}
       let set = new Setting(litS)
-      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE")
+      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE", FALLBACK_LANGUAGE)
       _.bassert(12,areEqual(valS,FALLBACK_LANGUAGE),"get the hardcoded LANGAUGE value via Setting") 
       }/**********************************************************************/{        
       let lit = {NOLANGUAGE:"abcd"}
@@ -4655,7 +4638,7 @@ registeredExceptions.push(
 class LocalizationWorker extends Setting {
   static #KEY =  LOCALIZATION_WORKER_KEY //  "__TRANSLATE"
   static #localType =  LOCALIZATION_TYPE // "(String|Array.<String>|Array.<Array.<String>>)"
-  static #defaultLang = FALLBACK_LANGUAGE // "en"
+  #defaultLang = FALLBACK_LANGUAGE
   /** Key which this worker will handle
    * @type {String}
    */
@@ -4666,8 +4649,8 @@ class LocalizationWorker extends Setting {
    * @type {String}
    * @param {String} lang
    */
-  static set defaultLang(lang) {
-    if (typeof lang == "string") LocalizationWorker.#defaultLang = lang
+  set defaultLang(lang) {
+    if (typeof lang == "string") this.#defaultLang = lang
   }
 
   /**
@@ -4689,6 +4672,8 @@ class LocalizationWorker extends Setting {
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
+    if(this.root.at(GENERAL_WORKER_KEY) != undefined)
+      this.#defaultLang = this.root.at(GENERAL_WORKER_KEY).getValue("LANGUAGE", FALLBACK_LANGUAGE)
   }
 
   /**
@@ -4731,19 +4716,20 @@ class LocalizationWorker extends Setting {
    * let set = new Setting(lit)
    * set.getValue("__TRANSLATE.car", "nl")
    * @param {String} key
-   * @param  {...any} params - 2nd parameter should be language string
+   * @param {String} fallback 
+   * @param {String} language - if other langauge string than #defaultLang
    * @returns {String}
    */
-  getValue(key, ...params) {
+  getValue(key, fallbackIn, language) {
     let atom = this.at(key)
-    if (atom != undefined && params.length > 0 && Array.isArray(atom.VALUE)) {
-      let lang = params[0]
-      let fallback
+    if (atom != undefined  && Array.isArray(atom.VALUE)) {
+      let lang = language == undefined ? this.#defaultLang : lang
+      let fallback = fallbackIn
       for (const langPair of atom.VALUE) {
         if (Array.isArray(langPair) && langPair.length > 1) {
           if (langPair[0] == lang) return langPair[1]
           if (fallback == undefined) fallback = langPair[1]
-          if (langPair[0] == LocalizationWorker.#defaultLang)
+          if (langPair[0] == this.#defaultLang)
             fallback = langPair[1]
         } else break
       }
@@ -4834,20 +4820,20 @@ class LocalizationWorker extends Setting {
       let lit = {word: ["de","Wort"]}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
       let val = loc.getValue("word")
-      _.bassert(21,areEqual(val,["de","Wort"]),"get the value via DialogWorker")
+      _.bassert(21,areEqual(val,"Wort"),"get the value via DialogWorker")
       let litS = { __TRANSLATE:{word: ["de","Wort"]}}
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.word")
-      _.bassert(22,areEqual(valS,["de","Wort"]),"get the value via Setting")
+      _.bassert(22,areEqual(valS,"Wort"),"get the value via Setting")
       }/**********************************************************************/{        
       let lit = { chapter: {word: ["de","Wort"]}}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
       let val = loc.getValue("chapter.word")
-      _.bassert(31,areEqual(val,["de","Wort"]),"get the value via Setting")
+      _.bassert(31,areEqual(val,"Wort"),"get the value via Setting")
       let litS = { __TRANSLATE:{chapter: {word: ["de","Wort"]}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.chapter.word")
-      _.bassert(32,areEqual(valS,["de","Wort"]),"get the value via Setting")
+      _.bassert(32,areEqual(valS,"Wort"),"get the value via Setting")
       }/**********************************************************************/        
       let lit = { word: "Wort", 
                   coffee: ["de","Kaffee"],
@@ -4855,34 +4841,33 @@ class LocalizationWorker extends Setting {
                   notThere: ["some","use","less","words"],
                   noLang: [["some","1"],["use","2"],["less","3"],["words","4"]],
                 }
-      LocalizationWorker.defaultLang = "de" 
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest40",par)
+      loc.defaultLang = "de" 
       let val1 = loc.getValue("word")
       let val2 = loc.getValue("coffee")
       let val3 = loc.getValue("tree")
       let val4 = loc.getValue("notThere")
       let val5 = loc.getValue("noLang")
       let expAnsw1 = "Wort"
-      let expAnsw2 = "de,Kaffee"
-      let expAnsw3 = "en,tree,fr,arbre,es,botavara,de,Baum"
-      let expAnsw4 = "some,use,less,words"
-      let expAnsw5 = "some,1,use,2,less,3,words,4"
+      let expAnsw2 = "Kaffee"
+      let expAnsw3 = "Baum"
+      let expAnsw4 = "use"
+      let expAnsw5 = "1"
       _.bassert(41,val1==expAnsw1,"no language given")
       _.bassert(42,val2==expAnsw2,"no language given")
       _.bassert(43,val3==expAnsw3,"no language given")
       _.bassert(44,val4==expAnsw4,"no language given")
       _.bassert(45,val5==expAnsw5,"no language given")
-
       val1 = loc.getValue("word","de")
       val2 = loc.getValue("coffee","de")
       val3 = loc.getValue("tree","de")
       val4 = loc.getValue("notThere","de")
       val5 = loc.getValue("noLang","de")
       expAnsw1 = "Wort"
-      expAnsw2 = "Kaffee"
+      expAnsw2 = "de"
       expAnsw3 = "Baum"
-      expAnsw4 = "use"
-      expAnsw5 = "1"
+      expAnsw4 = "de"
+      expAnsw5 = "de"
       _.bassert(51,val1==expAnsw1,"de")
       _.bassert(52,val2==expAnsw2,"de")
       _.bassert(53,val3==expAnsw3,"de")
@@ -4894,6 +4879,11 @@ class LocalizationWorker extends Setting {
       val3 = loc.getValue("tree","nl")
       val4 = loc.getValue("notThere","nl")
       val5 = loc.getValue("noLang","nl")
+      expAnsw1 = "Wort"
+      expAnsw2 = "nl"
+      expAnsw3 = "Baum"
+      expAnsw4 = "nl"
+      expAnsw5 = "nl"
       _.bassert(61,val1==expAnsw1,"language 'nl' not found")
       _.bassert(62,val2==expAnsw2,"language 'nl' not found")
       _.bassert(63,val3==expAnsw3,"language 'nl' not found")
@@ -4907,7 +4897,11 @@ class LocalizationWorker extends Setting {
       val3 = set.getValue("__TRANSLATE.tree","de")
       val4 = set.getValue("__TRANSLATE.notThere","de")
       val5 = set.getValue("__TRANSLATE.noLang","de")
-
+      expAnsw1 = "Wort"
+      expAnsw2 = "de"
+      expAnsw3 = "tree"
+      expAnsw4 = "de"
+      expAnsw5 = "de"
       _.bassert(71,val1==expAnsw1,"de")
       _.bassert(72,val2==expAnsw2,"de")
       _.bassert(73,val3==expAnsw3,"de")
@@ -5366,7 +5360,7 @@ class doTheWork {
   }
   typesFromFolder() {
     let types = [];
-    let relative = this.#gen.getValue("RELATIVE_PATHS") 
+    let relative = this.#gen.getValue("RELATIVE_PATHS", true) 
     let noteWithPath = relative ? this.#path_relative : this.#path_absolute
     let folderParts = noteWithPath.split(GLOBAL_ROOT_KEY);
     folderParts.unshift(GLOBAL_ROOT_KEY)
@@ -5378,7 +5372,7 @@ class doTheWork {
       if(0 == key.localeCompare("DEFAULTS")) {
         continue
       }
-      let folders = val.getValue("folders")
+      let folders = val.getValue("folders", "")
       if(folders === undefined) {
         folders = this.#defaults.at("folders").DEFAULT
       }
