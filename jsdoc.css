@@ -381,6 +381,14 @@ footer {
    margin-top: 6px;
    margin-bottom: 6px;
 }
+.details dt.tag-source {
+  font-size: 0.7rem;
+  line-height: 1em;
+}
+.details dd.tag-source {
+  font-size: 0.7rem;
+  line-height: 1em;
+}
 
 .details ul {
    margin: 0
@@ -687,6 +695,9 @@ html[data-search-mode] .level-hide {
     display: block;
 }
 
+#main section {
+  padding-bottom: 1em;
+}
 
 @media only screen and (max-width: 680px) {
   body {

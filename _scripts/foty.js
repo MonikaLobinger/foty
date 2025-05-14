@@ -1,86 +1,19 @@
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
 //@todo adapt paths for windows
-/**
- * @description
- * Script for obsidian, templater extension needed
- * Creates new notes with frontmatter and text skeleton based on note types
- *<p>
- * Basics<br>
- * ======<br>
- * Obsidian creates a new note as empty note.
- * Notes of given kinds have some text in it in common. This text can be
- * inserted automatically with a template. One has to write the templates
- * for the kinds of notes one uses, choose the correct one on new note
- * creation and the skeleton will be inserted.
- * Code can also be written in javascript in case templater extension is
- * installed. This can be done within the template in specific code sections.
- * With templater parts of javascript code can be written in javascript files
- * which each export a function. This function can be called from within the
- * code section.
- *<p>
- * Problem description<br>
- * ====================<br>
- * For each kind of note another template is needed. If needs change, the
- * template has to be changed. If general needs change, all templates have
- * to be changed. Elaborated Templates are difficult to maintain. Not all
- * users of obsidian can write javascript.
- *<p>
- * Intention of foty<br>
- * ==================<br>
- * Let user needs be configurable and write a full note skeleton from given
- * configuration.
- * For changing needs only configuration should have to be changed.
- *<p>
- * Presumptions<br>
- * =============<br>
- * Note skeleton will contain a frontmatter header and a rendered part.
- * Frontmatter header has frontmatter entries. Rendered part has plain text
- * and text based on variable output, e.g. date or links to resources.
- *<p>
- * On new unnamed note creation note name will be created. Some kinds of
- * notes have a marker in its names, which do not belong to the semantic
- * title.
- *<p>
- * This all has to be configurable based on kind of note. Different kinds
- * of notes in foty are called 'types'. The configuration of a type should
- * lead to expected output, after foty has identified the type and the
- * (semantic) title.
- *<p>
- * Note types can be bound to folders.
- *<p>
- * Realization<br>
- * ===========<br>
- * foty consists of two parts: This javascript file and the template file,
- * which calls this script.
- *<p>
- * The script will return a list of key/value entries. One of the keys
- * is '____'. Before this key all entries are frontmatter entries, entries
- * after this keys are variables to be used in render part.
- *<p>
- * The template will write out all frontmatter entries in notes frontmatter
- * header section. Then it will write the render section depending on
- * variables.
- *<p>
- * Connection between script and template is tight, the template has to know
- * the names of the variables.
- *<p>
- * One could have realized it the way, that all the output is created from
- * script file, but than changes in rendering only would require javascript
- * editing.
- *<p>
- * Usage<br>
- * =====<br>
- * Different parts of codes are in different regions.
- * A region starts with //#region REGION_NAME or //# REGION_NAME
- * and it ends with //#endregion REGION_NAME or //#endregion REGION_NAME
- * Regions can be nested.
- * Using Visual Studio Code (and perhaps other source code editors) regions
- * marked this way can be folded for convenience.
- *<p>
- * Some settings for the script can be adapted to user needs. Those are in
- * region USER CONFIGURATION.
- */
+// Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
+// Script for Obsidian to create different note types, see foty.md for details.
+//
+// Different parts of codes are in different regions.
+// A region starts with //#region REGION_NAME or //# REGION_NAME
+// and it ends with //#endregion REGION_NAME or //#endregion REGION_NAME
+// Regions can be nested.
+// Using Visual Studio Code (and perhaps other source code editors) regions
+// marked this way can be folded for convenience.
+// 
+// Some settings for the script can be adapted to user needs. Those are in
+// region USER CONFIGURATION.
+
 //#region CONFIGURATION
 // This region simulates a configuration dialog
 // It contains a section with code to be used in configuration, which user would 
@@ -1905,7 +1838,7 @@ class Essence extends GenePool {
   get RENDER() {
     return this[Essence.#pre + "RENDER"]
   }
-  /** TYPE essence, individual
+  /** TYPE essence, inherited
    * @type {String}
    */
   get TYPE() {
@@ -1933,7 +1866,8 @@ class Essence extends GenePool {
   }
   /** PARSE essence, inherited
    * <p>
-   * Only for internal use. If set, no Essences will be added. This is the only
+   * Only for internal use. 
+   * If set to false, no Essences will be added. This is the only
    * case, in which no Essences are possible. If used internally, instance has
    * to be parsed later before returning. Never ever an instance without
    * Essences should be given out from the using code.
@@ -2056,7 +1990,8 @@ class Essence extends GenePool {
    * Creates the tokens.
    * <p>
    * Removes {@link Essence#SPEC_KEY|this.SPEC_KEY} property from {@link literal} and
-   * removes all <code>specification properties</code> from literal if value of
+   * removes all <code class="bordered"><a href="#zweitens">
+   * specification properties</a> </code> from literal if value of
    * {@link Essence#SPEC_KEY|this.SPEC_KEY} property is not of type <code>Boolean</code>.
    * <p>
    * Adds recognized <code class="bordered"><a href="#zweitens">
@@ -2173,19 +2108,21 @@ class Essence extends GenePool {
     let l = literal
     let s = specLit
     let n = name
-    hide(this, l, s, "ROOT", "Boolean", p, un, parent == un, n)
-    hide(this, l, s, "RENDER", "Boolean", p, Essence.#RENDER_DEFT, un, n)
-    hide(this, l, s, "TYPE", "String", p, Essence.#TYPE_DEFT, un, n)
-    hide(this, l, s, "IGNORE", "Boolean", p, Essence.#IGNORE_DEFT, un, n)
-    hide(this, l, s, "PARSE", "Boolean", p, Essence.#PARSE_DEFT, un, n)
-    hide(this, l, s, "INTERNAL", "Boolean", un, Essence.#INTERNAL_DEFT, un, n)
-    hide(this, l, s, "FLAT", "Boolean", un, Essence.#FLAT_DEFT, un, n)
-    hide(this, l, s, "LOCAL", "Boolean", p, Essence.#LOCAL_DEFT, un, n)
-    hide(this, l, s, "ONCE", "Boolean", un, Essence.#ONCE_DEFT, un, n)
-    hide(this, l, s, "REPEAT", "Boolean", un, Essence.#REPEAT_DEFT, un, n)
-    hide(this, l, s, "DEFAULT", this.TYPE, un, Essence.#DEFAULT_DEFT, un, n)
-    hide(this, l, s, "VALUE", this.TYPE, un, Essence.#VALUE_DEFT, un, n)
-    hide(this, l, s, "DEFAULTS", "Object", un, Essence.#DEFAULTS_DEFT, un, n)
+    // 6th arg p: Property is inherited
+    // 6th arg un: Property is individual
+    hide(this, l, s, "ROOT", "Boolean",     p, un, parent == un, n)
+    hide(this, l, s, "RENDER", "Boolean",   p, Essence.#RENDER_DEFT, un, n)
+    hide(this, l, s, "TYPE", "String",      p, Essence.#TYPE_DEFT, un, n)
+    hide(this, l, s, "IGNORE", "Boolean",   p, Essence.#IGNORE_DEFT, un, n)
+    hide(this, l, s, "PARSE", "Boolean",    p, Essence.#PARSE_DEFT, un, n)
+    hide(this, l, s, "INTERNAL", "Boolean", p, Essence.#INTERNAL_DEFT, un, n)
+    hide(this, l, s, "FLAT", "Boolean",     un, Essence.#FLAT_DEFT, un, n)
+    hide(this, l, s, "LOCAL", "Boolean",    p, Essence.#LOCAL_DEFT, un, n)
+    hide(this, l, s, "ONCE", "Boolean",     un, Essence.#ONCE_DEFT, un, n)
+    hide(this, l, s, "REPEAT", "Boolean",   un, Essence.#REPEAT_DEFT, un, n)
+    hide(this, l, s, "DEFAULT", this.TYPE,  un, Essence.#DEFAULT_DEFT, un, n)
+    hide(this, l, s, "VALUE", this.TYPE,    un, Essence.#VALUE_DEFT, un, n)
+    hide(this, l, s, "DEFAULTS", "Object",  un, Essence.#DEFAULTS_DEFT, un, n)
     if (literal != un) delete literal[this.#SPEC_KEY]
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
@@ -2261,16 +2198,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
   }
 
   /**
-   * Set PARSE in literals __SPEC to false, creates __SPEC, if not exists
-   * @param {Object} literal
-   */
-  static setDoNotParse(literal) {
-    if (typeof literal != "object" || literal == null) return
-    let spec = literal["__SPEC"]
-    if (typeof spec != "object" || spec == null) literal["__SPEC"] = {}
-    literal["__SPEC"]["PARSE"] = false
-  }
-  /**
    * Returns false if literal's __SPEC has PARSE set to false, true else
    * @param {Object} literal
    * @returns {Boolean}
@@ -2284,16 +2211,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       }
     }
     return answ
-  }
-  /**
-   * Removes PARSE from literals __SPEC
-   * @param {Object} literal
-   */
-  static removeDoNotParse(literal) {
-    if (typeof literal != "object" || literal == null) return
-    let spec = literal["__SPEC"]
-    if (typeof spec != "object" || spec == null) return
-    delete literal["__SPEC"]["PARSE"]
   }
   //#region static getESSENCE from literal
   /** ROOT essence, set automatically
@@ -2401,9 +2318,7 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.run(constructorTest)
       _.run(isATest)
       _.run(parseTest)
-      _.run(setDoNotParseTest)
       _.run(doParseTest)
-      _.run(removeDoNotParseTest)
       _.run(getEssencesTest)
       _.destruct()
       _ = null
@@ -2577,39 +2492,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(14,!ess1.isA("String","string"),"should return false for string, as not in pool")
       _.bassert(15,!ess1.isA("String",Object),"should return false as string is not an Object")
     }
-    function setDoNotParseTest() {
-      let lit1 = {a:"b"}
-      let lit2 = {a:"b",__SPEC:{}}
-      let lit3 = {a:"b",__SPEC:{anything:"something"}}
-      let lit4 = {a:"b",__SPEC:{anything:"something",PARSE:true}}
-      let lit5 = {a:"b",__SPEC:{anything:"something",PARSE:false}}
-      Essence.setDoNotParse(lit1)
-      Essence.setDoNotParse(lit2)
-      Essence.setDoNotParse(lit3)
-      Essence.setDoNotParse(lit4)
-      Essence.setDoNotParse(lit5)
-      _.bassert(0,lit1["__SPEC"] != undefined, "Spec is now set")
-      _.bassert(1,lit1["__SPEC"]["PARSE"] === false, "PARSE set to false")
-      _.bassert(2,lit2["__SPEC"]["PARSE"] === false, "PARSE set to false")
-      _.bassert(3,lit3["__SPEC"]["PARSE"] === false, "PARSE set to false")
-      _.bassert(4,lit4["__SPEC"]["PARSE"] === false, "PARSE set to false")
-      _.bassert(5,lit5["__SPEC"]["PARSE"] === false, "PARSE set to false")
-      _.bassert(11,lit1["a"] === "b", "nothing else changed")
-      _.bassert(12,lit2["a"] === "b", "nothing else changed")
-      _.bassert(13,lit3["a"] === "b", "nothing else changed")
-      _.bassert(14,lit4["a"] === "b", "nothing else changed")
-      _.bassert(15,lit5["a"] === "b", "nothing else changed")
-      _.bassert(21,Object.keys(lit1).length === 2, "nothing else changed")
-      _.bassert(22,Object.keys(lit2).length === 2, "nothing else changed")
-      _.bassert(23,Object.keys(lit3).length === 2, "nothing else changed")
-      _.bassert(24,Object.keys(lit4).length === 2, "nothing else changed")
-      _.bassert(25,Object.keys(lit5).length === 2, "nothing else changed")
-      _.bassert(31,Object.keys(lit1["__SPEC"]).length === 1, "nothing else changed")
-      _.bassert(32,Object.keys(lit2["__SPEC"]).length === 1, "nothing else changed")
-      _.bassert(33,Object.keys(lit3["__SPEC"]).length === 2, "nothing else changed")
-      _.bassert(34,Object.keys(lit4["__SPEC"]).length === 2, "nothing else changed")
-      _.bassert(35,Object.keys(lit5["__SPEC"]).length === 2, "nothing else changed")
-    }
     function doParseTest() {
       let lit1 = {a:"b"}
       let lit2 = {a:"b",__SPEC:{}}
@@ -2626,28 +2508,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(3,answ3 === true, "PARSE is not set")
       _.bassert(4,answ4 === true, "PARSE is set to true")
       _.bassert(5,answ5 === false, "PARSE is set to false")
-    }
-    function removeDoNotParseTest() {
-      let lit1 = {a:"b"}
-      let lit2 = {a:"b",__SPEC:{}}
-      let lit3 = {a:"b",__SPEC:{anything:"something"}}
-      let lit4 = {a:"b",__SPEC:{anything:"something",PARSE:true}}
-      let lit5 = {a:"b",__SPEC:{anything:"something",PARSE:false}}
-      let exp1 = {a:"b"}
-      let exp2 = {a:"b",__SPEC:{}}
-      let exp3 = {a:"b",__SPEC:{anything:"something"}}
-      let exp4 = {a:"b",__SPEC:{anything:"something"}}
-      let exp5 = {a:"b",__SPEC:{anything:"something"}}
-      Essence.removeDoNotParse(lit1)
-      Essence.removeDoNotParse(lit2)
-      Essence.removeDoNotParse(lit3)
-      Essence.removeDoNotParse(lit4)
-      Essence.removeDoNotParse(lit5)
-      _.bassert(1,areEqual(lit1,exp1),"Nothing should change, no Spec")
-      _.bassert(2,areEqual(lit2,exp2),"Nothing should change, Spec empty")
-      _.bassert(3,areEqual(lit3,exp3),"Nothing should change, Spec does not contain PARSE")
-      _.bassert(4,areEqual(lit4,exp4),"PARSE should be removed from Spec, no other changes")
-      _.bassert(5,areEqual(lit5,exp5),"PARSE should be removed from Spec, no other changes")
     }
     function getEssencesTest(){
       let un
@@ -2925,7 +2785,7 @@ class AEssence extends Essence {
       _.bassert(48,ess2.TYPE==="Boolean","Should be set to parent value")
       _.bassert(49,ess2.DEFAULT==="","Should be set to default value")
       _.bassert(50,ess2.VALUE==="","Should be set to default value")
-      _.bassert(51,ess2.INTERNAL===false,"Should be set to default value")
+      _.bassert(51,ess2.INTERNAL===true,"Should be set to inherited value")
       _.bassert(52,ess1.PARSE===true,"Should stay at default value")
       _.bassert(53,areEqual(ess2.DEFAULTS,{}),"Has an extra test")
       let lit3 = {__SPEC: {RENDER:true,
@@ -3581,7 +3441,8 @@ class Setting extends BreadCrumbs {
    *       Falls __SPEC true ist: <br>TYPE wird auf #globalType gesetzt
    *                              (außer er ist parallel zu __SPEC gesetzt)<br>
    *       Falls __SPEC false ist: <br>TYPE wird nicht gesetzt<br>
-   *                               (!!NIE, auch wenn nicht vorhanden nicht)<br>
+   *                               hat damit den DEFAULT Wert<br>
+   *                              (außer er ist parallel zu __SPEC gesetzt)<br>
    *    Für reine Atoms: (bedeutet: der Wert ist kein Object)<br>
    *       erzeugt ein spezifiziertes Atom mit VALUE: Wert und __SPEC true
    *       (damit wird TYPE zu #globalType)
@@ -5266,7 +5127,7 @@ class TypesWorker extends Setting {
       )
     }
     parent.workersTypeForChildren = TypesWorker.#localType
-    TypesWorker.#setDoNotParse(literal)
+    TypesWorker.#cpRepeatedDefaults(literal)
     super(literal, key, parent)
     this.addGene(TypesWorker)
     // literal {(Object)} checked by superclass
@@ -5274,7 +5135,6 @@ class TypesWorker extends Setting {
     // parent {(Undefined|Setting)} checked by superclass
     this.throwIfUndefined(parent, "parent")
     this.throwIfUndefined(key, "key")
-    this.#parse()
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
         this.name === undefined
@@ -5301,24 +5161,35 @@ class TypesWorker extends Setting {
       )
     }
   }
-  #parse() {
-    if (!this.REPEAT) return
-    for (const [key, value] of Object.entries(this.literal)) {
-      if (key == "DEFAULTS") continue
-      AEssence.removeDoNotParse(value)
-      new Setting(value, key, this, undefined, true)
-    }
-  }
-  static #setDoNotParse(literal) {
+  static #cpRepeatedDefaults(literal) {
     if (typeof literal != "object" || literal == null) return
     let spec = literal[AEssence.SPEC_KEY]
     if (typeof spec != "object" || spec == null) return
 
     if (literal["DEFAULTS"] != undefined && spec["REPEAT"] === true) {
+      let defaults = literal.DEFAULTS
       for (const [key, value] of Object.entries(literal)) {
         if (key == AEssence.SPEC_KEY || key == "DEFAULTS") continue
-        AEssence.setDoNotParse(value)
+        for (const [defkey, defvalue] of Object.entries(defaults)) {
+          if (defkey == AEssence.SPEC_KEY) continue
+          if (defvalue[AEssence.SPEC_KEY] != false) continue
+          if(value.defkey === undefined) {           
+            value[defkey] = {}
+            let defaultval
+            for (const [newkey, newvalue] of Object.entries(defvalue)) {
+              value[defkey][newkey]=newvalue
+              if(newkey === "DEFAULT") {
+                defaultval = newvalue
+              }
+            }
+            if(value[defkey]["VALUE"] === undefined) {
+              value[defkey]["VALUE"]=defaultval
+            }
+            value[defkey][AEssence.SPEC_KEY]=true
+          }
+        }       
       }
+      delete literal.DEFAULTS
     }
   }
 
@@ -5501,7 +5372,7 @@ class doTheWork {
     folderParts.unshift(GLOBAL_ROOT_KEY)
     folderParts.pop()
     folderParts.forEach((part)=> {
-      console.log("!" + part)
+      //console.log("!" + part)
     })
     for (const [key, val] of this.#typ) {
       if(0 == key.localeCompare("DEFAULTS")) {
@@ -5511,7 +5382,7 @@ class doTheWork {
       if(folders === undefined) {
         folders = this.#defaults.at("folders").DEFAULT
       }
-      console.log(">" + key + ":" + folders)
+      //console.log(">" + key + ":" + folders)
     }
     return types;
   }
@@ -5779,4 +5650,171 @@ if (DEBUG) {
   }
   aut("'" + set4.getValue("__NOTE_TYPES.citation.marker") + "'")
   aut("'" + set4.at("__NOTE_TYPES.DEFAULTS.marker").DEFAULT + "'")
+}
+
+let small = false
+if (small) {
+  let small_configuration = {
+    __NOTE_TYPES: 
+    {
+      __SPEC: {
+        REPEAT: true,    // individual, default: false
+        RENDER: false,   // inherited, default: false
+        IGNORE: false,   // inherited, default: false
+        PARSE: true,     // inherited, default: true
+        INTERNAL: false, // inherited, default: false
+        LOCAL: false,    // inherited, default: false
+        TYPE: "String",  // inherited, default: "String"
+        DEFAULT: "",     // individual, default: ""
+        VALUE: "",       // individual, default: ""
+        FLAT: false,     // individual, default: false
+        ONCE: false,     // individual, default: false
+        DEFAULTS: {},    // individual: default: {}, only if REPEAT is TRUE
+      }, 
+      DEFAULTS:  {        // ==Node== (FLAT: false), hat alle Token
+        date: {           // ==Atom== (FLAT: true), hat alle Token
+          __SPEC:false,   // Geschwister Key-Wert Paare bleiben was sie sind
+          TYPE:"Boolean", // individual
+          DEFAULT:false,  // individual
+        },
+      },
+      diary: {           // ==Node== (FLAT: false), hat alle Token
+                        // Alle Kinder Key-Wert Paare werden zu Atom-Objekten
+        showdate: true,  // ==Atom== (FLAT: true), hat alle Token
+        dateformat: "YYYY-MM-DD",
+      },
+    },
+  }  
+  let set = new Setting(small_configuration)
+  let types = set.at(TYPES_WORKER_KEY)
+  let defaults = types.at("DEFAULTS")
+  let diary = types.at("diary")
+  let defaults_date = defaults.at("date")
+  let defaults_type = defaults.at("TYPE")
+  let diary_showdate = diary.at("showdate")
+  vaut("defaults.FLAT", defaults.FLAT)
+  vaut("diary.FLAT", diary.FLAT)
+  vaut("diary_showdate.FLAT", diary_showdate.FLAT)
+  vaut("defaults.TYPE", defaults.TYPE)
+  vaut("defaults.ONCE", defaults.ONCE)
+  vaut("diary_showdate.nichtda", diary_showdate.nichtda)
+  vaut("diary_showdate.TYPE", diary_showdate.TYPE)
+  vaut("diary_showdate.ONCE", diary_showdate.ONCE)
+  vaut("defaults_type", defaults_type)
+  vaut("defaults_date.__SPEC", defaults_date.__SPEC)
+  vaut("defaults_date.nichtda", defaults_date.nichtda)
+  vaut("defaults_date.ONCE", defaults_date.ONCE)
+  vaut("defaults_date.FLAT", defaults_date.FLAT)
+  vaut("defaults_date.TYPE", defaults_date.TYPE)
+  vaut("defaults_date.DEFAULT", defaults_date.DEFAULT)
+}
+
+let learn = false
+if (learn) {
+  let learn_configuration = {
+    // 
+    __NOTE_TYPES: 
+    {
+      parent: 
+      {
+        __SPEC: { 
+          INTERNAL: true,     // Inherited
+          ONCE: true,         // Individual
+          TYPE:"Number",      // Inherited
+        }, 
+        atom1:"Wert",         // ==Atom== FLAT true, __SPEC: true, VALUE "Wert"
+        TYPE:"Boolean",       // Ignoriert, obiges TYPE wird verwendet
+        node1: {              // ==Node== FLAT false
+          atom1_1: "Wert"     // ==Atom== FLAT true, __SPEC: true, VALUE "Wert"
+        },
+        // Für Key-Value Paare erfunden, TYPE erlaubt alles
+        node_true: {          // ==Atom== FLAT true, VALUE falls ungesetzt ???
+                              // Alle Token sind da
+          __SPEC: true,       // verschwindet
+                              // TYPE ist alles erlaubt
+          //TYPE:"Number",    //    außer TYPE ist hier gesetzt
+          VALUE: "anton",     // Wird VALUE
+          verloren: "weg"     // Geht unter
+        },
+        // Für DEFAULTS erfunden, kein Wert, TYPE unnötig
+        node_false: {         // ==Atom== FLAT true, VALUE falls ungesetzt ???
+                              // Alle Token sind da
+          __SPEC: false,      // verschwindet 
+                              // Erbt TYPE von Parent
+          //TYPE:"Boolean",   //    außer TYPE ist hier gesetzt
+          VALUE: 22,          // Wird VALUE, wenn Typ stimmt
+          verloren: "weg"     // Geht unter
+        },
+      },
+    },
+  }       
+  let set = new Setting(learn_configuration)
+  let types = set.at(TYPES_WORKER_KEY)
+  let parent = types.at("parent")
+  let node1 = parent.at("node1")
+  let node_true = parent.at("node_true")
+  let node_false = parent.at("node_false")
+  let atom1 = parent.at("atom1")
+  vaut("parent", parent)
+  vaut("node1", node1)
+  vaut("node_true", node_true)
+  vaut("node_false", node_false)
+  vaut("atom1", atom1)
+  aut("----", green)
+  vaut("parent.TYPE", parent.TYPE)
+  vaut("node1.TYPE", node1.TYPE)
+  vaut("node_true.TYPE", node_true.TYPE)
+  vaut("node_false.TYPE", node_false.TYPE)
+  vaut("atom1.TYPE", atom1.TYPE)
+  aut("----", red)
+  vaut("parent.VALUE", parent.VALUE)
+  vaut("node1.VALUE", node1.VALUE)
+  vaut("node_true.VALUE", node_true.VALUE)
+  vaut("node_false.VALUE", node_false.VALUE)
+  vaut("atom1.VALUE", atom1.VALUE)
+  aut("----", blue)
+}
+
+let doconfig = true
+if (doconfig) {
+  let doconfig_configuration = {
+    __NOTE_TYPES: 
+    {
+      __SPEC: { REPEAT: true, }, 
+      DEFAULTS:  {
+        date: {
+          __SPEC:false,
+          TYPE:"Boolean",
+          DEFAULT:false,
+        },
+      },
+      note: {
+        folder: "/", 
+      },
+      diary: {
+        showdate: true, 
+        dateformat: "YYYY-MM-DD",
+      },
+    }    
+  }       
+  let set = new Setting(doconfig_configuration)
+  let types = set.at(TYPES_WORKER_KEY)
+  let diary = types.at("diary")
+//  aut(diary)
+//  for (const [key, val] of diary) {
+//    if (!val.FLAT) {
+//      aut(key)
+//      for (const [key2, val2] of val) {
+//        vaut("   " + key2, val2.VALUE)
+//      }
+//    } else {
+//      vaut(key, val)
+//      vaut("     VALUE", val.VALUE)
+//      vaut("     DEFAULT", val.DEFAULT)
+//      vaut("     TYPE", val.TYPE)
+//    }
+//  }
+//  vaut("date",diary.getValue("date"))
+//  vaut("showdate",diary.getValue("showdate"))
+//  vaut("dateformat",diary.getValue("dateformat"))
 }

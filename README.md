@@ -30,6 +30,6 @@ Every line of code you do not write is good
   - Edit: `./node_modules/jsdoc-mermaid/index.js` replace `https://unpkg.com/mermaid@7.1.0/dist` with `..`
   - So source would be `src="../mermaid.min.js">`
 - `cp jsdoc.css node_modules/docdash/static/styles`
-- `./node_modules/.bin/jsdoc -c jsdocconf.js _scripts/foty.js`
+- `./node_modules/.bin/jsdoc -c jsdocconf.js -r _scripts/foty.md _scripts/foty.js`
 - open `./out/index.html` in Browser
 
