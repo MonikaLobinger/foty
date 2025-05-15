@@ -148,3 +148,50 @@ directory is set in the settings `Ctrl-,` of the `core plugin` `Templates`.
   - Set `foty_Vorlage.md` as template for all files (`.*`)
   - Set `Script files folder location` to script directory.
   - activate `Enable user system command functions` 
+
+
+## Internal
+Keines meiner Objekte hat (enumerable) Properties
+
+Alle meine Objekte haben alle meine Tags (hidden Properties)
+
+Meine Objekte sind alle AEssence oder abgeleitet
+
+Objekte die keine Atome (Blätter) sind, sind alle Settings oder abgeleitet
+
+Alle Worker sind Settings
+
+Setting.at liefert eines von: Setting AEssence undefined
+    Der Pfad "a.b.c" darf schon von a an undefiniert sein, a kann Worker sein
+
+Setting.getValue liefert einen Wert oder undefined
+    Der Pfad "a.b.c" darf schon von a an undefiniert sein, a kann Worker sein
+
+Setting.getFrontmatterYAML .getRenderYAML
+    Rekursiv alle Werte mit RENDER gesetzt auf (FALSE/TRUE), aber nicht Worker
+
+
+Die möglichen Funktionen
+GenePool      .addGene .hasGene .length .isA .toString
+Essence       .SPEC_KEY .skipped .parse 
+              .ROOT
+              .FLAT
+              ...
+              .REPEAT
+AEssence      
+BreadCrumbs   .literal .parent .name .root .toString .toBreadcrumbs .throwIfUndefined .throwIfNotOfType
+Setting       .workertsTypeForChildren
+              .children
+              .tp
+              .iterator
+              .has
+              .at
+              .getValue
+              .getFrontmatterYAML
+              .getRenderYAML
+GeneralWorker      .getValue
+LocalizationWorker .getValue
+DialogWorker
+TypesWorker   .getValue
+
+

@@ -1,4 +1,3 @@
-//module.exports = testit // templater call: "await tp.user.foty(tp, app)"
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
 //@todo adapt paths for windows
@@ -3679,13 +3678,16 @@ class Setting extends BreadCrumbs {
    * @returns {*}
    */
   getValue(key, ...params) {
-    let works = this.#getWorks(key)
-    if (works !== undefined) {
+    let works_and_subkeys = this.#getWorks(key)
+    if (works_and_subkeys !== undefined) {
       if (params === undefined)
-        return works[0].getValue(works[1])
+        return works_and_subkeys[0].getValue(works_and_subkeys[1])
       else
-        return works[0].getValue(works[1], ...params)
-    } else if (this.at(key) !== undefined) return this.at(key).VALUE
+        return works_and_subkeys[0].getValue(works_and_subkeys[1], ...params)
+    } else {
+      if (this.at(key) !== undefined) 
+        return this.at(key).VALUE
+    }
   }
 
   #getWorks(key) {
@@ -3705,20 +3707,27 @@ class Setting extends BreadCrumbs {
 
   /** Returns all frontmatter entries of this instance and descendants
    * besides IGNORED ones.
+   * Workers are not treated as descendants. Otherwise entries
+   * for all notetypes would be gathered if called from root.
    * @returns  {Object.<String.any>}
    */
   getFrontmatterYAML() {
     let frontmatterYAML = {}
-    for (const [key, value] of Object.entries(this.#children)) {
+    for (const [key, value] of this) {
       if (value.FLAT) {
-        if (!value.RENDER && !value.IGNORE) frontmatterYAML[key] = value.VALUE
-      } else Object.assign(frontmatterYAML, value.getFrontmatterYAML())
+        if (!value.RENDER && !value.IGNORE) 
+          frontmatterYAML[key] = value.VALUE
+      } else {
+        Object.assign(frontmatterYAML, value.getFrontmatterYAML())
+      }
     }
     return frontmatterYAML
   }
 
   /** Returns all render entries of this instance and descendants
    * besides IGNORED ones.
+   * Workers are not treated as descendants. Otherwise entries
+   * for all notetypes would be gathered if called from root.
    * @returns  {Object.<String.any>}
    */
   getRenderYAML() {
@@ -3731,6 +3740,9 @@ class Setting extends BreadCrumbs {
     return renderYAML
   }
 
+  /** LOGS all key.VALUE pairs recursive to console
+   * @param {Number} depth 
+   */
   showVALUES(depth) {
     let indent = ""
     for(let d=depth;d>0;d--) indent += "    "
@@ -3741,6 +3753,10 @@ class Setting extends BreadCrumbs {
     }
   }
 
+  /** LOGS all keys with their VALUE and DEFAULT tag recursive to console.
+   * Functions are shortenend to String "FUNCTION"
+   * @param {Number} depth 
+   */
   showVALUE_DEFAULT(depth) {
     let indent = ""
     for(let d=depth;d>0;d--) indent += "    "
@@ -3760,6 +3776,10 @@ class Setting extends BreadCrumbs {
     }
   }
 
+  /** LOGS all keys recursive to console with some of their tags.
+   * Functions are shortenend to String "FUNCTION"
+   * @param {Number} depth 
+   */
   showWhatGoesOut(depth) {
     let indent = ""
     if(depth == 0)
@@ -3774,7 +3794,7 @@ class Setting extends BreadCrumbs {
       let def = value.DEFAULT
       if(typeof value.VALUE == "function") val="FUNCTION"
       if(typeof value.DEFAULT == "function") def="FUNCTION"
-      vaut(indent+render+ignore+repeat+flat+val, key+":"+val+":"+def)
+      vaut(indent+render+ignore+repeat+flat, key+":"+val+":"+def)
       if(value.isA(value, Setting))
         value.showWhatGoesOut(depth+1)
     }
@@ -5443,6 +5463,8 @@ class Templater {
   #notename
   #marker
 
+  get notetype() {return this.#notetype}
+
   constructor(setting, tp) {
     this.#tp = tp
     this.#gen = setting.at(GENERAL_WORKER_KEY)
@@ -5603,6 +5625,8 @@ async function foty(tp, app) {
     let setting = new Setting(lit, undefined, undefined, tp)
     let templ = new Templater(setting, tp)
     await templ.doTheWork()
+    let notetype = templ.notetype
+    let noteCfg = setting.at("__NOTE_TYPES."+notetype)
 
     let CONVERT_FROM_ONNE = false
     if (CONVERT_FROM_ONNE) {
@@ -5640,7 +5664,8 @@ async function foty(tp, app) {
     /**************************************************************************/
     }
     frontmatterYAML = setting.getFrontmatterYAML()
-    Object.assign(renderYAML, setting.getRenderYAML())
+    Object.assign(frontmatterYAML, noteCfg.getFrontmatterYAML())
+    Object.assign(renderYAML, setting.getRenderYAML(), noteCfg.getRenderYAML())
   } catch (e) {
     if (e instanceof FotyError) {
       let errYAML = {}
@@ -5674,179 +5699,3 @@ async function foty(tp, app) {
   }
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
-
-////////////////////////////////////////////////////////////////////////////////
-
-let small_configuration = {
-  // General section has to be the first section
-  __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
-  { 
-    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"    
-    RELATIVE_PATH: true, 
-    DIRECTORY_SEPARATOR: "/", 
-  },
-  __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
-  { 
-    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
-    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
-    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
-  },
-  __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
-  { 
-    TYPE_MAX_ENTRIES: 10,
-  },
-  __NOTE_TYPES: 
-  {
-    __SPEC: {REPEAT: true, DEFAULT: "note"},
-    DEFAULTS: {
-        marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
-        date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
-        // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
-        // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
-        // frontmatter: {__SPEC: {},
-        //   aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
-        //   date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
-        //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
-        //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
-        //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
-        //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
-        //     position: {__SPEC:false,IGNORE: true},
-        // },
-        folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
-    },
-    // If DEFAULT is not set in __SPEC, first entry is default
-    // If set and has all DEFAULTS, it has not to be listed here
-    note: {
-      notename: cbkNoteName,
-      folders: []
-    },
-    diary: {
-      notename: cbkNoteName,
-      date: true,
-      dateformat: "YYYY-MM-DD",
-      frontmatter: {
-        __SPEC: {RENDER: false},
-        private: true, 
-      },
-      page: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
-      folders: ["diary", "temp", "unbedacht"],
-    },
-    citation: {
-      marker: "°",
-      frontmatter: {cssclass: "garten, tagebuch"},
-    },
-  },
-  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
-  c:    {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
-}
-async function testit(tp, app) {
-  let frontmatterYAML = {}
-  let renderYAML = {____: ""}
-  try {
-    let lit = small_configuration
-    let setting = new Setting(lit, undefined, undefined, tp)
-
-    //for (const p in lit) console.log(`${p}: ${lit[p]}`);
-    aut("=============================================",green)
-    let translate = setting.at("__TRANSLATE")
-    //vaut("__TRANSLATE", translate)
-    //console.log(translate)
-    //vaut("translate.FLAT    ", translate.FLAT)
-    //vaut("translate.REPEAT  ", translate.REPEAT)
-    //vaut("translate.VALUE   ", translate.VALUE)
-    //vaut("translate.DEFAULT ", translate.DEFAULT)
-    //for (const p in translate) console.log(`${p}: ${translate[p]}`);
-    //aut("=============================================",green)
-    let note_types = setting.at("__NOTE_TYPES")
-    //vaut("__NOTE_TYPES", note_types)
-    //console.log(note_types)
-    //vaut("note_types.FLAT    ", note_types.FLAT)
-    //vaut("note_types.REPEAT  ", note_types.REPEAT)
-    //vaut("note_types.VALUE   ", note_types.VALUE)
-    //vaut("note_types.DEFAULT ", note_types.DEFAULT)
-    //for (const p in note_types) console.log(`${p}: ${note_types[p]}`);
-    //aut("=============================================",blue)
-    let diary = setting.at("__NOTE_TYPES.diary")
-    //vaut("__NOTE_TYPES.diary", diary)
-    //console.log(diary)
-    //vaut("diary.FLAT    ", diary.FLAT)
-    //vaut("diary.REPEAT  ", diary.REPEAT)
-    //vaut("diary.VALUE   ", diary.VALUE)
-    //vaut("diary.DEFAULT ", diary.DEFAULT)
-    //for (const p in diary) console.log(`${p}: ${diary[p]}`);
-    //aut("=============================================",blue)
-    let dateformat = setting.at("__NOTE_TYPES.diary.dateformat")
-    //vaut("__NOTE_TYPES.diary.dateformat", dateformat)
-    //console.log(dateformat)
-    //vaut("dateformat.FLAT    ", dateformat.FLAT)
-    //vaut("dateformat.REPEAT  ", dateformat.REPEAT)
-    //vaut("dateformat.VALUE   ", dateformat.VALUE)
-    //vaut("dateformat.DEFAULT ", dateformat.DEFAULT)
-    //for (const p in dateformat) console.log(`${p}: ${dateformat[p]}`);
-    
-    //let answer1 = translate.translate("NAME_PROMPT","vorgabe")
-    //vaut("1", answer1)
-    //let answer2 = translate.translate("gibtsnicht","niemals")
-    //vaut("2", answer2)
-    // Das kann nicht gehen, weil note_types keine Funktion translate hat
-    //let answer3 = note_types.translate("gibtsnicht","niemals")
-    //vaut("3", answer3)
-
-    diary.showVALUES(0)
-    diary.showWhatGoesOut(0)
-    //vaut("frontmatter",diary.at("frontmatter"))
-    //vaut("dateformat",diary.at("dateformat"))
-    //vaut("NICHTDA.nicht",diary.at("NICHTDA.nicht"))
-    //aut(diary.has("frontmatter"))
-    //aut(diary.has("dateformat"))
-    //aut(diary.has("NICHTDA.nicht"))
-    //aut(diary.has("dateformat.nicht"))
-    let templ = new Templater(setting, tp)
-    await templ.doTheWork()
-    frontmatterYAML = setting.getFrontmatterYAML()
-    Object.assign(renderYAML, setting.getRenderYAML())
-  } catch (e) {
-    aut("RETHROWING")
-    throw e
-  }
-  return Object.assign({}, frontmatterYAML, renderYAML)
-}
-/*
-Keines meiner Objekte hat (enumerable) Properties
-
-Alle meine Objekte haben alle meine Tags (hidden Properties)
-
-Meine Objekte sind alle AEssence oder abgeleitet
-
-Objekte die keine Atome (Blätter) sind, sind alle Settings oder abgeleitet
-
-Alle Worker sind Settings
-
-Setting.at liefert eines von: Setting AEssence undefined
-    Der Pfad "a.b.c" darf schon von a an undefiniert sein
-
-Die möglichen Funktionen
-GenePool      .addGene .hasGene .length .isA .toString
-Essence       .SPEC_KEY .skipped .parse 
-              .ROOT
-              .FLAT
-              ...
-              .REPEAT
-AEssence      
-BreadCrumbs   .literal .parent .name .root .toString .toBreadcrumbs .throwIfUndefined .throwIfNotOfType
-Setting       .workertsTypeForChildren
-              .children
-              .tp
-              .iterator
-              .has
-              .at
-              .getValue
-              .getFrontmatterYAML
-              .getRenderYAML
-GeneralWorker      .getValue
-LocalizationWorker .getValue
-DialogWorker
-TypesWorker   .getValue
-
-
-*/
