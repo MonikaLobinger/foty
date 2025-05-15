@@ -111,13 +111,14 @@ let user_configuration = {
   __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
   { 
     LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"    
-    RELATIVE_PATH: true, // hardcoded:FALLBACK_RELATIVE_PATH true
+    RELATIVE_PATH: true, 
+    DIRECTORY_SEPARATOR: "/", 
   },
   __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
   { 
-    type_prompt:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
-    title_new_file:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
-    name_prompt:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
+    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
+    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
   },
   __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
   { 
@@ -139,21 +140,21 @@ let user_configuration = {
         //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
         //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
         //     position: {__SPEC:false,IGNORE: true},
-         },
-         folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["/zwischenreich"]},
         },
+        folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
+    },
     // If DEFAULT is not set in __SPEC, first entry is default
     // If set and has all DEFAULTS, it has not to be listed here
     note: {
       notename: cbkNoteName,
-      folders: ["/"],
+      folders: []
     },
     diary: {
       notename: cbkNoteName,
       date: true,
       dateformat: "YYYY-MM-DD",
       frontmatter: {private: true},
-      folders: ["/diary", "/temp", "unbedacht"],
+      folders: ["diary", "temp", "unbedacht"],
     },
     citation: {
       marker: "°",
@@ -5343,6 +5344,8 @@ class Templater {
   #filetitle
   #path_relative
   #path_absolute
+  #relative
+  #dirsep
 
   #isNew=false
   #notetype
@@ -5355,6 +5358,10 @@ class Templater {
     this.#loc = setting.at(LOCALIZATION_WORKER_KEY)
     this.#dlg = setting.at(DIALOG_WORKER_KEY)
     this.#typ = setting.at(TYPES_WORKER_KEY)
+
+    this.#relative = this.#gen.getValue("RELATIVE_PATH", true)
+    this.#dirsep = this.#gen.getValue("DIRECTORY_SEPARATOR", true)
+
 
     this.#filetitle = this.#tp.file.title
     this.#path_relative = this.#tp.file.path(true)
@@ -5376,7 +5383,7 @@ class Templater {
       lang_array.push(lang)
     }
     lang_array.forEach((lang) => {     
-      let title = this.#loc.getValue("title_new_file","", lang)
+      let title = this.#loc.getValue("TITLE_NEW_FILE","", lang)
       if(title.length > 0) {
         new_titles_array.push(title)
       }
@@ -5389,25 +5396,66 @@ class Templater {
   async #findType(isNew) {
     let types_f = []
     let types_m = []
-    function typesFromFolder() {
-
+    function typesFromFolder(me) {
+      let noteWithPath = me.#relative ? me.#path_relative : me.#path_absolute
+      let folderParts = noteWithPath.split(me.#dirsep)
+      folderParts.pop()
+  
+      for (const [key, value] of me.#typ) {
+        let folders = me.#typ.getValue(key+".folders")
+        if(folders == undefined) continue
+        let answer = folderParts.some(part => {
+          return folders.some(folder => {
+            if(0 == part.localeCompare(folder)) {
+              return true
+            }
+          })
+        })
+        if(answer == true) {
+          types_f.push(key)
+        }      
+      }
     }
-    function typesFromMarker() {
-
+    function typesFromMarker(me) {
+      let type = undefined;
+      let noMarker  = [];
+      let markerlen = 0;
+      let typelen = 0;
+    
+      for (const [key, value] of me.#typ) {
+        if(types_f.length > 0 && !types_f.includes(key)) 
+          continue;
+        let marker = me.#typ.getValue(key+".marker")
+        aut(marker)
+        if(marker === undefined || marker.length==0) {
+          markerlen = marker.length
+          noMarker.push(key);
+        } else if(me.#filetitle.startsWith(marker)) {
+          if(markerlen > typelen) {
+            typelen = markerlen;
+            type = key;
+          }
+        }
+      }
+      if(type != undefined) { 
+        types_m.push(type)
+      } else {
+        types_m = [...noMarker];
+      }
     }
     let defaulttype = this.#typ.DEFAULT
-    typesFromFolder()
+    typesFromFolder(this)
     if(!this.#isNew) {
-      typesFromMarker()
-    }
-    let type_prompt = this.#loc.getValue("type_prompt", "Choose Type")
+      typesFromMarker(this)
+    }  
+    let TYPE_PROMPT = this.#loc.getValue("TYPE_PROMPT", "Choose Type")
     let type_max_entries = this.#dlg.getValue("type_max_entries", 10)
     if(types_m.length > 1) {
       this.#notetype = await this.#tp.system.suggester(types_m, 
-        types_m, false, type_prompt, type_max_entries);
+        types_m, false, TYPE_PROMPT, type_max_entries);
     } else if(types_f.length > 1) {
       this.#notetype = await this.#tp.system.suggester(types_f, 
-        types_f, false, type_prompt, type_max_entries);
+        types_f, false, TYPE_PROMPT, type_max_entries);
     } else { 
       this.#notetype = types_m.length > 0 ? types_m[0] : 
         types_f.length > 0 ? types_f[0] :
@@ -5426,7 +5474,7 @@ class Templater {
       }
     }
     if(this.#notename == "") {
-      let prompt = this.#loc.getValue("name_prompt", "Pure Name of Note")
+      let prompt = this.#loc.getValue("NAME_PROMPT", "Pure Name of Note")
       try {
         this.#notename= await this.#tp.system.prompt(prompt,"",true)
       } catch(e) {
@@ -5482,7 +5530,7 @@ async function foty(tp, app) {
       let type = 
         await findType(tp, notePath, isNew, TYPES, DEFAULTTYPE, FOLDER2TYPES);
       let name = 
-        await findName(tp, noteTitle, isNew, TYPES[type], name_prompt);
+        await findName(tp, noteTitle, isNew, TYPES[type], NAME_PROMPT);
       await rename(tp, isNew, name, TYPES[type]);
       setOnneValues(tp, onneFmPairs, name, type, ONNE_FRONTMATTER_ENTRIES, 
                   TYPES[type]["frontmatter"]);
