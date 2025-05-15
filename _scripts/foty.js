@@ -217,7 +217,7 @@ const GLOBAL_BREADCRUMBS_SEPARATOR = " \u00BB "
 const GLOBAL__SPEC = "__SPEC"
 // Essence
 const GLOBAL_namePartHiddenPropertiesStartWith = "__"
-const GLOBAL_RENDER_DEFAULT = false
+const GLOBAL_RENDER_DEFAULT = undefined
 const GLOBAL_TYPE_DEFAULT = "String"
 const GLOBAL_DEFAULT_DEFAULT = ""
 const GLOBAL_VALUE_DEFAULT = ""
@@ -1850,7 +1850,7 @@ class Essence extends GenePool {
     return this[Essence.#pre + "ROOT"]
   }
   /** RENDER essence, inherited
-   * @type {Boolean}
+   * @type {Boolean|undefined}
    */
   get RENDER() {
     return this[Essence.#pre + "RENDER"]
@@ -1952,8 +1952,8 @@ class Essence extends GenePool {
    * Either as found in specification section or as
    * given from parent if one and if inherited or at least as hardcoded default.
    * They have to be of certain {@link Gene}, e.g. the value for the
-   * {@link Essence.getRENDER|RENDER} token has to be a Boolean. If some
-   * specification  entry
+   * {@link Essence.getRENDER|RENDER} token has to be a Boolean or undefined. 
+   * If some specification  entry
    * has wrong  {@link Gene} it will be {@link Essence#skipped|skipped} and
    * parent token value if inherited or if no parent or individual
    * hardcoded value will be used.
@@ -2351,7 +2351,7 @@ ${type_x}:${this.TYPE} \
       _.bassert(13,ess0.INTERNAL===undefined,"Should not be defined after construction")
       ess0.parse(un,un,"Essence.getterEssencesTest21")
       _.bassert(21,ess0.ROOT===true,"Should always be defined")
-      _.bassert(22,ess0.RENDER===false,"Should always be defined")
+      _.bassert(22,ess0.RENDER===undefined,"RENDER is used as trivalent")
       _.bassert(23,ess0.IGNORE===false,"Should always be defined")
       _.bassert(24,ess0.ONCE===false,"Should always be defined")
       _.bassert(25,ess0.FLAT===false,"Should always be defined")
@@ -2375,7 +2375,7 @@ ${type_x}:${this.TYPE} \
       let ess1 = new Essence("__SPEC")
       ess1.parse(lit1,un,"Essence:getterEssencesTest1")
       _.bassert(31,ess1.ROOT===true,"Should be set automatically")
-      _.bassert(32,ess1.RENDER===false,"Should stay at default value")
+      _.bassert(32,ess1.RENDER===undefined,"Should stay at default value")
       _.bassert(33,ess1.IGNORE===false,"Should stay at default value")
       _.bassert(34,ess1.ONCE===false,"Should stay at default value")
       _.bassert(35,ess1.FLAT===false,"Should stay at default value")
@@ -2400,7 +2400,7 @@ ${type_x}:${this.TYPE} \
       ess2.parse(lit2,un,"Essence:getterEssencesTest51")
       _.bassert(50,ess2.SPEC_KEY == "_S_P_E_C_", "Reason that nothing works is not the SPEC key")
       _.bassert(51,ess2.ROOT===true,"Should be set automatically")
-      _.bassert(52,ess2.RENDER===false,"Should stay at default value")
+      _.bassert(52,ess2.RENDER===undefined,"Should stay at default value")
       _.bassert(53,ess2.IGNORE===false,"Should stay at default value")
       _.bassert(54,ess2.ONCE===false,"Should stay at default value")
       _.bassert(55,ess2.FLAT===false,"Should stay at default value")
@@ -2423,7 +2423,7 @@ ${type_x}:${this.TYPE} \
       let ess0 = new Essence()
       ess0.parse(un,un,"Essence parseTest1")
       _.bassert(1,ess0.ROOT===true,"Should always be defined")
-      _.bassert(2,ess0.RENDER===false,"Should always be defined")
+      _.bassert(2,ess0.RENDER===undefined,"RENDER is used as trivalent")
       _.bassert(3,ess0.IGNORE===false,"Should always be defined")
       _.bassert(4,ess0.ONCE===false,"Should always be defined")
       _.bassert(5,ess0.FLAT===false,"Should always be defined")
@@ -2728,7 +2728,7 @@ class AEssence extends Essence {
       let un
       let ess0 = new AEssence(un,un,"AEssence:getterEssencesTest0")
       _.bassert(1,ess0.ROOT===true,"Should always be defined")
-      _.bassert(2,ess0.RENDER===false,"Should always be defined")
+      _.bassert(2,ess0.RENDER===undefined,"RENDER is used as trivalent")
       _.bassert(3,ess0.IGNORE===false,"Should always be defined")
       _.bassert(4,ess0.ONCE===false,"Should always be defined")
       _.bassert(5,ess0.FLAT===false,"Should always be defined")
@@ -3731,13 +3731,13 @@ class Setting extends BreadCrumbs {
     return renderYAML
   }
 
-  showVALUE(depth) {
+  showVALUES(depth) {
     let indent = ""
     for(let d=depth;d>0;d--) indent += "    "
     for (const [key, value] of this) {
       vaut(indent+key, value.VALUE)
       if(value.isA(value, Setting))
-        value.showVALUE(depth+1)
+        value.showVALUES(depth+1)
     }
   }
 
@@ -3759,6 +3759,27 @@ class Setting extends BreadCrumbs {
       }
     }
   }
+
+  showWhatGoesOut(depth) {
+    let indent = ""
+    if(depth == 0)
+      vaut("RENDER|IGNORE|REPEAT|FLAT", "KEY:VALUE:DEFAULT")
+    for(let d=depth;d>0;d--) indent += "    "
+    for (const [key, value] of this) {
+      let render = value.RENDER + "|"
+      let ignore = value.IGNORE + "|"
+      let repeat = value.REPEAT + "|"
+      let flat = value.FLAT
+      let val = value.VALUE
+      let def = value.DEFAULT
+      if(typeof value.VALUE == "function") val="FUNCTION"
+      if(typeof value.DEFAULT == "function") def="FUNCTION"
+      vaut(indent+render+ignore+repeat+flat+val, key+":"+val+":"+def)
+      if(value.isA(value, Setting))
+        value.showWhatGoesOut(depth+1)
+    }
+  }
+
 
   /** Returns whether key is main key of known workers
    * @param {*} key
@@ -5703,7 +5724,11 @@ let small_configuration = {
       notename: cbkNoteName,
       date: true,
       dateformat: "YYYY-MM-DD",
-      frontmatter: {private: true},
+      frontmatter: {
+        __SPEC: {RENDER: false},
+        private: true, 
+      },
+      page: {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
       folders: ["diary", "temp", "unbedacht"],
     },
     citation: {
@@ -5767,13 +5792,15 @@ async function testit(tp, app) {
     //let answer3 = note_types.translate("gibtsnicht","niemals")
     //vaut("3", answer3)
 
-    diary.showVALUE(0)
-    vaut("frontmatter",diary.at("frontmatter"))
-    vaut("dateformat",diary.at("dateformat"))
-    vaut("NICHTDA.nicht",diary.at("NICHTDA.nicht"))
-    aut(diary.has("frontmatter"))
-    aut(diary.has("dateformat"))
-    aut(diary.has("NICHTDA.nicht"))
+    diary.showVALUES(0)
+    diary.showWhatGoesOut(0)
+    //vaut("frontmatter",diary.at("frontmatter"))
+    //vaut("dateformat",diary.at("dateformat"))
+    //vaut("NICHTDA.nicht",diary.at("NICHTDA.nicht"))
+    //aut(diary.has("frontmatter"))
+    //aut(diary.has("dateformat"))
+    //aut(diary.has("NICHTDA.nicht"))
+    //aut(diary.has("dateformat.nicht"))
     let templ = new Templater(setting, tp)
     await templ.doTheWork()
     frontmatterYAML = setting.getFrontmatterYAML()
