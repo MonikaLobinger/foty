@@ -1,4 +1,5 @@
-module.exports = foty // templater call: "await tp.user.foty(tp, app)"
+module.exports = test // templater call: "await tp.user.foty(tp, app)"
+//module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
 //@todo adapt paths for windows
 // Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
@@ -227,7 +228,6 @@ const GLOBAL_FLAT_DEFAULT = false
 const GLOBAL_LOCAL_DEFAULT = false
 const GLOBAL_ONCE_DEFAULT = false
 const GLOBAL_REPEAT_DEFAULT = false
-const GLOBAL_DEFAULTS_DEFAULT = {}
 
 //  #region Colors
 /** Color, to be used without quotation marks during development. */
@@ -1589,6 +1589,10 @@ class GenePool {
       return this.#genes[ident].is(v)
     }
   }
+  toString() {
+    return "°°°" + this.constructor.name
+  }
+
   static isCompoundOr(id) {
     let answ = false
     if (typeof id === "string") {
@@ -1919,12 +1923,6 @@ class Essence extends GenePool {
   get REPEAT() {
     return this[Essence.#pre + "REPEAT"]
   }
-  /** DEFAULTS essence for REPEAT nodes, individual
-   * @type {Object}
-   */
-  get DEFAULTS() {
-    return this[Essence.#pre + "DEFAULTS"]
-  }
 
   static #pre = GLOBAL_namePartHiddenPropertiesStartWith // "__"
   static #RENDER_DEFT = GLOBAL_RENDER_DEFAULT // false
@@ -1938,7 +1936,6 @@ class Essence extends GenePool {
   static #LOCAL_DEFT = GLOBAL_LOCAL_DEFAULT  // false
   static #ONCE_DEFT = GLOBAL_ONCE_DEFAULT  // false
   static #REPEAT_DEFT = GLOBAL_REPEAT_DEFAULT  // false
-  static #DEFAULTS_DEFT = GLOBAL_DEFAULTS_DEFAULT  // {}
   //#endregion member variables
   /**
    * @classdesc Essence is unrecognizable except through me.
@@ -2028,7 +2025,6 @@ class Essence extends GenePool {
    * {@link Essence#LOCAL|LOCAL} (inherited),
    * {@link Essence#ONCE|ONCE},
    * {@link Essence#REPEAT|REPEAT} (individual) and
-   * {@link Essence#DEFAULTS|DEFAULTS}.
    * Also {@link Essence#ROOT|ROOT} is added, with value dependent
    * whether {@link parent}
    * is defined. There are some more <code>specification properties</code> for
@@ -2135,7 +2131,6 @@ class Essence extends GenePool {
     hide(this, l, s, "REPEAT", "Boolean",   un, Essence.#REPEAT_DEFT, un, n)
     hide(this, l, s, "DEFAULT", this.TYPE,  un, Essence.#DEFAULT_DEFT, un, n)
     hide(this, l, s, "VALUE", this.TYPE,    un, Essence.#VALUE_DEFT, un, n)
-    hide(this, l, s, "DEFAULTS", "Object",  un, Essence.#DEFAULTS_DEFT, un, n)
     if (literal != un) delete literal[this.#SPEC_KEY]
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
@@ -2161,9 +2156,6 @@ class Essence extends GenePool {
       let value_x = this.VALUE.length ? "VALUE" : "value"
       let default_x = this.DEFAULT.length ? "DEFAULT" : "default"
       let type_x = "type"
-      let defaults_x = Object.keys(this.DEFAULTS).length
-        ? "DEFAULTS"
-        : "defaults"
       if (literal != undefined)
         aut(
           `\
@@ -2175,7 +2167,7 @@ ${render_x}:${Essence.getRENDER(literal)}
 ${value_x}:'${Essence.getVALUE(literal)}' \
 ${default_x}:'${Essence.getDEFAULT(literal)}' \
 ${type_x}:${Essence.getTYPE(literal)} \
-${defaults_x}:${flatten(Essence.getDEFAULTS(literal))}`,
+`,
           blue
         )
       aut(
@@ -2188,7 +2180,7 @@ ${render_x}:${this.RENDER}
 ${value_x}:'${this.VALUE}' \
 ${default_x}:'${this.DEFAULT}' \
 ${type_x}:${this.TYPE} \
-${defaults_x}:${flatten(this.DEFAULTS)}`,
+`,
         lime
       )
       aut(
@@ -2312,13 +2304,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
   static getREPEAT(lit) {
     return lit[Essence.#pre + "REPEAT"]
   }
-  /** DEFAULTS essence, individual
-   * @param {Object} lit
-   * @returns {Object}
-   */
-  static getDEFAULTS(lit) {
-    return lit[Essence.#pre + "DEFAULTS"]
-  }
   //#endregion static getESSENCE from literal
 
   //prettier-ignore
@@ -2375,7 +2360,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(28,ess0.TYPE==="String","Should always be defined")
       _.bassert(29,ess0.DEFAULT==="","Should always be defined")
       _.bassert(30,ess0.VALUE==="","Should always be defined")
-      _.bassert(31,areEqual(ess0.DEFAULTS,{}),"Should always be defined")
       _.bassert(32,ess0.PARSE===true,"Should always be defined")
       _.bassert(33,ess0.INTERNAL===false,"Should always be defined")
       let lit1 = {__SPEC: {RENDER:true,
@@ -2402,7 +2386,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(40,ess1.VALUE==="","Should stay at default value")
       _.bassert(41,ess1.INTERNAL===false,"Should stay at default value")
       _.bassert(42,ess1.PARSE===true,"Should stay at default value")
-      _.bassert(43,areEqual(ess1.DEFAULTS,{}),"Should stay at default value")      
       let lit2 = {_S_P_E_C_: {RENDER:true,
                            IGNORE:true,
                            ONCE:true,
@@ -2428,7 +2411,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(60,ess2.VALUE==="","Should stay at default value")
       _.bassert(61,ess2.INTERNAL===false,"Should stay at default value")
       _.bassert(62,ess2.PARSE===true,"Should stay at default value")
-      _.bassert(63,areEqual(ess2.DEFAULTS,{}),"Should stay at default value")      
     }
     function constructorTest() {
       let un
@@ -2450,7 +2432,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(8,ess0.TYPE==="String","Should always be defined")
       _.bassert(9,ess0.DEFAULT==="","Should always be defined")
       _.bassert(10,ess0.VALUE==="","Should always be defined")
-      _.bassert(11,areEqual(ess0.DEFAULTS,{}),"Should always be defined")
       _.bassert(12,ess0.PARSE===true,"Should always be defined")
       _.bassert(13,ess0.INTERNAL===false,"Should always be defined")
       let lit1 = {_S_P_E_C_: {RENDER:true,
@@ -2481,7 +2462,6 @@ ${defaults_x}:${flatten(this.DEFAULTS)}`,
       _.bassert(30,ess1.VALUE===false,"Should be set to literal value")
       _.bassert(31,ess1.INTERNAL===true,"Should be set to literal value")
       _.bassert(32,ess1.PARSE===true,"Should stay at default value")
-      _.bassert(33,areEqual(ess1.DEFAULTS,{}),"Has an extra test") 
            
       _.shouldAssert(40,_tryParse,ess1,{}, new Error(),un,"Error no allowed parent")
       _.shouldAssert(41,_tryParse,ess1,"string", un,un,"String no allowed literal")
@@ -2760,7 +2740,6 @@ class AEssence extends Essence {
       _.bassert(8,ess0.TYPE==="String","Should always be defined")
       _.bassert(9,ess0.DEFAULT==="","Should always be defined")
       _.bassert(10,ess0.VALUE==="","Should always be defined")
-      _.bassert(11,areEqual(ess0.DEFAULTS,{}),"Should always be defined")
       _.bassert(12,ess0.PARSE===true,"Should always be defined")
       _.bassert(13,ess0.INTERNAL===false,"Should always be defined")
       let lit1 = {__SPEC: {RENDER:true,
@@ -2786,7 +2765,6 @@ class AEssence extends Essence {
       _.bassert(30,ess1.VALUE===false,"Should be set to literal value")
       _.bassert(31,ess1.INTERNAL===true,"Should be set to literal value")
       _.bassert(32,ess1.PARSE===true,"Should stay at default value")
-      _.bassert(33,areEqual(ess1.DEFAULTS,{}),"Has an extra test")
       let ess2 = new AEssence(undefined,ess1,"AEssence:getterEssencesTest2")
       _.bassert(41,ess2.ROOT===false,"Should always be defined")
       _.bassert(42,ess2.RENDER===true,"Should be set to parent value")
@@ -2800,7 +2778,6 @@ class AEssence extends Essence {
       _.bassert(50,ess2.VALUE==="","Should be set to default value")
       _.bassert(51,ess2.INTERNAL===true,"Should be set to inherited value")
       _.bassert(52,ess1.PARSE===true,"Should stay at default value")
-      _.bassert(53,areEqual(ess2.DEFAULTS,{}),"Has an extra test")
       let lit3 = {__SPEC: {RENDER:true,
         IGNORE:true,
         ONCE:true,
@@ -2825,7 +2802,6 @@ class AEssence extends Essence {
       _.bassert(70,ess3.VALUE===undefined,"No Essences should be added")
       _.bassert(71,ess3.INTERNAL===undefined,"No Essences should be added")
       _.bassert(72,ess3.PARSE===undefined,"No Essences should be added")
-      _.bassert(73,ess3.DEFAULTS===undefined,"No Essences should be added")
     }
     function isATest() {
       let un
@@ -4211,7 +4187,6 @@ class Setting extends BreadCrumbs {
       let ess0 = new AEssence({},un,"atomsTest")
       console.log(`ess0: '${ess0}'`) 
       console.log(`ess0.DEFAULT: '${ess0.DEFAULT}'`) 
-      console.log(`ess0.DEFAULTS: '${ess0.DEFAULTS}'`) 
       console.log(`ess0.FLAT: '${ess0.FLAT}'`) 
       console.log(`ess0.IGNORE: '${ess0.IGNORE}'`) 
       console.log(`ess0.LOCAL: '${ess0.LOCAL}'`) 
@@ -5426,7 +5401,6 @@ class Templater {
         if(types_f.length > 0 && !types_f.includes(key)) 
           continue;
         let marker = me.#typ.getValue(key+".marker")
-        aut(marker)
         if(marker === undefined || marker.length==0) {
           markerlen = marker.length
           noMarker.push(key);
@@ -5489,9 +5463,7 @@ class Templater {
   }
         
 }
-
 //#endregion Templater class
-
 /** exported function.
  * <p>
  * Name does not matter for templater, but if named 'main' interferes with jsdoc.
@@ -5587,3 +5559,118 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+let small_configuration = {
+  // General section has to be the first section
+  __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
+  { 
+    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"    
+    RELATIVE_PATH: true, 
+    DIRECTORY_SEPARATOR: "/", 
+  },
+  __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
+  { 
+    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
+    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
+  },
+  __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
+  { 
+    TYPE_MAX_ENTRIES: 10,
+  },
+  __NOTE_TYPES: 
+  {
+    __SPEC: {REPEAT: true, DEFAULT: "note"},
+    DEFAULTS: {
+        marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
+        date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
+        // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
+        // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
+        frontmatter: {__SPEC: {},
+          aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
+          date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
+        //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
+        //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
+        //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
+        //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
+        //     position: {__SPEC:false,IGNORE: true},
+        },
+        folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
+    },
+    // If DEFAULT is not set in __SPEC, first entry is default
+    // If set and has all DEFAULTS, it has not to be listed here
+    note: {
+      notename: cbkNoteName,
+      folders: []
+    },
+    diary: {
+      notename: cbkNoteName,
+      date: true,
+      dateformat: "YYYY-MM-DD",
+      frontmatter: {private: true},
+      folders: ["diary", "temp", "unbedacht"],
+    },
+    citation: {
+      marker: "°",
+      frontmatter: {cssclass: "garten, tagebuch"},
+    },
+  },
+  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
+  c:    {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
+}
+async function test(tp, app) {
+  let frontmatterYAML = {}
+  let renderYAML = {____: ""}
+  try {
+    let lit = user_configuration
+    let setting = new Setting(lit, undefined, undefined, tp)
+
+    //for (const p in lit) console.log(`${p}: ${lit[p]}`);
+    let note_types = setting.at("__NOTE_TYPES")
+    aut("=============================================",green)
+    vaut("__NOTE_TYPES", note_types)
+    //console.log(note_types)
+    vaut("note_types.PARSE   ", note_types.PARSE)
+    vaut("note_types.REPEAT  ", note_types.REPEAT)
+    vaut("note_types.VALUE   ", note_types.VALUE)
+    vaut("note_types.DEFAULT ", note_types.DEFAULT)
+    //for (const p in note_types) console.log(`${p}: ${note_types[p]}`);
+    let diary = setting.at("__NOTE_TYPES.diary")
+    aut("=============================================",blue)
+    vaut("__NOTE_TYPES.diary", diary)
+    //console.log(diary)
+    vaut("diary.PARSE   ", diary.PARSE)
+    vaut("diary.REPEAT  ", diary.REPEAT)
+    vaut("diary.VALUE   ", diary.VALUE)
+    vaut("diary.DEFAULT ", diary.DEFAULT)
+    //for (const p in diary) console.log(`${p}: ${diary[p]}`);
+    let dateformat = setting.at("__NOTE_TYPES.diary.dateformat")
+    aut("=============================================",blue)
+    vaut("__NOTE_TYPES.diary.dateformat", dateformat)
+    //console.log(dateformat)
+    vaut("dateformat.PARSE   ", dateformat.PARSE)
+    vaut("dateformat.REPEAT  ", dateformat.REPEAT)
+    vaut("dateformat.VALUE   ", dateformat.VALUE)
+    vaut("dateformat.DEFAULT ", dateformat.DEFAULT)
+    //for (const p in dateformat) console.log(`${p}: ${dateformat[p]}`);
+    aut("=============================================",green)
+    
+
+    let templ = new Templater(setting, tp)
+    await templ.doTheWork()
+    frontmatterYAML = setting.getFrontmatterYAML()
+    Object.assign(renderYAML, setting.getRenderYAML())
+  } catch (e) {
+    aut("RETHROWING")
+    throw e
+  }
+  return Object.assign({}, frontmatterYAML, renderYAML)
+}
+/*
+Meine Objekte haben keine (enumerable) Properties
+
+Meine Objekte sind alle Settings oder abgeleitet, außer die Atome
+
+Die Atome sind AEssence
+*/
