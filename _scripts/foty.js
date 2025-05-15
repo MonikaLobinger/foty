@@ -1,5 +1,5 @@
-module.exports = test // templater call: "await tp.user.foty(tp, app)"
-//module.exports = foty // templater call: "await tp.user.foty(tp, app)"
+//module.exports = testit // templater call: "await tp.user.foty(tp, app)"
+module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
 //@todo adapt paths for windows
 // Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
@@ -2526,7 +2526,6 @@ ${type_x}:${this.TYPE} \
       _.bassert(10,Essence.getVALUE(lit1) === undefined, "Hidden properties not added")
       _.bassert(11,Essence.getINTERNAL(lit1) === undefined, "Hidden properties not added")
       _.bassert(12,Essence.getPARSE(lit1) === undefined, "Hidden properties not added")
-      _.bassert(13,Essence.getDEFAULTS(lit1) === undefined, "Hidden properties not added")
       let ess1 = new Essence("__SPEC")
       ess1.specificationPool.addGene("String", cbkTypeOfLc)
       ess1.specificationPool.addGene("Boolean", cbkTypeOfLc)
@@ -2545,7 +2544,6 @@ ${type_x}:${this.TYPE} \
       _.bassert(30,Essence.getVALUE(lit1) === 127, "Hidden properties added")
       _.bassert(31,Essence.getINTERNAL(lit1) === false, "Hidden properties added")
       _.bassert(32,Essence.getPARSE(lit1) === true, "Hidden properties added")
-      _.bassert(31,areEqual(Essence.getDEFAULTS(lit1),{}), "Hidden properties added")
       _.bassert(32,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
       let lit2 = {__SPEC: {RENDER:true,
         IGNORE:true,
@@ -2576,7 +2574,6 @@ ${type_x}:${this.TYPE} \
       _.bassert(50,Essence.getVALUE(lit2) === undefined, "Hidden properties not added")
       _.bassert(51,Essence.getINTERNAL(lit2) === undefined, "Hidden properties not added")
       _.bassert(52,Essence.getPARSE(lit2) === undefined, "Hidden properties not added")
-      _.bassert(53,Essence.getDEFAULTS(lit2) === undefined, "Hidden properties not added")
       _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed") 
       _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed") 
       _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed") 
@@ -2848,7 +2845,6 @@ class AEssence extends Essence {
       _.bassert(10,AEssence.getVALUE(lit1) === undefined, "Hidden properties not added")
       _.bassert(11,AEssence.getINTERNAL(lit1) === undefined, "Hidden properties not added")
       _.bassert(12,AEssence.getPARSE(lit1) === undefined, "Hidden properties not added")
-      _.bassert(13,AEssence.getDEFAULTS(lit1) === undefined, "Hidden properties not added")
       new AEssence(lit1,un,"AEssence:getEssencesTest")
       _.bassert(20,lit1.__SPEC === undefined, "__SPEC properties removed")
       _.bassert(21,AEssence.getROOT(lit1) === true, "Hidden properties added")
@@ -2863,7 +2859,6 @@ class AEssence extends Essence {
       _.bassert(30,AEssence.getVALUE(lit1) === 127, "Hidden properties added")
       _.bassert(31,AEssence.getINTERNAL(lit1) === false, "Hidden properties added")
       _.bassert(32,AEssence.getPARSE(lit1) === true, "Hidden properties added")
-      _.bassert(31,areEqual(AEssence.getDEFAULTS(lit1),{}), "Hidden properties added")
       _.bassert(32,Object.keys(lit1).length === 0,"Hidden properties are not enumerable")
       let lit2 = {__SPEC: {RENDER:true,
         IGNORE:true,
@@ -2890,7 +2885,6 @@ class AEssence extends Essence {
       _.bassert(50,AEssence.getVALUE(lit2) === undefined, "Hidden properties not added")
       _.bassert(51,AEssence.getINTERNAL(lit2) === undefined, "Hidden properties not added")
       _.bassert(52,AEssence.getPARSE(lit2) === undefined, "Hidden properties not added")
-      _.bassert(53,AEssence.getDEFAULTS(lit2) === undefined, "Hidden properties not added")
       _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed") 
       _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed") 
       _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed") 
@@ -3636,8 +3630,29 @@ class Setting extends BreadCrumbs {
     }
   }
 
-  /**
-   * Returns entry for key
+  /** Returns whether entry for {@link key} exists
+   * @param {String} key 
+   * @returns {Boolean} 
+   */
+  has(key) {
+    if (typeof key == "string") {
+      let subKeys = key.split(".")
+      if (subKeys.length > 1) {
+        if (this.#works[subKeys[0]] !== undefined)
+          return this.#works[subKeys.shift()].has(subKeys.join("."))
+        else if (this.#children[subKeys[0]] !== undefined &&
+          this.isA(this.#children[subKeys[0]],Setting))
+          return this.#children[subKeys.shift()].has(subKeys.join("."))
+        else return false
+      }
+    } 
+    if (this.#works[key]) return true
+    else if (this.#children[key]) return true
+    else return false
+  }
+
+  /** Returns entry for key
+   * 
    * @param {(String|Symbol)} key
    * @returns {(AEssence|Setting)}
    */
@@ -3655,8 +3670,9 @@ class Setting extends BreadCrumbs {
     else return this.#children[key]
   }
 
-  /**
-   * Returns value from worker, if {@link key} is registered worker, else from this
+  /** Returns value from worker, if {@link key} is registered worker, else from 
+   * this
+   * 
    * @param {String} key - key can specify child keys by using points, 
    *                       e.g. "grandParentKey.parentKey.childKey"
    * @param  {...any} params - for worker's getValue
@@ -3687,8 +3703,7 @@ class Setting extends BreadCrumbs {
     return answ
   }
 
-  /**
-   * Returns all frontmatter entries of this instance and descendants
+  /** Returns all frontmatter entries of this instance and descendants
    * besides IGNORED ones.
    * @returns  {Object.<String.any>}
    */
@@ -3702,8 +3717,7 @@ class Setting extends BreadCrumbs {
     return frontmatterYAML
   }
 
-  /**
-   * Returns all render entries of this instance and descendants
+  /** Returns all render entries of this instance and descendants
    * besides IGNORED ones.
    * @returns  {Object.<String.any>}
    */
@@ -3715,6 +3729,35 @@ class Setting extends BreadCrumbs {
       } else Object.assign(renderYAML, value.getRenderYAML())
     }
     return renderYAML
+  }
+
+  showVALUE(depth) {
+    let indent = ""
+    for(let d=depth;d>0;d--) indent += "    "
+    for (const [key, value] of this) {
+      vaut(indent+key, value.VALUE)
+      if(value.isA(value, Setting))
+        value.showVALUE(depth+1)
+    }
+  }
+
+  showVALUE_DEFAULT(depth) {
+    let indent = ""
+    for(let d=depth;d>0;d--) indent += "    "
+    for (const [key, value] of Object.entries(this.#children)) {
+      if(typeof value.VALUE == "function")
+        vaut(indent+key+".VALUE", "FUNCTION")
+      else if(typeof value.VALUE != "string" || value.VALUE.length > 0)
+        vaut(indent+key+".VALUE", value.VALUE)
+      if(typeof value.DEFAULT != "string" || value.DEFAULT.length > 0)
+        vaut(indent+key+".DEFAULT", value.DEFAULT)
+      if(typeof value.VALUE == "string" && value.VALUE.length == 0 &&
+        typeof value.DEFAULT == "string" && value.DEFAULT.length == 0)
+        vaut(indent+key+".DEFAULT|VALUE", "-----")
+      if(value.isA(value, Setting)) {
+        value.showVALUE_DEFAULT(depth+1)
+      }
+    }
   }
 
   /** Returns whether key is main key of known workers
@@ -3737,6 +3780,7 @@ class Setting extends BreadCrumbs {
       _.run(isATest)
       _.run(toStringTest)
       _.run(iteratorTest)
+      _.run(hasTest)
       _.run(atTest)
       _.run(getValueTest)
       _.run(getFrontmatterYAMLTest)
@@ -4047,6 +4091,54 @@ class Setting extends BreadCrumbs {
 
       }/**********************************************************************/              
 
+    }
+    function hasTest() {
+      /**********************************************************************/{
+      let lit = {pos:[22,12], deep: {deeper: {pos:[14,13,18]}}}
+      let set = new Setting(lit)
+      let answ1 = set.has("deep")
+      let answ2 = set.has("deep.deeper")
+      let answ3 = set.has("deep.deeper.pos")
+      let answ4 = set.has("neep.deeper.pos")
+      let answ5 = set.has("deep.deeper.xos")
+      let answ6 = set.has("deep.deeper.pos.ne")
+      _.bassert(1,answ1==true,"'deep' exists")
+      _.bassert(2,answ2==true,"'deep.deeper' exists")
+      _.bassert(3,answ3==true,"'deep.deeper.pos' exists")
+      _.bassert(4,answ4==false,"'neep' does not exist")
+      _.bassert(5,answ5==false,"'deep.deeper.xos' does not exist")
+      _.bassert(6,answ6==false,"'deep.deeper.pos.ne' does not exist")
+      }/**********************************************************************/{        
+      class testWorker extends Setting {
+        static get workerKey() {
+          return "__TEST"
+        }
+        constructor(literal, key, parent) {
+          parent.workersTypeForChildren = "(Number|Array.<Number>)"
+          super(literal,key,parent)
+          this.addGene(testWorker)
+        }          
+      }
+      let lit = {__TEST:{pos:[22,12], deep: {deeper: {pos:[14,13,18]}}}}
+      Setting.worker = testWorker
+      let set = new Setting(lit)
+      let answer1 = set.has("__TEST")
+      let answer2 = set.has("__TEST.deep")
+      let answer3 = set.has("__TEST.deep.deeper")
+      let answer4 = set.has("__TEST.deep.deeper.pos")
+      let answer5 = set.has("__NEST.deep.deeper.pos")
+      let answer6 = set.has("__TEST.neep")
+      let answer7 = set.has("__TEST.deep.deeper.nos")
+      let answer8 = set.has("__TEST.deep.deeper.pos.ne")
+      _.bassert(1,answer1==true,"Workers root exists")
+      _.bassert(2,answer2==true,"Workers 'deep' exists")
+      _.bassert(3,answer3==true,"Workers 'deep.deeper' exists")
+      _.bassert(4,answer4==true,"Workers 'deep.deeper.pos' exists")
+      _.bassert(5,answer5==false,"Worker '__NEST' does not exist")
+      _.bassert(6,answer6==false,"Workers 'neep' does not exist")
+      _.bassert(7,answer7==false,"Workers 'deep.deeper.nos' does not exist")
+      _.bassert(8,answer8==false,"Workers 'deep.deeper.pos.ne' does not exist")
+      }/**********************************************************************/              
     }
     function atTest() {
       /**********************************************************************/{
@@ -4727,6 +4819,9 @@ class LocalizationWorker extends Setting {
       if (atom.VALUE.length > 1) return atom.VALUE[1]
     }
     if (atom != undefined) return atom.VALUE
+  }
+  translate(key, fallbackIn, language) {
+    return this.getValue(key, fallbackIn,language)
   }
   //prettier-ignore
   static test(outputObj) { // LocalizationWorker
@@ -5587,15 +5682,15 @@ let small_configuration = {
         date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
         // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
         // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
-        frontmatter: {__SPEC: {},
-          aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
-          date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
+        // frontmatter: {__SPEC: {},
+        //   aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
+        //   date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
         //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
         //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
         //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
         //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
         //     position: {__SPEC:false,IGNORE: true},
-        },
+        // },
         folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
     },
     // If DEFAULT is not set in __SPEC, first entry is default
@@ -5619,44 +5714,66 @@ let small_configuration = {
   soso: {VALUE: "naja", __SPEC: true, RENDER: false},
   c:    {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
 }
-async function test(tp, app) {
+async function testit(tp, app) {
   let frontmatterYAML = {}
   let renderYAML = {____: ""}
   try {
-    let lit = user_configuration
+    let lit = small_configuration
     let setting = new Setting(lit, undefined, undefined, tp)
 
     //for (const p in lit) console.log(`${p}: ${lit[p]}`);
+    aut("=============================================",green)
+    let translate = setting.at("__TRANSLATE")
+    //vaut("__TRANSLATE", translate)
+    //console.log(translate)
+    //vaut("translate.FLAT    ", translate.FLAT)
+    //vaut("translate.REPEAT  ", translate.REPEAT)
+    //vaut("translate.VALUE   ", translate.VALUE)
+    //vaut("translate.DEFAULT ", translate.DEFAULT)
+    //for (const p in translate) console.log(`${p}: ${translate[p]}`);
+    //aut("=============================================",green)
     let note_types = setting.at("__NOTE_TYPES")
-    aut("=============================================",green)
-    vaut("__NOTE_TYPES", note_types)
+    //vaut("__NOTE_TYPES", note_types)
     //console.log(note_types)
-    vaut("note_types.PARSE   ", note_types.PARSE)
-    vaut("note_types.REPEAT  ", note_types.REPEAT)
-    vaut("note_types.VALUE   ", note_types.VALUE)
-    vaut("note_types.DEFAULT ", note_types.DEFAULT)
+    //vaut("note_types.FLAT    ", note_types.FLAT)
+    //vaut("note_types.REPEAT  ", note_types.REPEAT)
+    //vaut("note_types.VALUE   ", note_types.VALUE)
+    //vaut("note_types.DEFAULT ", note_types.DEFAULT)
     //for (const p in note_types) console.log(`${p}: ${note_types[p]}`);
+    //aut("=============================================",blue)
     let diary = setting.at("__NOTE_TYPES.diary")
-    aut("=============================================",blue)
-    vaut("__NOTE_TYPES.diary", diary)
+    //vaut("__NOTE_TYPES.diary", diary)
     //console.log(diary)
-    vaut("diary.PARSE   ", diary.PARSE)
-    vaut("diary.REPEAT  ", diary.REPEAT)
-    vaut("diary.VALUE   ", diary.VALUE)
-    vaut("diary.DEFAULT ", diary.DEFAULT)
+    //vaut("diary.FLAT    ", diary.FLAT)
+    //vaut("diary.REPEAT  ", diary.REPEAT)
+    //vaut("diary.VALUE   ", diary.VALUE)
+    //vaut("diary.DEFAULT ", diary.DEFAULT)
     //for (const p in diary) console.log(`${p}: ${diary[p]}`);
+    //aut("=============================================",blue)
     let dateformat = setting.at("__NOTE_TYPES.diary.dateformat")
-    aut("=============================================",blue)
-    vaut("__NOTE_TYPES.diary.dateformat", dateformat)
+    //vaut("__NOTE_TYPES.diary.dateformat", dateformat)
     //console.log(dateformat)
-    vaut("dateformat.PARSE   ", dateformat.PARSE)
-    vaut("dateformat.REPEAT  ", dateformat.REPEAT)
-    vaut("dateformat.VALUE   ", dateformat.VALUE)
-    vaut("dateformat.DEFAULT ", dateformat.DEFAULT)
+    //vaut("dateformat.FLAT    ", dateformat.FLAT)
+    //vaut("dateformat.REPEAT  ", dateformat.REPEAT)
+    //vaut("dateformat.VALUE   ", dateformat.VALUE)
+    //vaut("dateformat.DEFAULT ", dateformat.DEFAULT)
     //for (const p in dateformat) console.log(`${p}: ${dateformat[p]}`);
-    aut("=============================================",green)
     
+    //let answer1 = translate.translate("NAME_PROMPT","vorgabe")
+    //vaut("1", answer1)
+    //let answer2 = translate.translate("gibtsnicht","niemals")
+    //vaut("2", answer2)
+    // Das kann nicht gehen, weil note_types keine Funktion translate hat
+    //let answer3 = note_types.translate("gibtsnicht","niemals")
+    //vaut("3", answer3)
 
+    diary.showVALUE(0)
+    vaut("frontmatter",diary.at("frontmatter"))
+    vaut("dateformat",diary.at("dateformat"))
+    vaut("NICHTDA.nicht",diary.at("NICHTDA.nicht"))
+    aut(diary.has("frontmatter"))
+    aut(diary.has("dateformat"))
+    aut(diary.has("NICHTDA.nicht"))
     let templ = new Templater(setting, tp)
     await templ.doTheWork()
     frontmatterYAML = setting.getFrontmatterYAML()
@@ -5668,9 +5785,41 @@ async function test(tp, app) {
   return Object.assign({}, frontmatterYAML, renderYAML)
 }
 /*
-Meine Objekte haben keine (enumerable) Properties
+Keines meiner Objekte hat (enumerable) Properties
 
-Meine Objekte sind alle Settings oder abgeleitet, außer die Atome
+Alle meine Objekte haben alle meine Tags (hidden Properties)
 
-Die Atome sind AEssence
+Meine Objekte sind alle AEssence oder abgeleitet
+
+Objekte die keine Atome (Blätter) sind, sind alle Settings oder abgeleitet
+
+Alle Worker sind Settings
+
+Setting.at liefert eines von: Setting AEssence undefined
+    Der Pfad "a.b.c" darf schon von a an undefiniert sein
+
+Die möglichen Funktionen
+GenePool      .addGene .hasGene .length .isA .toString
+Essence       .SPEC_KEY .skipped .parse 
+              .ROOT
+              .FLAT
+              ...
+              .REPEAT
+AEssence      
+BreadCrumbs   .literal .parent .name .root .toString .toBreadcrumbs .throwIfUndefined .throwIfNotOfType
+Setting       .workertsTypeForChildren
+              .children
+              .tp
+              .iterator
+              .has
+              .at
+              .getValue
+              .getFrontmatterYAML
+              .getRenderYAML
+GeneralWorker      .getValue
+LocalizationWorker .getValue
+DialogWorker
+TypesWorker   .getValue
+
+
 */

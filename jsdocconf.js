@@ -43,7 +43,7 @@ module.exports = {
       wrap: false,           // [false|true] Wrap long navigation names instead of trimming them
       ShortenTypes: false, // [false|true] If set to true this will resolve the display name of all types as the shortened name only (after the final period).
       removeQuotes: "none",// ["none"|"all"|"trim"] Remove single and double quotes, trim removes only surrounding ones
-      private: true,        // [false|true] set to false to not show @private in navbar
+      private: false,        // [false|true] set to false to not show @private in navbar
       sectionOrder: [               // Order the main section in the navbar (default order shown here)
         "Classes",
         "Events",
