@@ -93,6 +93,16 @@ function cbkFmtCreated(tp, noteName, noteType) {
 function cbkFmtCssClass(tp, noteName, noteType) {
   return noteType
 }
+/** {@link FrontmatterCallback}, returns noteName
+ * @type {FrontmatterCallback}
+ * @param {Object} tp - templater object
+ * @param {String} noteName
+ * @param {String} noteType
+ * @returns {String}
+ */
+function cbkNoteName(tp, noteName, noteType) {
+  return noteName
+}
 //  #endregion DO_NOT_TOUCH
 //  #region USER CONFIGURATION
 //prettier-ignore
@@ -105,9 +115,9 @@ let user_configuration = {
   },
   __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
   { 
-    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
-    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
-    DEFAULT_NAME_PROMPT: [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
+    type_prompt:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
+    title_new_file:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+    name_prompt:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
   },
   __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
   { 
@@ -121,9 +131,9 @@ let user_configuration = {
         date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
         // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
         // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
-           frontmatter: {__SPEC: {},
-               aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
-               date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
+        frontmatter: {__SPEC: {},
+          aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
+          date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
         //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
         //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
         //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
@@ -135,9 +145,11 @@ let user_configuration = {
     // If DEFAULT is not set in __SPEC, first entry is default
     // If set and has all DEFAULTS, it has not to be listed here
     note: {
+      notename: cbkNoteName,
       folders: ["/"],
     },
     diary: {
+      notename: cbkNoteName,
       date: true,
       dateformat: "YYYY-MM-DD",
       frontmatter: {private: true},
@@ -4723,11 +4735,13 @@ class LocalizationWorker extends Setting {
   getValue(key, fallbackIn, language) {
     let atom = this.at(key)
     if (atom != undefined  && Array.isArray(atom.VALUE)) {
-      let lang = language == undefined ? this.#defaultLang : lang
+      let lang = language == undefined ? this.#defaultLang : language
       let fallback = fallbackIn
       for (const langPair of atom.VALUE) {
         if (Array.isArray(langPair) && langPair.length > 1) {
-          if (langPair[0] == lang) return langPair[1]
+          if (langPair[0] == lang) {
+            return langPair[1]
+          }
           if (fallback == undefined) fallback = langPair[1]
           if (langPair[0] == this.#defaultLang)
             fallback = langPair[1]
@@ -5165,9 +5179,9 @@ class TypesWorker extends Setting {
       for (const [key, value] of Object.entries(literal)) {
         if (key == AEssence.SPEC_KEY || key == "DEFAULTS") continue
         for (const [defkey, defvalue] of Object.entries(defaults)) {
-          if (defkey == AEssence.SPEC_KEY) continue
-          if (defvalue[AEssence.SPEC_KEY] != false) continue
-          if(value.defkey === undefined) {           
+          if (defkey == AEssence.SPEC_KEY) continue 
+          if (defvalue[AEssence.SPEC_KEY] != false) continue // e.g. frontmatter
+          if(value[defkey] === undefined) {           
             value[defkey] = {}
             let defaultval
             for (const [newkey, newvalue] of Object.entries(defvalue)) {
@@ -5187,6 +5201,25 @@ class TypesWorker extends Setting {
     }
   }
 
+  /**
+   * Returns value of {@link key} or {@link fallback} as caller fallback
+   * or undefined if none of them is found
+   * <p>
+   * @param {String} key
+   * @param  {...any} fallback
+   * @returns {...any}
+   */
+  getValue(key, fallback) {
+    let atom = this.at(key)
+    let value
+    if( atom !== undefined) {
+      value = atom.VALUE
+    } else {
+      value = fallback
+    }        
+    return value
+  }
+    
   //prettier-ignore
   static test(outputObj) { // TypesWorker
     let _ = null
@@ -5299,30 +5332,42 @@ registeredExceptions.push(
 )
 //  #endregion workers
 //#endregion central code classes
-//#region functions
-class doTheWork {
+//#region Templater class
+class Templater {
+  #tp
   #gen
   #loc
   #dlg
   #typ
-  #defaults
 
-  #filename
+  #filetitle
   #path_relative
   #path_absolute
 
+  #isNew=false
+  #notetype
+  #notename
+  #marker
+
   constructor(setting, tp) {
+    this.#tp = tp
     this.#gen = setting.at(GENERAL_WORKER_KEY)
     this.#loc = setting.at(LOCALIZATION_WORKER_KEY)
     this.#dlg = setting.at(DIALOG_WORKER_KEY)
     this.#typ = setting.at(TYPES_WORKER_KEY)
-    this.#defaults = this.#typ.at("DEFAULTS")
 
-    this.#filename = tp.file.title
-    this.#path_relative = tp.file.path(true)
-    this.#path_absolute = tp.file.path(false)
+    this.#filetitle = this.#tp.file.title
+    this.#path_relative = this.#tp.file.path(true)
+    this.#path_absolute = this.#tp.file.path(false)
   }
-  isNewNote() {
+
+  async doTheWork() {
+    this.#checkIsNewNote()
+    await this.#findType()
+    await this.#findName()
+    await this.#rename()
+  }
+  #checkIsNewNote() {
     let answer = false
     let lang_array = [FALLBACK_LANGUAGE]
     let new_titles_array = []
@@ -5330,66 +5375,74 @@ class doTheWork {
     if(0 != lang.localeCompare(FALLBACK_LANGUAGE)) {
       lang_array.push(lang)
     }
-    lang_array.forEach((lang) => {
-      new_titles_array.push(this.#loc.getValue("TITLE_NEW_FILE",lang))
+    lang_array.forEach((lang) => {     
+      let title = this.#loc.getValue("title_new_file","", lang)
+      if(title.length > 0) {
+        new_titles_array.push(title)
+      }
     })
     new_titles_array.some(prefix => { 
-      answer = this.#filename.startsWith(prefix) ? true : false
-      return answer
-    });
-    return answer
+      this.#isNew = this.#filetitle.startsWith(prefix) ? true : false
+      return this.#isNew
+    });    
   } 
-  async findType(isNew) {
-    let type = this.defaultType()
+  async #findType(isNew) {
+    let types_f = []
     let types_m = []
-    let types_f = this.typesFromFolder()
-    //if(!isNew) types_m = typesFromMarker()
-  }
+    function typesFromFolder() {
 
-  defaultType() {
-    let def = this.#typ.DEFAULT
-    if(0 == def.length) {
-      for (const [key, val] of this.#typ) {
-        if(0 != key.localeCompare("DEFAULTS")) {
-          def = key
-          break
-        }
+    }
+    function typesFromMarker() {
+
+    }
+    let defaulttype = this.#typ.DEFAULT
+    typesFromFolder()
+    if(!this.#isNew) {
+      typesFromMarker()
+    }
+    let type_prompt = this.#loc.getValue("type_prompt", "Choose Type")
+    let type_max_entries = this.#dlg.getValue("type_max_entries", 10)
+    if(types_m.length > 1) {
+      this.#notetype = await this.#tp.system.suggester(types_m, 
+        types_m, false, type_prompt, type_max_entries);
+    } else if(types_f.length > 1) {
+      this.#notetype = await this.#tp.system.suggester(types_f, 
+        types_f, false, type_prompt, type_max_entries);
+    } else { 
+      this.#notetype = types_m.length > 0 ? types_m[0] : 
+        types_f.length > 0 ? types_f[0] :
+        defaulttype != undefined ? defaulttype : "note";
+    }
+    this.#marker = this.#typ.getValue(this.#notetype+".marker", "")
+  }
+  async #findName(){
+    this.#notename = ""
+    if(!this.#isNew) {
+      this.#notename = this.#filetitle.substring(this.#marker.length)
+    } else {
+      let fu = this.#typ.getValue(this.#notetype+".notename", undefined)
+      if(typeof fu == "function") {
+        this.#notename = fu(this.#tp, this.#notename, this.#notetype)
       }
     }
-    return def
+    if(this.#notename == "") {
+      let prompt = this.#loc.getValue("name_prompt", "Pure Name of Note")
+      try {
+        this.#notename= await this.#tp.system.prompt(prompt,"",true)
+      } catch(e) {
+        // Cancelled
+      }
+    }     
   }
-  typesFromFolder() {
-    let types = [];
-    let relative = this.#gen.getValue("RELATIVE_PATHS", true) 
-    let noteWithPath = relative ? this.#path_relative : this.#path_absolute
-    let folderParts = noteWithPath.split(GLOBAL_ROOT_KEY);
-    folderParts.unshift(GLOBAL_ROOT_KEY)
-    folderParts.pop()
-    folderParts.forEach((part)=> {
-      //console.log("!" + part)
-    })
-    for (const [key, val] of this.#typ) {
-      if(0 == key.localeCompare("DEFAULTS")) {
-        continue
-      }
-      let folders = val.getValue("folders", "")
-      if(folders === undefined) {
-        folders = this.#defaults.at("folders").DEFAULT
-      }
-      //console.log(">" + key + ":" + folders)
+  async #rename(){
+    if(this.#notename.length > 0) {
+      await(this.#tp.file.rename(this.#marker + this.#notename))
     }
-    return types;
   }
-    
-}
-async function findName(){
-  return "" 
-}
-async function rename(){
-  return "" 
+        
 }
 
-//#endregion functions
+//#endregion Templater class
 
 /** exported function.
  * <p>
@@ -5412,11 +5465,8 @@ async function foty(tp, app) {
   try {
     let lit = user_configuration
     let setting = new Setting(lit, undefined, undefined, tp)
-    let work = new doTheWork(setting, tp)
-    let isNew = work.isNewNote()
-    let type = await work.findType(isNew)
-    let name = await findName()
-    await rename()
+    let templ = new Templater(setting, tp)
+    await templ.doTheWork()
 
     let CONVERT_FROM_ONNE = false
     if (CONVERT_FROM_ONNE) {
@@ -5432,7 +5482,7 @@ async function foty(tp, app) {
       let type = 
         await findType(tp, notePath, isNew, TYPES, DEFAULTTYPE, FOLDER2TYPES);
       let name = 
-        await findName(tp, noteTitle, isNew, TYPES[type], DEFAULT_NAME_PROMPT);
+        await findName(tp, noteTitle, isNew, TYPES[type], name_prompt);
       await rename(tp, isNew, name, TYPES[type]);
       setOnneValues(tp, onneFmPairs, name, type, ONNE_FRONTMATTER_ENTRIES, 
                   TYPES[type]["frontmatter"]);
@@ -5493,9 +5543,9 @@ if (DEBUG) {
   let onne_x = {
     //localType: (String|Array.<String>|Array.<Array.<String>>)
     __TRANSLATE: {
-      TYPE_PROMPT: "Typ wählen",
-      TITLE_NEW_FILE: ["Unbenannt", "Untitled"],
-      DEFAULT_NAME_PROMPT: "Name der Notiz (ohne Kenner/Marker)",
+      type_prompt: "Typ wählen",
+      title_new_file: ["Unbenannt", "Untitled"],
+      name_prompt: "Name der Notiz (ohne Kenner/Marker)",
     },
     //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
     __DIALOG_SETTINGS: {
@@ -5769,7 +5819,7 @@ if (learn) {
   aut("----", blue)
 }
 
-let doconfig = true
+let doconfig = false
 if (doconfig) {
   let doconfig_configuration = {
     __NOTE_TYPES: 
@@ -5811,4 +5861,48 @@ if (doconfig) {
 //  vaut("date",diary.getValue("date"))
 //  vaut("showdate",diary.getValue("showdate"))
 //  vaut("dateformat",diary.getValue("dateformat"))
+}
+
+let checkcopy = false
+if (checkcopy) {
+  let check_configuration = {
+    __NOTE_TYPES: 
+    {
+      DEFAULTS: {
+        folders: {IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["/zwischenreich"]},
+      },
+      note: {
+        folders: "/WERTWERT",
+      },
+      /*
+      diary: {
+        date: true,
+        dateformat: "YYYY-MM-DD",
+        frontmatter: {private: true},
+        folders: ["/diary", "/temp", "unbedacht"],
+      },
+      citation: {
+        marker: "°",
+        frontmatter: {cssclass: "garten, tagebuch"},
+      },
+      */
+    },
+  }  
+  function cpRepeatedDefaults(literal) {
+    let defaults = literal.DEFAULTS
+    let note = literal.note
+    console.log(note["folders"])
+    for (const [key, value] of Object.entries(literal)) { if (key == "DEFAULTS") continue    
+      console.log(value["folders"])
+      console.log(literal[key])
+      for (const [defkey, defvalue] of Object.entries(defaults)) {
+        console.log(value[defkey])
+        if(value[defkey] === undefined) { 
+          vaut(key+"."+defkey,"ERSETZT")          
+          value[defkey] = {}
+        }
+      }       
+    }
+  }
+  cpRepeatedDefaults(check_configuration.__NOTE_TYPES)
 }
