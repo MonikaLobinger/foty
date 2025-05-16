@@ -219,12 +219,12 @@ Wird einmal für die Wurzel des Konfigurationsobjektes gesetzt. Wird intern für
 #### FLAT
 Wird automatisch für Atome (Blätter) gesetzt. Diese sind Objekte der  AEssence Klasse. Für Nodes ist der FLAT Wert false.  Nodes sind Objekte der Setting Klasse.
 #### PARSE
-Sowas von intern.
+Falls gesetzt, werden keine Token erzeugt und __SPEC nicht gelöscht
 #### REPEAT
 Falls gesetzt wird dieser Node rekursiv in alle Geschwister kopiert.
 Der Node muß ein direkter Eintrag im __NOTE_TYPES Konfigurationsobjekt sein. Es wird nur nach einem REPEAT Eintrag gesucht. Weitere würden ignoriert werden.
 #### DEFAULT
-todo
+Die Worker können damit fehlende VALUE erzeugen. 
 #### VALUE
 todo
 #### IGNORE
@@ -241,11 +241,17 @@ unbenutzt
 unbenutzt
 
 ### __SPEC
-In __SPEC stehen die Tokens drin
-Node: __SPEC ist ein Objekt
-Atom: __SPEC false: TYPE wird nicht gesetzt, bekommt DEFAULT Wert
-      __SPEC true: TYPE bekommt globalen TYP (alles ist erlaubt)
-      In beiden Fällen: TYPE ist vererbbar
+In __SPEC stehen die Tokens drin, __SPEC selbst verschwindet
+Wenn __SPEC fehlt wird es für ein Objekt {} und für ein Schlüssel/Wert Paar true
+Wenn __SPEC ein Boolean ist, ist sein Eltern FLAT
+Node: FLAT ist false
+      __SPEC ist ein Objekt, definiert TYPE (evlt als Default)
+Atom: FLAT ist true
+      __SPEC false: TYPE bekommt Default Wert
+      __SPEC true: TYPE bekommt globalen TYPE (alles ist erlaubt)
+      In beiden Fällen: Nur wenn nicht explizit gesetzt
+      Alle reinen Schlüssel/Wert Paare (ohne __SPEC) werden Atome
+      
 
 ### Workers
 Workers sind von Setting abgeleitet. Sie überschreiben vlt die Funktion getValue. Vielleicht bieten sie noch zusätzliche Funktionen an. getValue von Setting gibt den Wert zurück, falls da, undefined sonst.

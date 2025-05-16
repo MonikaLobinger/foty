@@ -127,20 +127,21 @@ let user_configuration = {
   __NOTE_TYPES: 
   {
     __SPEC: {DEFAULT: "note"},
-    DEFAULTS: {
-      __SPEC: {REPEAT: true, },
+    defaults: {
+      __SPEC: {REPEAT: true,},
+      erna: "wohnt",
       marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
       date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
-      // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
+      title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
       // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
-      frontmatter: {__SPEC: {},
+      frontmatter: {__SPEC: {RENDER: false,},
         aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
         date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
-      // tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
-      // publish: {TYPE: "Boolean", DEFAULT: false},
-      // cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
-      // private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
-      // position: {__SPEC:false,IGNORE: true},
+        tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
+        publish: {__SPEC:false, TYPE: "Boolean", DEFAULT: false},
+        cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass, RENDER: false,},
+        private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false, RENDER: false,},
+        position: {__SPEC:false,IGNORE: true}, 
       },
       test: {VALUE: "naja", __SPEC: false, RENDER: false},
       folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
@@ -155,11 +156,11 @@ let user_configuration = {
       notename: cbkNoteName,
       date: true,
       dateformat: "YYYY-MM-DD",
-      frontmatter: {private: true},
+      frontmatter: {private: true, },
       folders: ["diary", "temp", "unbedacht"],
     },
     citation: {
-      marker: "°",
+    //  marker: "°",
       frontmatter: {cssclass: "garten, tagebuch"},
     },
   },
@@ -2132,6 +2133,7 @@ class Essence extends GenePool {
     hide(this, l, s, "REPEAT", "Boolean",   un, Essence.#REPEAT_DEFT, un, n)
     hide(this, l, s, "DEFAULT", this.TYPE,  un, Essence.#DEFAULT_DEFT, un, n)
     hide(this, l, s, "VALUE", this.TYPE,    un, Essence.#VALUE_DEFT, un, n)
+    
     if (literal != un) delete literal[this.#SPEC_KEY]
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
@@ -2661,7 +2663,7 @@ class AEssence extends Essence {
       parent,
       typeof name == "symbol" ? "_Symbol_" + GLOBAL_SYMBOL_COUNTER++ : name
     )
-  }
+    }
 
   //prettier-ignore
   static test(outputObj) {
@@ -3546,19 +3548,21 @@ class Setting extends BreadCrumbs {
       !this.ROOT && this.parent.workersTypeForChildren !== undefined
         ? this.parent.workersTypeForChildren
         : Setting.#globalType
-    for (const [key, value] of Object.entries(this.literal)) {
-      if (!AEssence.doParse(value)) continue
-      if (Setting.#isWorkerKey(key)) {
+    for (const [childkey, childval] of Object.entries(this.literal)) {
+      if (!AEssence.doParse(childval)) continue
+      if (Setting.#isWorkerKey(childkey)) {
         // constructs a workers instance
-        this.#works[key] = new Setting.#workers[key](value, key, this)
-      } else if (this.isA(value, "object")) {
-        let aEss = this.#essenceOfAtom(this.literal, key, type)
-        if (aEss != un) this.#children[key] = aEss
-        else this.#children[key] = new Setting(value, key, this)
+        this.#works[childkey] = 
+                        new Setting.#workers[childkey](childval, childkey, this)
+      } else if (this.isA(childval, "object")) {
+        let aEss = this.#essenceOfAtom(this.literal, childkey, type)
+        if (aEss != un) this.#children[childkey] = aEss
+        else this.#children[childkey] = new Setting(childval, childkey, this)
       } else {
-        let litAtom = {VALUE: this.literal[key], __SPEC: true}
-        this.literal[key] = litAtom
-        this.#children[key] = this.#essenceOfAtom(this.literal, key, type)
+        let litAtom = {VALUE: this.literal[childkey], __SPEC: true}
+        this.literal[childkey] = litAtom
+        this.#children[childkey] = 
+                               this.#essenceOfAtom(this.literal, childkey, type)
       }
     }
   }
@@ -5293,6 +5297,7 @@ class TypesWorker extends Setting {
         value[AEssence.SPEC_KEY].REPEAT == true) {
         defaults = value
         defaultskey = key
+        value[AEssence.SPEC_KEY].REPEAT = undefined
         break;
       }
     }
@@ -5300,28 +5305,42 @@ class TypesWorker extends Setting {
       for (const [key, value] of Object.entries(literal)) {
         if (key == AEssence.SPEC_KEY || key == defaultskey) continue
         for (const [defkey, defvalue] of Object.entries(defaults)) {
-          if (defkey == AEssence.SPEC_KEY) continue      
-          if (defvalue[AEssence.SPEC_KEY] != false) continue // e.g. frontmatter
-          if(value[defkey] === undefined) {
-            value[defkey] = {}
-            let defaultval
-            for (const [newkey, newvalue] of Object.entries(defvalue)) {
-              value[defkey][newkey]=newvalue
-              if(newkey === "DEFAULT") {
-                defaultval = newvalue
-              }
-            }
-            if(value[defkey]["VALUE"] === undefined) {
-              value[defkey]["VALUE"]=defaultval
-            }
-            value[defkey][AEssence.SPEC_KEY]=true
-          }
+          TypesWorker.#deepCopy(defvalue, value, defkey, key,0)
         }
       }
       delete literal[defaultskey]
     }
   }
-
+  static #deepCopy(what, to, name, toname, depth) {
+    if(depth > 5) return
+    if(typeof what != "object") {
+      if(to[name] === undefined) {
+        to[name] = what
+      }
+    } else if(typeof what[AEssence.SPEC_KEY] == "boolean") {
+      if(to[name] === undefined) {
+        to[name] = {}
+        let defaultval
+        for (const [newkey, newvalue] of Object.entries(what)) {
+          to[name][newkey]=newvalue
+          if(newkey === "DEFAULT") {
+            defaultval = newvalue
+          }
+        }
+        if(to[name]["VALUE"] === undefined) {
+          to[name]["VALUE"]=defaultval
+        }
+        to[name][AEssence.SPEC_KEY]=true
+      }
+    } else {
+      if(to[name] === undefined) {
+        to[name] = {}
+      }
+      for (const [whatkey, whatvalue] of Object.entries(what)) {
+        TypesWorker.#deepCopy(whatvalue, to[name], whatkey, name,depth+1)
+      }
+  }
+  }
   /**
    * Returns value of {@link key} or {@link fallback} as caller fallback
    * or undefined if none of them is found
@@ -5496,6 +5515,13 @@ class Templater {
     await this.#findName()
     await this.#rename()
   }
+  setValues(vals) {
+    for (let [key, value] of Object.entries(vals)) {
+      if(typeof value == "function")
+      vals[key]=value(this.#tp, this.#notename, this.#notetype)
+    }
+  
+  }
   #checkIsNewNote() {
     let answer = false
     let lang_array = [FALLBACK_LANGUAGE]
@@ -5643,6 +5669,9 @@ async function foty(tp, app) {
     await templ.doTheWork()
     let notetype = templ.notetype
     let noteCfg = setting.at("__NOTE_TYPES."+notetype)
+    //setting.showWhatGoesOut(0)
+    //noteCfg.showWhatGoesOut(0)
+    //noteCfg.showVALUES(0)
 
     let CONVERT_FROM_ONNE = false
     if (CONVERT_FROM_ONNE) {
@@ -5679,12 +5708,11 @@ async function foty(tp, app) {
                               renderPairs);
     /**************************************************************************/
     }
-    //setting.showWhatGoesOut(0)
-    //noteCfg.showWhatGoesOut(0)
-    //noteCfg.showVALUES(0)
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(frontmatterYAML, noteCfg.getFrontmatterYAML())
     Object.assign(renderYAML, setting.getRenderYAML(), noteCfg.getRenderYAML())
+    templ.setValues(frontmatterYAML)
+    templ.setValues(renderYAML)
   } catch (e) {
     if (e instanceof FotyError) {
       let errYAML = {}
@@ -5713,7 +5741,7 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 const lit1 = {__SPEC: {RENDER: true}, a: 23}
-let setting1 = new Setting(lit1,"xxx")
-let answ1f = setting1.getFrontmatterYAML()
-setting1.showWhatGoesOut(0)
-setting1.showVALUES(0)
+//let setting1 = new Setting(lit1,"xxx")
+//let answ1f = setting1.getFrontmatterYAML()
+//setting1.showWhatGoesOut(0)
+//setting1.showVALUES(0)
