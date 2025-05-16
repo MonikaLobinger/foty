@@ -126,22 +126,24 @@ let user_configuration = {
   },
   __NOTE_TYPES: 
   {
-    __SPEC: {REPEAT: true, DEFAULT: "note"},
+    __SPEC: {DEFAULT: "note"},
     DEFAULTS: {
-        marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
-        date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
-        // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
-        // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
-        frontmatter: {__SPEC: {},
-          aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
-          date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
-        //     tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
-        //     publish: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
-        //     cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
-        //     private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
-        //     position: {__SPEC:false,IGNORE: true},
-        },
-        folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
+      __SPEC: {REPEAT: true, },
+      marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
+      date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
+      // title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
+      // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
+      frontmatter: {__SPEC: {},
+        aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
+        date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
+      // tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
+      // publish: {TYPE: "Boolean", DEFAULT: false},
+      // cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass},
+      // private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false},
+      // position: {__SPEC:false,IGNORE: true},
+      },
+      test: {VALUE: "naja", __SPEC: false, RENDER: false},
+      folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
     },
     // If DEFAULT is not set in __SPEC, first entry is default
     // If set and has all DEFAULTS, it has not to be listed here
@@ -2940,7 +2942,7 @@ class BreadCrumbs extends AEssence {
     return this.#name
   }
   /**
-   * Returns root
+   * Returns root of the BreadCrumbs tree
    * @type {BreadCrumbs}
    */
   get root() {
@@ -3715,7 +3717,7 @@ class Setting extends BreadCrumbs {
     let frontmatterYAML = {}
     for (const [key, value] of this) {
       if (value.FLAT) {
-        if (!value.RENDER && !value.IGNORE) 
+        if (value.RENDER != undefined && !value.RENDER && !value.IGNORE) 
           frontmatterYAML[key] = value.VALUE
       } else {
         Object.assign(frontmatterYAML, value.getFrontmatterYAML())
@@ -3753,7 +3755,7 @@ class Setting extends BreadCrumbs {
     }
   }
 
-  /** LOGS all keys with their VALUE and DEFAULT tag recursive to console.
+  /** LOGS all keys with their VALUE and DEFAULT token recursive to console.
    * Functions are shortenend to String "FUNCTION"
    * @param {Number} depth 
    */
@@ -4244,11 +4246,11 @@ class Setting extends BreadCrumbs {
       }/**********************************************************************/              
     }
     function getFrontmatterYAMLTest() {
-      const lit1 = {a: 23}
-      const lit2 = {a: 23, b: "ja"}
-      const lit3 = {a: 23, c: {b: "ja"}, d: "ja"}
-      const lit4 = {a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
-      const lit5 = {a: 23, c: {__SPEC: {RENDER: true}, pict: "ja", d: {__SPEC: {RENDER: false}, x: "y"}}}
+      const lit1 = {__SPEC: {RENDER: false}, a: 23}
+      const lit2 = {__SPEC: {RENDER: false}, a: 23, b: "ja"}
+      const lit3 = {__SPEC: {RENDER: false}, a: 23, c: {b: "ja"}, d: "ja"}
+      const lit4 = {__SPEC: {RENDER: false}, a: 23, c: {b: "ja", c: {c: 25}}, d: "ja"}
+      const lit5 = {__SPEC: {RENDER: false} , a: 23, c: {__SPEC: {RENDER: true}, pict: "ja", d: {__SPEC: {RENDER: false}, x: "y"}}}
       let setting1 = new Setting(lit1,"Setting:getFrontmatterYAMLTest1")
       let setting2 = new Setting(lit2,"Setting:getFrontmatterYAMLTest2")
       let setting3 = new Setting(lit3,"Setting:getFrontmatterYAMLTest3")
@@ -4336,7 +4338,7 @@ class Setting extends BreadCrumbs {
     }
     function deepLiteralTest() {
       /************************************************************/if(true){    
-      let lit0 = { __SPEC: {TYPE: "Number"},
+        let lit0 = { __SPEC: {TYPE: "Number",RENDER: false},
         pict: {VALUE: "Russian-Matroshka2.jpg", 
               __SPEC: true, RENDER: true, },
         integer: {VALUE: 127, __SPEC: false, },
@@ -4358,7 +4360,8 @@ class Setting extends BreadCrumbs {
       _.bassert(9,Object.keys(renderY0).length == 1,"only added entries should appear in render YAML")
       
       }/************************************************************/if(true){
-      let lit1 = {  a:2,
+      let lit1 = {  __SPEC: {RENDER: false},
+                    a:2,
                     b:"stg",
                     c:true,
                     d:false,
@@ -4383,7 +4386,8 @@ class Setting extends BreadCrumbs {
       _.bassert(29,frontMY1["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit2 = {  a:[],
+        let lit2 = { __SPEC: {RENDER: false},  
+                    a:[],
                     b:[1,2,3],
                     c:[false,false,true],
                     d:["a"],
@@ -4412,7 +4416,7 @@ class Setting extends BreadCrumbs {
       _.bassert(43,frontMY2["i"] === "","Value should be removed, array of 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit3 = { __SPEC: {TYPE: "Number"},
+        let lit3 = { __SPEC: {RENDER: false,TYPE: "Number"},
                   a:2,
                   b:"stg",
                   c:true,
@@ -4438,7 +4442,7 @@ class Setting extends BreadCrumbs {
       _.bassert(59,frontMY3["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit4 = {  __SPEC: {TYPE: "Number"},
+        let lit4 = {  __SPEC: {RENDER: false,TYPE: "Number"},
                     a:[],
                     b:[1,2,3],
                     c:[false,false,true],
@@ -4468,7 +4472,7 @@ class Setting extends BreadCrumbs {
       _.bassert(73,frontMY4["i"] === "","Value should be removed, array of 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit5 = { __SPEC: {TYPE: "Number"},
+        let lit5 = { __SPEC: {RENDER: false,TYPE: "Number"},
                   a:{__SPEC: true, VALUE:2},
                   b:{__SPEC: true, VALUE:"stg"},
                   c:{__SPEC: true, VALUE:true},
@@ -4494,7 +4498,7 @@ class Setting extends BreadCrumbs {
       _.bassert(89,frontMY5["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit6 = {  __SPEC: {TYPE: "Number"},
+        let lit6 = {  __SPEC: {RENDER: false,TYPE: "Number"},
                     a:{__SPEC: true, VALUE:[]},
                     b:{__SPEC: true, VALUE:[1,2,3]},
                     c:{__SPEC: true, VALUE:[false,false,true]},
@@ -4524,7 +4528,7 @@ class Setting extends BreadCrumbs {
       _.bassert(103,frontMY6["i"] === "","Value should be removed, array of 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit7 = { __SPEC: {TYPE: "Number"},
+        let lit7 = { __SPEC: {RENDER: false,TYPE: "Number"},
                   a:{__SPEC: false, VALUE:2},
                   b:{__SPEC: false, VALUE:"stg"},
                   c:{__SPEC: false, VALUE:true},
@@ -4550,7 +4554,7 @@ class Setting extends BreadCrumbs {
       _.bassert(119,frontMY7["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit8 = {  __SPEC: {TYPE: "Number"},
+        let lit8 = {  __SPEC: {RENDER: false,TYPE: "Number"},
                     a:{__SPEC: false, VALUE:[]},
                     b:{__SPEC: false, VALUE:[1,2,3]},
                     c:{__SPEC: false, VALUE:[false,false,true]},
@@ -4860,9 +4864,6 @@ class LocalizationWorker extends Setting {
       if (atom.VALUE.length > 1) return atom.VALUE[1]
     }
     if (atom != undefined) return atom.VALUE
-  }
-  translate(key, fallbackIn, language) {
-    return this.getValue(key, fallbackIn,language)
   }
   //prettier-ignore
   static test(outputObj) { // LocalizationWorker
@@ -5285,15 +5286,23 @@ class TypesWorker extends Setting {
     if (typeof literal != "object" || literal == null) return
     let spec = literal[AEssence.SPEC_KEY]
     if (typeof spec != "object" || spec == null) return
-
-    if (literal["DEFAULTS"] != undefined && spec["REPEAT"] === true) {
-      let defaults = literal.DEFAULTS
+    let defaults
+    let defaultskey
+    for (const [key, value] of Object.entries(literal)) {
+      if(value[AEssence.SPEC_KEY] != undefined &&
+        value[AEssence.SPEC_KEY].REPEAT == true) {
+        defaults = value
+        defaultskey = key
+        break;
+      }
+    }
+    if (defaults != undefined) {
       for (const [key, value] of Object.entries(literal)) {
-        if (key == AEssence.SPEC_KEY || key == "DEFAULTS") continue
+        if (key == AEssence.SPEC_KEY || key == defaultskey) continue
         for (const [defkey, defvalue] of Object.entries(defaults)) {
-          if (defkey == AEssence.SPEC_KEY) continue 
+          if (defkey == AEssence.SPEC_KEY) continue      
           if (defvalue[AEssence.SPEC_KEY] != false) continue // e.g. frontmatter
-          if(value[defkey] === undefined) {           
+          if(value[defkey] === undefined) {
             value[defkey] = {}
             let defaultval
             for (const [newkey, newvalue] of Object.entries(defvalue)) {
@@ -5307,9 +5316,9 @@ class TypesWorker extends Setting {
             }
             value[defkey][AEssence.SPEC_KEY]=true
           }
-        }       
+        }
       }
-      delete literal.DEFAULTS
+      delete literal[defaultskey]
     }
   }
 
@@ -5517,6 +5526,10 @@ class Templater {
       for (const [key, value] of me.#typ) {
         let folders = me.#typ.getValue(key+".folders")
         if(folders == undefined) continue
+        if(typeof folders == "string") {
+          let f = folders[0]
+          folders = [f]
+        }
         let answer = folderParts.some(part => {
           return folders.some(folder => {
             if(0 == part.localeCompare(folder)) {
@@ -5540,12 +5553,15 @@ class Templater {
           continue;
         let marker = me.#typ.getValue(key+".marker")
         if(marker === undefined || marker.length==0) {
-          markerlen = marker.length
+          markerlen = 0
           noMarker.push(key);
-        } else if(me.#filetitle.startsWith(marker)) {
-          if(markerlen > typelen) {
-            typelen = markerlen;
-            type = key;
+        } else {
+          markerlen = marker.length
+          if(me.#filetitle.startsWith(marker)) {
+            if(markerlen > typelen) {
+              typelen = markerlen;
+              type = key;
+            }
           }
         }
       }
@@ -5663,6 +5679,9 @@ async function foty(tp, app) {
                               renderPairs);
     /**************************************************************************/
     }
+    //setting.showWhatGoesOut(0)
+    //noteCfg.showWhatGoesOut(0)
+    //noteCfg.showVALUES(0)
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(frontmatterYAML, noteCfg.getFrontmatterYAML())
     Object.assign(renderYAML, setting.getRenderYAML(), noteCfg.getRenderYAML())
@@ -5691,11 +5710,10 @@ async function foty(tp, app) {
   }
 
   if (!DEBUG) dbgYAML = undefined
-  let DEBUG1 = false
-  if (DEBUG1) {
-    let lit = user_configuration
-    let setting = new Setting(lit, undefined, undefined, tp)
-  
-  }
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
+const lit1 = {__SPEC: {RENDER: true}, a: 23}
+let setting1 = new Setting(lit1,"xxx")
+let answ1f = setting1.getFrontmatterYAML()
+setting1.showWhatGoesOut(0)
+setting1.showVALUES(0)

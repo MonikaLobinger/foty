@@ -151,9 +151,11 @@ directory is set in the settings `Ctrl-,` of the `core plugin` `Templates`.
 
 
 ## Internal
+### Klassenfunktionen
 Keines meiner Objekte hat (enumerable) Properties
 
-Alle meine Objekte haben alle meine Tags (hidden Properties)
+Alle meine Objekte haben alle meine Tokens (hidden Properties)
+außer RENDER, was als dreiwertig betrachtet wird
 
 Meine Objekte sind alle AEssence oder abgeleitet
 
@@ -195,3 +197,68 @@ DialogWorker
 TypesWorker   .getValue
 
 
+### Tokens
+| Name     |Vererbt|Benutzt|Bemerkung|
+|----------|-------|-------|---------|
+| ROOT     |   -   |intern | |
+| FLAT     |   -   |intern | |
+| PARSE    |   x   |intern | |
+| REPEAT   |   -   |  ja   | nur TypesWorker, in Hauptobjekt, nur einer|
+| DEFAULT  |   -   |  ja   | nur TypesWorker |
+| VALUE    |   -   |  ja   | nur TypesWorker |
+| IGNORE   |   x   |  ja   | nur TypesWorker |
+| RENDER   |   x   |  ja   | nur TypesWorker |
+| TYPE     |   x   |  ja   | nur TypesWorker |
+| ONCE     |   -   | nein  | |
+| LOCAL    |   x   | nein  | |
+| INTERNAL |   x   | nein*)| |
+
+Manche Tokens kann man im Literal (dem Konfigurationsobjekt) setzen. Sie müssen in einem Objekt mit dem Schlüssel __SPEC stehen. 
+#### ROOT
+Wird einmal für die Wurzel des Konfigurationsobjektes gesetzt. Wird intern für Dinge verwendet, die im ganzen Konfigurationsobjekt nur einmal vorkommen müssen, z.B. die Verbindung zum Templater.
+#### FLAT
+Wird automatisch für Atome (Blätter) gesetzt. Diese sind Objekte der  AEssence Klasse. Für Nodes ist der FLAT Wert false.  Nodes sind Objekte der Setting Klasse.
+#### PARSE
+Sowas von intern.
+#### REPEAT
+Falls gesetzt wird dieser Node rekursiv in alle Geschwister kopiert.
+Der Node muß ein direkter Eintrag im __NOTE_TYPES Konfigurationsobjekt sein. Es wird nur nach einem REPEAT Eintrag gesucht. Weitere würden ignoriert werden.
+#### DEFAULT
+todo
+#### VALUE
+todo
+#### IGNORE
+Falls gesetzt, wird dieser Node rekursiv ignoriert
+#### RENDER
+Dreiwertig: true, false, undefined. Falls false werden die Schlüssel/Werte Paare als Frontmatter Einträge an das Template übergeben; falls true werden die Schlüssel/Werte Paare an das Template übergeben, doch dieses muß den Namen des Schlüssels kennen; falls undefined erzeugt der Eintrag keine Ausgabe.
+#### TYPE
+todo
+#### INTERNAL
+*)Wird nicht benutzt, außer daß die Ausgabe einer Exception gefärbt wäre
+#### LOCAL
+unbenutzt
+#### ONCE
+unbenutzt
+
+### __SPEC
+In __SPEC stehen die Tokens drin
+Node: __SPEC ist ein Objekt
+Atom: __SPEC false: TYPE wird nicht gesetzt, bekommt DEFAULT Wert
+      __SPEC true: TYPE bekommt globalen TYP (alles ist erlaubt)
+      In beiden Fällen: TYPE ist vererbbar
+
+### Workers
+Workers sind von Setting abgeleitet. Sie überschreiben vlt die Funktion getValue. Vielleicht bieten sie noch zusätzliche Funktionen an. getValue von Setting gibt den Wert zurück, falls da, undefined sonst.
+Sie können auch im Konstruktor schon Sachen machen
+#### GeneralWorker
+Bearbeitet das Konfigurationsobjekt mit dem Schlüssel __GENERAL_SETTINGS.
+getValue akzeptiert einen Fallback Value.
+#### LocalizationWorker
+Bearbeitet das Konfigurationsobjekt mit dem Schlüssel __TRANSLATE.
+getValue arbeitet als translate Funktion, auch akzeptiert  es einen Fallback Value
+#### DialogWorker
+Bearbeitet das Konfigurationsobjekt mit dem Schlüssel __DIALOG_SETTINGS.
+Überschreibt nichts, hat keine zusätzlichen Funktionen
+#### TypesWorker
+Bearbeitet das Konfigurationsobjekt mit dem Schlüssel __NOTE_TYPES.
+getValue akzeptiert einen Fallback Value. Der Clou dieses Worker ist, daß er im Konstruktor die REPEAT Knoten im Literal vervielfältigt.
