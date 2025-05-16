@@ -126,10 +126,8 @@ let user_configuration = {
   },
   __NOTE_TYPES: 
   {
-    __SPEC: {DEFAULT: "note"},
-    defaults: {
-      __SPEC: {REPEAT: true,},
-      erna: "wohnt",
+    xdefaults: {
+      __SPEC: {REPEAT: true, IGNORE: true},
       marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
       date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
       title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
@@ -146,26 +144,21 @@ let user_configuration = {
       test: {VALUE: "naja", __SPEC: false, RENDER: false},
       folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
     },
-    // If DEFAULT is not set in __SPEC, first entry is default
-    // If set and has all DEFAULTS, it has not to be listed here
-    note: {
-      notename: cbkNoteName,
-      folders: []
+    __SPEC: {DEFAULT: "audio"},// If DEFAULT is not or wrong set, first is default
+    defaults: {
+      __SPEC: {REPEAT: true},
+      marker: "", 
+      isDiary: false, 
+      name_prompt: "Titel",
+      pict: "",
     },
-    diary: {
-      notename: cbkNoteName,
-      date: true,
-      dateformat: "YYYY-MM-DD",
-      frontmatter: {private: true, },
-      folders: ["diary", "temp", "unbedacht"],
-    },
-    citation: {
-    //  marker: "°",
-      frontmatter: {cssclass: "garten, tagebuch"},
+
+    audio: {
+      marker: "{a}", 
+      pict: "pexels-foteros-352505_200.jpg", 
+      name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
     },
   },
-  soso: {VALUE: "naja", __SPEC: true, RENDER: false},
-  c:    {pict: "Russian-Matroshka2.jpg", __SPEC: {RENDER: true}, },
 }
 //  #endregion USER CONFIGURATION
 //  #region EXAMPLE CONFIGURATIONS
@@ -5294,7 +5287,8 @@ class TypesWorker extends Setting {
     let defaultskey
     for (const [key, value] of Object.entries(literal)) {
       if(value[AEssence.SPEC_KEY] != undefined &&
-        value[AEssence.SPEC_KEY].REPEAT == true) {
+        value[AEssence.SPEC_KEY].REPEAT == true &&
+        value[AEssence.SPEC_KEY].IGNORE != true ) {
         defaults = value
         defaultskey = key
         value[AEssence.SPEC_KEY].REPEAT = undefined
@@ -5575,6 +5569,7 @@ class Templater {
       let typelen = 0;
     
       for (const [key, value] of me.#typ) {
+        if(value.IGNORE) continue
         if(types_f.length > 0 && !types_f.includes(key)) 
           continue;
         let marker = me.#typ.getValue(key+".marker")
@@ -5598,6 +5593,13 @@ class Templater {
       }
     }
     let defaulttype = this.#typ.DEFAULT
+    if(this.#typ[defaulttype] == undefined) {
+      for (const [key, value] of this.#typ) {
+        if(value.IGNORE) continue
+        defaulttype = key
+        break
+      }
+    }
     typesFromFolder(this)
     if(!this.#isNew) {
       typesFromMarker(this)
@@ -5671,43 +5673,8 @@ async function foty(tp, app) {
     let noteCfg = setting.at("__NOTE_TYPES."+notetype)
     //setting.showWhatGoesOut(0)
     //noteCfg.showWhatGoesOut(0)
-    //noteCfg.showVALUES(0)
+    noteCfg.showVALUES(0)
 
-    let CONVERT_FROM_ONNE = false
-    if (CONVERT_FROM_ONNE) {
-    /**************************************************************************/
-      let activeFile = tp.config.active_file.path;
-      let runMode = tp.config.run_mode;
-      let notePath = tp.file.path(true/*relative*/);
-      let noteTitle = tp.file.title;
-      let onneFmPairs = copyValuesToExistingKeys(
-                        entries2pairs(ONNE_FRONTMATTER_ENTRIES), 
-                        tp.frontmatter);
-      let isNew
-      let type = 
-        await findType(tp, notePath, isNew, TYPES, DEFAULTTYPE, FOLDER2TYPES);
-      let name = 
-        await findName(tp, noteTitle, isNew, TYPES[type], NAME_PROMPT);
-      await rename(tp, isNew, name, TYPES[type]);
-      setOnneValues(tp, onneFmPairs, name, type, ONNE_FRONTMATTER_ENTRIES, 
-                  TYPES[type]["frontmatter"]);
-      let renderPairs = { 
-        "____"      : "",
-        "foto"      : "",
-        "firstline" : "",
-        "prevdate"  : "",
-        "prevname"  : "",
-        "nextdate"  : "",
-        "nextname"  : "",
-      };
-      setRenderValues(tp, app, renderPairs, TYPES[type], RESOURCE_FOLDER, 
-                      RESOURCE_TYPES);
-    
-      return Object.assign({}, onneFmPairs, 
-                              getOtherPairs(tp, ONNE_FRONTMATTER_ENTRIES), 
-                              renderPairs);
-    /**************************************************************************/
-    }
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(frontmatterYAML, noteCfg.getFrontmatterYAML())
     Object.assign(renderYAML, setting.getRenderYAML(), noteCfg.getRenderYAML())
