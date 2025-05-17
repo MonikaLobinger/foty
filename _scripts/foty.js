@@ -48,7 +48,10 @@ module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 function cbkFmtAlias(tp, noteName, noteType) {
   let alias = noteName
   if (noteType != "ort" && noteType != "person") {
-    alias = noteName.replace(/,/g, ` `).replace(/  /g, ` `)
+    if(noteName.startsWith("_"))
+      alias = noteName.slice(1)
+    else
+      alias = noteName.replace(/,/g, ` `).replace(/  /g, ` `)
   } else {
     // ort, person
     alias = noteName.replace(/, /g, `,`)
@@ -61,7 +64,9 @@ function cbkFmtAlias(tp, noteName, noteType) {
       alias = strArr.join(" ") + " " + alias
     }
   }
-  return alias
+  let aliases=[]
+  aliases.push(alias)
+  return aliases
 }
 /** {@link FrontmatterCallback}, returns tags value
  * @type {FrontmatterCallback}
@@ -71,7 +76,11 @@ function cbkFmtAlias(tp, noteName, noteType) {
  * @returns {(String|Array.<String>)}
  */
 function cbkFmtTags(tp, noteName, noteType) {
-  return "0/" + noteType
+  let tags=[]
+  tags.push("0/" + noteType.charAt(0).toUpperCase() + noteType.slice(1))
+  if(noteName.startsWith("_"))
+    tags.push("0/" + "moc")
+  return tags
 }
 /** {@link FrontmatterCallback}, returns date value
  * @type {FrontmatterCallback}
@@ -126,38 +135,138 @@ let user_configuration = {
   },
   __NOTE_TYPES: 
   {
-    xdefaults: {
-      __SPEC: {REPEAT: true, IGNORE: true},
-      marker: {__SPEC:false,TYPE:"String",DEFAULT:"",},
-      date: {__SPEC:false,TYPE:"Boolean",DEFAULT:false, },
-      title_before_date: {__SPEC:false,TYPE:"String",DEFAULT:"", },
-      // dateformat: {__SPEC:false,TYPE:"Date",DEFAULT:"YY-MM-DD", },
-      frontmatter: {__SPEC: {RENDER: false,},
-        aliases: {__SPEC:false,TYPE: "(Array.<String>|Function)", DEFAULT: cbkFmtAlias},
-        date_created: {__SPEC:false,TYPE: "(Date|Function)", DEFAULT: cbkFmtCreated},
-        tags: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtTags},
-        publish: {__SPEC:false, TYPE: "Boolean", DEFAULT: false},
-        cssclass: {__SPEC:false,TYPE: "Array", DEFAULT: cbkFmtCssClass, RENDER: false,},
-        private: {__SPEC:false,TYPE: "Boolean", DEFAULT: false, RENDER: false,},
-        position: {__SPEC:false,IGNORE: true}, 
-      },
-      test: {VALUE: "naja", __SPEC: false, RENDER: false},
-      folders: {__SPEC:false,IGNORE:true,TYPE:"(Array.<String>)",DEFAULT:["zwischenreich"]},
-    },
-    __SPEC: {DEFAULT: "audio"},// If DEFAULT is not or wrong set, first is default
+    __SPEC: {DEFAULT: "note"},// If DEFAULT is not or wrong set, first is default
     defaults: {
       __SPEC: {REPEAT: true},
-      marker: "", 
-      isDiary: false, 
-      name_prompt: "Titel",
-      pict: "",
+      date:              {__SPEC:false, DEFAULT:false,TYPE:"Boolean", },
+      dateformat:        {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
+      folders:           {__SPEC:false, IGNORE:true,DEFAULT:[""],TYPE:"(Array.<String>)"},
+      isDiary:           {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+      marker:            {__SPEC:false, DEFAULT:"",TYPE:"String", }, 
+      name_prompt:       {__SPEC:false, DEFAULT:"Titel",TYPE:"String", },
+      title_before_date: {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      frontmatter: {__SPEC: {RENDER: false,},
+        aliases:         {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
+        cssclass:        {__SPEC:false, DEFAULT: cbkFmtCssClass, TYPE: "(Array.<String>|Function)"},
+        date_created:    {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
+        position:        {__SPEC:false, IGNORE: true, TYPE: "Boolean", }, 
+        private:         {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+        publish:         {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+        tags:            {__SPEC:false, DEFAULT: cbkFmtTags, TYPE: "(Array.<String>|Function)",},
+      },    
+      page: { __SPEC: {RENDER: true,},
+        pict:            {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        firstline:       {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        prevdate:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        nextdate:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        prevname:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        nextname:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        lastline:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
+      }    
     },
 
+    obsidian: {
+      folders: ["Obsidian"],
+    },
     audio: {
       marker: "{a}", 
-      pict: "pexels-foteros-352505_200.jpg", 
+      folders: ["zwischenreich"],
       name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
+      page: { pict: "pexels-foteros-352505_200.jpg",  },
     },
+    buch:           {
+      marker: "{b}", 
+      folders: ["zwischenreich"],
+      name_prompt: "Autornachname - Buchtitel", 
+      page: { pict: "pexels-gül-işık-2203051_200.jpg", },
+    },
+    ort:            {
+      marker: "",    
+      folders: ["zwischenreich"],
+      page: { pict: "pexels-dzenina-lukac-1563005_200.jpg",}, 
+      name_prompt: "Ortsname, Land", 
+    },
+    person:         {
+      marker: "",    
+      folders: ["zwischenreich"],
+      page: { pict: "pexels-lucas-andrade-14097235_200.jpg",}, 
+      name_prompt: "Personnachname, Personvorname ?Geburtsdatum", 
+    },
+    video:          {
+      marker: "{v}", 
+      folders: ["zwischenreich"],
+      page: { pict: "pexels-vlad-vasnetsov-2363675_200.jpg",}, 
+      name_prompt: "?Reihe - ?Autornachname - Videotitel", 
+    },
+    web:            {
+      marker: "{w}", 
+      folders: ["zwischenreich"],
+      page: { pict: "pexels-sururi-ballıdağ-_200.jpeg",}, 
+      name_prompt: "?Autor - Webseitentitel - ?Datum", 
+    },
+    zitat:          {
+      marker: "°",   
+      folders: ["zwischenreich"],
+      name_prompt: "Titel Autornachname", 
+    },
+    zitate:         {
+      marker: "°°",  
+      folders: ["zwischenreich"],
+      name_prompt: "Titel Autornachname", 
+    },
+    exzerpt:        {
+      marker: "$",   
+      folders: ["exzerpte"],
+      name_prompt: "Autornachname - Buchtitel", 
+    },
+    garten:         {
+      marker: "",    
+      folders: ["garten", "temp"],
+      name_prompt: "Gartenthema", 
+    },
+    gartentagebuch: {
+      marker: "",    
+      folders: ["gartentagebuch"],
+      isDiary: true,  
+      before_date: "Garten ", 
+    },
+    lesetagebuch:   {
+      marker: "",    
+      folders: ["lesetagebuch"],
+      isDiary: true, 
+      firstline: "## ArticleTitle\n[ntvzdf]link\n\n", 
+      before_date: "Lesetagebucheintrag ", 
+    },
+    pflanze:        {
+      marker: "",    
+      folders: ["pflanzen"],
+      name_prompt: "Pflanzenname", 
+    },
+    unbedacht:      {
+      marker: "",    
+      folders: ["unbedacht"],
+      isDiary: true,  
+      before_date: "Unbedacht ", 
+      frontmatter: { private: true, },
+    },
+    verwaltung:     {
+      marker: "",    
+      folders: ["verwaltung"],
+      name_prompt: "Verwaltungsthema", 
+      frontmatter: { private: true, },
+    },
+    diary:          {
+      marker: "",    
+      folders: ["diary", "temp"],
+      isDiary: true,  
+      dateformat: "YYYY-MM-DD", 
+      frontmatter: { private: true, },
+    },
+    note:           {
+      marker: "",    
+      name_prompt: "Notizthema", 
+    },
+  
   },
 }
 //  #endregion USER CONFIGURATION
@@ -5504,15 +5613,20 @@ class Templater {
   }
 
   async doTheWork() {
-    this.#checkIsNewNote()
-    await this.#findType()
-    await this.#findName()
-    await this.#rename()
+    try {
+      this.#checkIsNewNote()
+      await this.#findType()
+      await this.#findName()
+      await this.#rename()
+    } catch(e) {
+      throw e
+    }
   }
   setValues(vals) {
     for (let [key, value] of Object.entries(vals)) {
-      if(typeof value == "function")
-      vals[key]=value(this.#tp, this.#notename, this.#notetype)
+      if(typeof value == "function") {
+        vals[key]=value(this.#tp, this.#notename, this.#notetype)
+      }
     }
   
   }
@@ -5593,7 +5707,7 @@ class Templater {
       }
     }
     let defaulttype = this.#typ.DEFAULT
-    if(this.#typ[defaulttype] == undefined) {
+    if(defaulttype == undefined) {
       for (const [key, value] of this.#typ) {
         if(value.IGNORE) continue
         defaulttype = key
@@ -5634,7 +5748,7 @@ class Templater {
       try {
         this.#notename= await this.#tp.system.prompt(prompt,"",true)
       } catch(e) {
-        // Cancelled
+        this.#notename = this.#filetitle
       }
     }     
   }
@@ -5673,7 +5787,7 @@ async function foty(tp, app) {
     let noteCfg = setting.at("__NOTE_TYPES."+notetype)
     //setting.showWhatGoesOut(0)
     //noteCfg.showWhatGoesOut(0)
-    noteCfg.showVALUES(0)
+    //noteCfg.showVALUES(0)
 
     frontmatterYAML = setting.getFrontmatterYAML()
     Object.assign(frontmatterYAML, noteCfg.getFrontmatterYAML())
@@ -5708,7 +5822,3 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 const lit1 = {__SPEC: {RENDER: true}, a: 23}
-//let setting1 = new Setting(lit1,"xxx")
-//let answ1f = setting1.getFrontmatterYAML()
-//setting1.showWhatGoesOut(0)
-//setting1.showVALUES(0)
