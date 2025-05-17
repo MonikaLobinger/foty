@@ -9,34 +9,34 @@ module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 // Regions can be nested.
 // Using Visual Studio Code (and perhaps other source code editors) regions
 // marked this way can be folded for convenience.
-// 
+//
 // Some settings for the script can be adapted to user needs. Those are in
 // region USER CONFIGURATION.
 
 //#region CONFIGURATION
 // This region simulates a configuration dialog
-// It contains a section with code to be used in configuration, which user would 
-// never see in a configuration dialog, so it is named DO_NOT_TOUCH. 
+// It contains a section with code to be used in configuration, which user would
+// never see in a configuration dialog, so it is named DO_NOT_TOUCH.
 // Unfortunately the callback functions defined there have to be written in
 // JavaScript file before they can be used.
 //
 // And it contains the value section, which user can edit, so it is
 // named USER CONFIGURATION.
 //
-// Additionally in a section named EXAMPLE_CONFIGURATIONS it contains example 
+// Additionally in a section named EXAMPLE_CONFIGURATIONS it contains example
 // configurations
-// 
+//
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // Only make changes in region USER CONFIGURATION
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  #region DO_NOT_TOUCH
 /** Returns sibling with next/prev date, depending on {@link next}
  *
- * @param {*} next 
+ * @param {*} next
  * @param {*} tp
- * @param {*} app 
- * @param {*} noteSetting 
- * @returns {*} 
+ * @param {*} app
+ * @param {*} noteSetting
+ * @returns {*}
  */
 function findSibling(next, tp, app, noteSetting) {
   function hasDate(fname, dateformat) {
@@ -46,7 +46,7 @@ function findSibling(next, tp, app, noteSetting) {
     matchstring = matchstring.replaceAll("D","[0-9]")
     let answer = fname.match(matchstring)
     return answer == null ? false : true
-  }   
+  }
   let dateformat = noteSetting.getValue("title_date_format")
   let currentFile /* TFile */ = app.workspace.getActiveFile();
   let currentFileName = currentFile.name;
@@ -66,18 +66,18 @@ function findSibling(next, tp, app, noteSetting) {
             nextFile = file;
           }
         }
-      } else if(file.name < currentFileName) { 
+      } else if(file.name < currentFileName) {
         if(prevFile == null) {
           prevFile = file;
         } else {
           if(file.name > prevFile.name) {
             prevFile = file;
           }
-          
+
         }
       }
     }
-  });  
+  });
   let answerFile = next === true ? nextFile : prevFile
   let answer = ""
   if(answerFile != null) {
@@ -212,7 +212,7 @@ function cbkNoteName(tp, noteName, noteType, noteSetting, app) {
   }
   return noteName
 }
-/** {@link FrontmatterCallback}, returns link to prev diary file 
+/** {@link FrontmatterCallback}, returns link to prev diary file
  * @type {FrontmatterCallback}
  * @param {Object} tp - templater object
  * @param {String} noteName
@@ -246,27 +246,27 @@ function cbkNextDateLink(tp, noteName, noteType, noteSetting, app) {
 let user_configuration = {
   // General section has to be the first section
   __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
-  { 
-    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"    
-    RELATIVE_PATH: true, 
+  {
+    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
+    RELATIVE_PATH: true,
   },
   __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
-  { 
+  {
     NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
     TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
     TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
   },
   __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
-  { 
+  {
     TYPE_MAX_ENTRIES: 10,
   },
-  __NOTE_TYPES: 
+  __NOTE_TYPES:
   {
     __SPEC: {DEFAULT: "note"},// If DEFAULT is not or wrong set, first is default
     defaults: {
       __SPEC: {REPEAT: true},
-      marker:            {__SPEC:false, DEFAULT:"",TYPE:"String", }, 
-      name_end:          {__SPEC:false, DEFAULT:"",TYPE:"String", }, 
+      marker:            {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      name_end:          {__SPEC:false, DEFAULT:"",TYPE:"String", },
       title_function:    {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
       title_before_date: {__SPEC:false, DEFAULT:"",TYPE:"String", },
       title_date_format: {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
@@ -277,108 +277,108 @@ let user_configuration = {
         aliases:         {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
         cssclass:        {__SPEC:false, DEFAULT: cbkFmtCssClass, TYPE: "(Array.<String>|Function)"},
         date_created:    {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
-        position:        {__SPEC:false, IGNORE: true, TYPE: "Boolean", }, 
+        position:        {__SPEC:false, IGNORE: true, TYPE: "Boolean", },
         private:         {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
         publish:         {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
         tags:            {__SPEC:false, DEFAULT: cbkFmtTags, TYPE: "(Array.<String>|Function)",},
-      },    
+      },
       page: { __SPEC: {RENDER: true,},
         pict:            {__SPEC:false, DEFAULT: "", TYPE: "String",},
         prevlink:        {__SPEC:false, DEFAULT: cbkPrevDateLink, TYPE: "(String|Function)",},
         nextlink:        {__SPEC:false, DEFAULT: cbkNextDateLink, TYPE: "(String|Function)",},
         firstline:       {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
         lastline:        {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-      },  
+      },
     },
     obsidian: {
       folders: ["Obsidian"],
     },
     audio: {
-      marker: "{a}", 
+      marker: "{a}",
       folders: ["zwischenreich"],
       name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel",
       page: { pict: "pexels-foteros-352505_200.jpg",  },
     },
     buch:           {
-      marker: "{b}", 
+      marker: "{b}",
       folders: ["zwischenreich"],
-      name_prompt: "Autornachname - Buchtitel", 
+      name_prompt: "Autornachname - Buchtitel",
       page: { pict: "pexels-gül-işık-2203051_200.jpg", },
     },
     ort:            {
       folders: ["zwischenreich"],
-      page: { pict: "pexels-dzenina-lukac-1563005_200.jpg",}, 
-      name_prompt: "Ortsname, Land", 
+      page: { pict: "pexels-dzenina-lukac-1563005_200.jpg",},
+      name_prompt: "Ortsname, Land",
     },
     person:         {
       folders: ["zwischenreich"],
-      page: { pict: "pexels-lucas-andrade-14097235_200.jpg",}, 
-      name_prompt: "Personnachname, Personvorname ?Geburtsdatum", 
+      page: { pict: "pexels-lucas-andrade-14097235_200.jpg",},
+      name_prompt: "Personnachname, Personvorname ?Geburtsdatum",
     },
     video:          {
-      marker: "{v}", 
+      marker: "{v}",
       folders: ["zwischenreich"],
-      page: { pict: "pexels-vlad-vasnetsov-2363675_200.jpg",}, 
-      name_prompt: "?Reihe - ?Autornachname - Videotitel", 
+      page: { pict: "pexels-vlad-vasnetsov-2363675_200.jpg",},
+      name_prompt: "?Reihe - ?Autornachname - Videotitel",
     },
     web:            {
-      marker: "{w}", 
+      marker: "{w}",
       folders: ["zwischenreich"],
-      page: { pict: "pexels-sururi-ballıdağ-_200.jpeg",}, 
-      name_prompt: "?Autor - Webseitentitel - ?Datum", 
+      page: { pict: "pexels-sururi-ballıdağ-_200.jpeg",},
+      name_prompt: "?Autor - Webseitentitel - ?Datum",
     },
     zitat:          {
-      marker: "°",   
+      marker: "°",
       folders: ["zwischenreich"],
-      name_prompt: "Titel Autornachname", 
+      name_prompt: "Titel Autornachname",
     },
     zitate:         {
-      marker: "°°",  
+      marker: "°°",
       folders: ["zwischenreich"],
-      name_prompt: "Titel Autornachname", 
+      name_prompt: "Titel Autornachname",
     },
     exzerpt:        {
-      marker: "$",   
+      marker: "$",
       folders: ["exzerpte"],
-      name_prompt: "Autornachname - Buchtitel", 
+      name_prompt: "Autornachname - Buchtitel",
     },
     garten:         {
       folders: ["garten", "temp"],
-      name_prompt: "Gartenthema", 
+      name_prompt: "Gartenthema",
     },
     gartentagebuch: {
       folders: ["gartentagebuch"],
-      title_before_date: "Garten ", 
+      title_before_date: "Garten ",
     },
     lesetagebuch:   {
       folders: ["lesetagebuch"],
-      firstline: "## ArticleTitle\n[ntvzdf]link\n\n", 
-      title_before_date: "Lesetagebucheintrag ", 
+      firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
+      title_before_date: "Lesetagebucheintrag ",
     },
     pflanze:        {
       folders: ["pflanzen"],
-      name_prompt: "Pflanzenname", 
+      name_prompt: "Pflanzenname",
     },
     unbedacht:      {
       title_function:  cbkCalcDateTitle,
       folders: ["Unbedacht"],
-      title_before_date: "Unbedacht ", 
+      title_before_date: "Unbedacht ",
       frontmatter: { private: true, },
     },
     verwaltung:     {
       folders: ["verwaltung"],
-      name_prompt: "Verwaltungsthema", 
+      name_prompt: "Verwaltungsthema",
       frontmatter: { private: true, },
     },
     diary:          {
       title_function:  cbkCalcDateTitle,
       folders: ["diary", "temp"],
-      title_date_format: "YYYY-MM-DD", 
+      title_date_format: "YYYY-MM-DD",
       frontmatter: { private: true, },
     },
     note:           {
     },
-  
+
   },
 }
 //  #endregion USER CONFIGURATION
@@ -1297,16 +1297,16 @@ function testGlobals(outputObj) {
     let arr3_2 = [[[1,2,3,4]]]
     _.bassert(131,areEqual(arr3, arr3_0),"arrays are equal - see code")
     _.bassert(132,!areEqual(arr3, arr3_1),"arrays are not equal - see code")
-    _.bassert(133,!areEqual(arr3, arr3_2),"arrays are not equal - see code")      
+    _.bassert(133,!areEqual(arr3, arr3_2),"arrays are not equal - see code")
 
     _.bassert(141,areEqual(un, undefined),"undefined is equal undefined")
     _.bassert(142,!areEqual(un, arr3),"undefined not equal array")
     _.bassert(143,!areEqual(arr3,un),"undefined not equal array")
-    _.bassert(144,!areEqual(un, obj3),"undefined not equal object")      
-    _.bassert(145,!areEqual(obj3,un),"undefined not equal object")      
-    _.bassert(146,!areEqual(un, null),"undefined not equal null")      
-    _.bassert(147,!areEqual(null, un),"undefined not equal null")  
-    
+    _.bassert(144,!areEqual(un, obj3),"undefined not equal object")
+    _.bassert(145,!areEqual(obj3,un),"undefined not equal object")
+    _.bassert(146,!areEqual(un, null),"undefined not equal null")
+    _.bassert(147,!areEqual(null, un),"undefined not equal null")
+
     _.bassert(151,areEqual(1,1),"1 is equal 1")
     _.bassert(152,areEqual(true,true),"true is equal true")
     _.bassert(153,areEqual(false,false),"false is equal false")
@@ -1654,7 +1654,7 @@ class Gene {
       _.bassert(6,gStrI.ident === idStrI,"should return what was given as ident")
       _.bassert(7,gSymB.ident === idSymB,"should return what was given as ident")
       _.bassert(8,gFunc.ident === idFunc,"should return what was given as ident")
-      _.bassert(8,gObjE.ident === idObjE,"should return what was given as ident")     
+      _.bassert(8,gObjE.ident === idObjE,"should return what was given as ident")
     }
     function constructorTest() {
       let un
@@ -1979,7 +1979,7 @@ class GenePool {
       _.bassert(15,!gns2.isA(false,"(String|Number)"),"Boolean should not be recognized for String or Number")
       _.bassert(16,gns2.isA(["a","b","c"],"(String|Array.<String>)"),"array of strings should be recognized for String or Array of Strings")
       _.bassert(17,gns2.isA("a","(String|Array.<String>)"),"String should be recognized for String or Array of Strings")
-      _.bassert(18,gns2.isA(2,"(Number|Array.<String>)"),"Number should be recognized for Number or Array of Strings")      
+      _.bassert(18,gns2.isA(2,"(Number|Array.<String>)"),"Number should be recognized for Number or Array of Strings")
 
       let idNull = null
       let idUndE = undefined
@@ -2009,7 +2009,7 @@ class GenePool {
       gns3.addGene(idSymB,cbkSymB)
       gns3.addGene(idFunc,cbkFunc)
       gns3.addGene(idObjE,cbkObjE)
-      
+
       _.bassert(21,gns3.isA(idNull,idNull), "should be a, see cbk")
       _.bassert(22,gns3.isA(idUndE,idUndE), "should be a, see cbk")
       _.bassert(23,gns3.isA(idBool,idBool), "should be a, see cbk")
@@ -2018,7 +2018,7 @@ class GenePool {
       _.bassert(26,gns3.isA(idStrI,idStrI), "should be a, see cbk")
       _.bassert(27,gns3.isA(idSymB,idSymB), "should be a, see cbk")
       _.bassert(28,gns3.isA(idFunc,idFunc), "should be a, see cbk")
-      _.bassert(29,gns3.isA(idObjE,idObjE), "should be a, see cbk")      
+      _.bassert(29,gns3.isA(idObjE,idObjE), "should be a, see cbk")
     }
     function _tryConstruct0() { new GenePool() }
     function _tryConstruct1(a) { new GenePool(a) }
@@ -2099,7 +2099,7 @@ class Essence extends GenePool {
   }
   /** PARSE essence, inherited
    * <p>
-   * Only for internal use. 
+   * Only for internal use.
    * If set to false, no Essences will be added. This is the only
    * case, in which no Essences are possible. If used internally, instance has
    * to be parsed later before returning. Never ever an instance without
@@ -2168,7 +2168,7 @@ class Essence extends GenePool {
    * Either as found in specification section or as
    * given from parent if one and if inherited or at least as hardcoded default.
    * They have to be of certain {@link Gene}, e.g. the value for the
-   * {@link Essence.getRENDER|RENDER} token has to be a Boolean or undefined. 
+   * {@link Essence.getRENDER|RENDER} token has to be a Boolean or undefined.
    * If some specification  entry
    * has wrong  {@link Gene} it will be {@link Essence#skipped|skipped} and
    * parent token value if inherited or if no parent or individual
@@ -2347,7 +2347,7 @@ class Essence extends GenePool {
     hide(this, l, s, "REPEAT", "Boolean",   un, Essence.#REPEAT_DEFT, un, n)
     hide(this, l, s, "DEFAULT", this.TYPE,  un, Essence.#DEFAULT_DEFT, un, n)
     hide(this, l, s, "VALUE", this.TYPE,    un, Essence.#VALUE_DEFT, un, n)
-    
+
     if (literal != un) delete literal[this.#SPEC_KEY]
     if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {
       let name_x =
@@ -2661,11 +2661,11 @@ ${type_x}:${this.TYPE} \
                            DEFAULT:false,
                            INTERNAL:true,
                            VALUE:false}}
-      let ess1 = new Essence()     
+      let ess1 = new Essence()
       _.bassert(20,ess1.SPEC_KEY=="_S_P_E_C_","Just to assure, we have correct SPEC KEY")
       ess1.specificationPool.addGene("String", cbkTypeOfLc)
       ess1.specificationPool.addGene("Boolean", cbkTypeOfLc)
-        
+
       ess1.parse(lit1,un,"Essence:getterEssencesTest1")
       _.bassert(21,ess1.ROOT===true,"Should always be defined")
       _.bassert(22,ess1.RENDER===true,"Should be set to literal value")
@@ -2679,10 +2679,10 @@ ${type_x}:${this.TYPE} \
       _.bassert(30,ess1.VALUE===false,"Should be set to literal value")
       _.bassert(31,ess1.INTERNAL===true,"Should be set to literal value")
       _.bassert(32,ess1.PARSE===true,"Should stay at default value")
-           
+
       _.shouldAssert(40,_tryParse,ess1,{}, new Error(),un,"Error no allowed parent")
       _.shouldAssert(41,_tryParse,ess1,"string", un,un,"String no allowed literal")
-    }    
+    }
     function isATest() {
       let un
       let ess1 = new Essence(un)
@@ -2695,7 +2695,7 @@ ${type_x}:${this.TYPE} \
       _.bassert(6,ess1.isA(gn1,Gene),"Gene should be Gene")
       _.bassert(7,!ess1.isA(ess1,Gene),"Essence should not be Gene")
       _.bassert(8,!ess1.isA(gn1,GenePool),"Gene should not be GenePool")
-  
+
       _.bassert(11,!ess1.isA(new Error(),Error),"should return false for Error, as not in pool")
       _.bassert(12,!ess1.isA("String",String),"should return false for string, as not in pool")
       _.bassert(13,!ess1.isA("String","String"),"should return false for string, as not in pool")
@@ -2791,18 +2791,18 @@ ${type_x}:${this.TYPE} \
       _.bassert(50,Essence.getVALUE(lit2) === undefined, "Hidden properties not added")
       _.bassert(51,Essence.getINTERNAL(lit2) === undefined, "Hidden properties not added")
       _.bassert(52,Essence.getPARSE(lit2) === undefined, "Hidden properties not added")
-      _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed") 
-      _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed") 
-      _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed") 
-      _.bassert(57,lit2["__SPEC"]["ONCE"] === true,"SPEC not changed") 
-      _.bassert(58,lit2["__SPEC"]["FLAT"] === true,"SPEC not changed") 
-      _.bassert(59,lit2["__SPEC"]["LOCAL"] === true,"SPEC not changed") 
-      _.bassert(60,lit2["__SPEC"]["REPEAT"] === true,"SPEC not changed") 
-      _.bassert(61,lit2["__SPEC"]["TYPE"] === "Boolean","SPEC not changed") 
-      _.bassert(62,lit2["__SPEC"]["DEFAULT"] === "No Boolean","SPEC not changed") 
-      _.bassert(63,lit2["__SPEC"]["INTERNAL"] === true,"SPEC not changed") 
-      _.bassert(64,lit2["__SPEC"]["PARSE"] === false,"SPEC not changed") 
-      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed")       
+      _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed")
+      _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed")
+      _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed")
+      _.bassert(57,lit2["__SPEC"]["ONCE"] === true,"SPEC not changed")
+      _.bassert(58,lit2["__SPEC"]["FLAT"] === true,"SPEC not changed")
+      _.bassert(59,lit2["__SPEC"]["LOCAL"] === true,"SPEC not changed")
+      _.bassert(60,lit2["__SPEC"]["REPEAT"] === true,"SPEC not changed")
+      _.bassert(61,lit2["__SPEC"]["TYPE"] === "Boolean","SPEC not changed")
+      _.bassert(62,lit2["__SPEC"]["DEFAULT"] === "No Boolean","SPEC not changed")
+      _.bassert(63,lit2["__SPEC"]["INTERNAL"] === true,"SPEC not changed")
+      _.bassert(64,lit2["__SPEC"]["PARSE"] === false,"SPEC not changed")
+      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed")
     }
     function _tryConstruct(arg1) {
       new Essence(arg1)
@@ -2937,9 +2937,9 @@ class AEssence extends Essence {
       let ess1 = new AEssence(lit,un,"AEssence:ConstructorTestEss1")
       _.bassert(33,lit.__SPEC === undefined,"SPEC should no longer be defined")
       _.bassert(34,lit.myValue != undefined,"just to show it is still defined")
-  
+
       _.shouldAssert(41,_tryConstruct3,{__SPEC: {RENDER:true}},new Error(),"Should not be constructed")
-      _.assert(42,_tryConstruct3,{__SPEC: {RENDER:true}},ess1,"Should be constructed")    
+      _.assert(42,_tryConstruct3,{__SPEC: {RENDER:true}},ess1,"Should be constructed")
     }
     function getterEssencesTest() {
       let un
@@ -3031,7 +3031,7 @@ class AEssence extends Essence {
       _.bassert(7,!ess1.isA(ess1,Gene),"AEssence should not be Gene")
       _.bassert(8,!ess1.isA(gn1,GenePool),"Gene should not be GenePool")
       _.bassert(9,!ess1.isA(gn1,AEssence),"Gene should not be AEssence")
-  
+
       _.bassert(11,!ess1.isA(new Error(),Error),"should return false for Error, as not in pool")
       _.bassert(12,!ess1.isA("String",String),"should return false for string, as not in pool")
       _.bassert(13,!ess1.isA("String","String"),"should return false for string, as not in pool")
@@ -3102,25 +3102,25 @@ class AEssence extends Essence {
       _.bassert(50,AEssence.getVALUE(lit2) === undefined, "Hidden properties not added")
       _.bassert(51,AEssence.getINTERNAL(lit2) === undefined, "Hidden properties not added")
       _.bassert(52,AEssence.getPARSE(lit2) === undefined, "Hidden properties not added")
-      _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed") 
-      _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed") 
-      _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed") 
-      _.bassert(57,lit2["__SPEC"]["ONCE"] === true,"SPEC not changed") 
-      _.bassert(58,lit2["__SPEC"]["FLAT"] === true,"SPEC not changed") 
-      _.bassert(59,lit2["__SPEC"]["LOCAL"] === true,"SPEC not changed") 
-      _.bassert(60,lit2["__SPEC"]["REPEAT"] === true,"SPEC not changed") 
-      _.bassert(61,lit2["__SPEC"]["TYPE"] === "Boolean","SPEC not changed") 
-      _.bassert(62,lit2["__SPEC"]["DEFAULT"] === "No Boolean","SPEC not changed") 
-      _.bassert(63,lit2["__SPEC"]["INTERNAL"] === true,"SPEC not changed") 
-      _.bassert(64,lit2["__SPEC"]["PARSE"] === false,"SPEC not changed") 
-      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed") 
+      _.bassert(54,Object.keys(lit2["__SPEC"]).length === 11,"SPEC not changed")
+      _.bassert(55,lit2["__SPEC"]["RENDER"] === true,"SPEC not changed")
+      _.bassert(56,lit2["__SPEC"]["IGNORE"] === true,"SPEC not changed")
+      _.bassert(57,lit2["__SPEC"]["ONCE"] === true,"SPEC not changed")
+      _.bassert(58,lit2["__SPEC"]["FLAT"] === true,"SPEC not changed")
+      _.bassert(59,lit2["__SPEC"]["LOCAL"] === true,"SPEC not changed")
+      _.bassert(60,lit2["__SPEC"]["REPEAT"] === true,"SPEC not changed")
+      _.bassert(61,lit2["__SPEC"]["TYPE"] === "Boolean","SPEC not changed")
+      _.bassert(62,lit2["__SPEC"]["DEFAULT"] === "No Boolean","SPEC not changed")
+      _.bassert(63,lit2["__SPEC"]["INTERNAL"] === true,"SPEC not changed")
+      _.bassert(64,lit2["__SPEC"]["PARSE"] === false,"SPEC not changed")
+      _.bassert(65,lit2["__SPEC"]["VALUE"] === "No Boolean","SPEC not changed")
     }
-    function _tryConstruct1(arg1) { 
-      new AEssence(arg1) 
+    function _tryConstruct1(arg1) {
+      new AEssence(arg1)
     }
-    function _tryConstruct3(arg1, arg2, arg3) { 
+    function _tryConstruct3(arg1, arg2, arg3) {
       if(arg3 == undefined) arg3 = "EssenceTest"
-      new AEssence(arg1, arg2, arg3) 
+      new AEssence(arg1, arg2, arg3)
     }
   }
 }
@@ -3166,7 +3166,7 @@ class BreadCrumbs extends AEssence {
   }
 
   /**
-   * @classdesc 
+   * @classdesc
    * Parsing tree superclass.
    * @mermaid
    *  classDiagram
@@ -3226,7 +3226,7 @@ class BreadCrumbs extends AEssence {
     if (this.skipped.length) {
       //prettier-ignore
       let str = `Breadcrumbs: ${this.toBreadcrumbs()}
-Not all specification values had been correct. Wrong values 
+Not all specification values had been correct. Wrong values
 are skipped and parents setting or hardcoded default is used.
 Skipped values are: `
       this.skipped.forEach((skip) => {
@@ -3410,7 +3410,7 @@ Skipped values are: `
       _.assert(5,_tryConstruct,new Error(),"BreadCrumbs:myName5",un, "any class for literal should construct")
       _.shouldAssert(6,_tryConstruct,["a","b"],"BreadCrumbs:myName6",un, "array for literal should not construct")
       _.shouldAssert(7,_tryConstruct,Symbol(),"BreadCrumbs:myName7",un, "symbol for literal should not construct")
-  
+
       _.assert(8,_tryConstruct,un,Symbol(),un, "symbol for key should construct")
       _.shouldAssert(9,_tryConstruct,{},un,un,"key has to be defined")
       _.shouldAssert(10,_tryConstruct,{},2,un,"key can not be a number")
@@ -3418,7 +3418,7 @@ Skipped values are: `
       _.shouldAssert(12,_tryConstruct,{},{},un,"key may not be an object")
       _.shouldAssert(13,_tryConstruct,{},new Error(),un,"key may not be 'Error' instance")
       _.shouldAssert(14,_tryConstruct,{},["a","b"],un,"key may not be an array")
-  
+
       let breadcrumbs = new BreadCrumbs(un,"myName8")
       let parent = new BreadCrumbs({},"myName9")
       _.assert(15,_tryConstruct,un,"BreadCrumbs:myName10",breadcrumbs,"BreadCrumbs with no literal for parent should construct")
@@ -3429,7 +3429,7 @@ Skipped values are: `
       _.shouldAssert(20,_tryConstruct,un,"BreadCrumbs:myName15",2,"parent may not be a number")
       _.shouldAssert(21,_tryConstruct,un,"BreadCrumbs:myName16",["a","b"],"parent may not be an array")
       _.shouldAssert(22,_tryConstruct,un,"BreadCrumbs:myName17",Symbol(),"parent may not be a symbol")
-  
+
       _.bassert(101,breadcrumbs instanceof Object,"'BreadCrumbs' has to be an instance of 'Object'")
       _.bassert(102,breadcrumbs instanceof BreadCrumbs,"'BreadCrumbs' has to be an instance of 'BreadCrumbs'")
       _.bassert(103,breadcrumbs.constructor === BreadCrumbs,"the constructor property is not 'BreadCrumbs'")
@@ -3551,7 +3551,7 @@ class Setting extends BreadCrumbs {
     Setting.#workers[workerClass.workerKey] = workerClass
   }
   /**
-   * Returns workersTypeForChildren 
+   * Returns workersTypeForChildren
    * @type (Undefined|Setting)
    */
   get workersTypeForChildren() {
@@ -3566,7 +3566,7 @@ class Setting extends BreadCrumbs {
     this.#workersTypeForChildren = type
   }
   /**
-   * Returns children 
+   * Returns children
    * @type Object
    */
   get children() {
@@ -3766,7 +3766,7 @@ class Setting extends BreadCrumbs {
       if (!AEssence.doParse(childval)) continue
       if (Setting.#isWorkerKey(childkey)) {
         // constructs a workers instance
-        this.#works[childkey] = 
+        this.#works[childkey] =
                         new Setting.#workers[childkey](childval, childkey, this)
       } else if (this.isA(childval, "object")) {
         let aEss = this.#essenceOfAtom(this.literal, childkey, type)
@@ -3775,7 +3775,7 @@ class Setting extends BreadCrumbs {
       } else {
         let litAtom = {VALUE: this.literal[childkey], __SPEC: true}
         this.literal[childkey] = litAtom
-        this.#children[childkey] = 
+        this.#children[childkey] =
                                this.#essenceOfAtom(this.literal, childkey, type)
       }
     }
@@ -3850,8 +3850,8 @@ class Setting extends BreadCrumbs {
   }
 
   /** Returns whether entry for {@link key} exists
-   * @param {String} key 
-   * @returns {Boolean} 
+   * @param {String} key
+   * @returns {Boolean}
    */
   has(key) {
     if (typeof key == "string") {
@@ -3864,14 +3864,14 @@ class Setting extends BreadCrumbs {
           return this.#children[subKeys.shift()].has(subKeys.join("."))
         else return false
       }
-    } 
+    }
     if (this.#works[key]) return true
     else if (this.#children[key]) return true
     else return false
   }
 
   /** Returns entry for key
-   * 
+   *
    * @param {(String|Symbol)} key
    * @returns {(AEssence|Setting)}
    */
@@ -3889,10 +3889,10 @@ class Setting extends BreadCrumbs {
     else return this.#children[key]
   }
 
-  /** Returns value from worker, if {@link key} is registered worker, else from 
+  /** Returns value from worker, if {@link key} is registered worker, else from
    * this
-   * 
-   * @param {String} key - key can specify child keys by using points, 
+   *
+   * @param {String} key - key can specify child keys by using points,
    *                       e.g. "grandParentKey.parentKey.childKey"
    * @param  {...any} params - for worker's getValue
    * @returns {*}
@@ -3905,7 +3905,7 @@ class Setting extends BreadCrumbs {
       else
         return works_and_subkeys[0].getValue(works_and_subkeys[1], ...params)
     } else {
-      if (this.at(key) !== undefined) 
+      if (this.at(key) !== undefined)
         return this.at(key).VALUE
     }
   }
@@ -3935,7 +3935,7 @@ class Setting extends BreadCrumbs {
     let frontmatterYAML = {}
     for (const [key, value] of this) {
       if (value.FLAT) {
-        if (value.RENDER != undefined && !value.RENDER && !value.IGNORE) 
+        if (value.RENDER != undefined && !value.RENDER && !value.IGNORE)
           frontmatterYAML[key] = value.VALUE
       } else {
         Object.assign(frontmatterYAML, value.getFrontmatterYAML())
@@ -3961,7 +3961,7 @@ class Setting extends BreadCrumbs {
   }
 
   /** LOGS all key.VALUE pairs recursive to console
-   * @param {Number} depth 
+   * @param {Number} depth
    */
   showVALUES(depth) {
     let indent = ""
@@ -3975,7 +3975,7 @@ class Setting extends BreadCrumbs {
 
   /** LOGS all keys with their VALUE and DEFAULT token recursive to console.
    * Functions are shortenend to String "FUNCTION"
-   * @param {Number} depth 
+   * @param {Number} depth
    */
   showVALUE_DEFAULT(depth) {
     let indent = ""
@@ -3998,7 +3998,7 @@ class Setting extends BreadCrumbs {
 
   /** LOGS all keys recursive to console with some of their tags.
    * Functions are shortenend to String "FUNCTION"
-   * @param {Number} depth 
+   * @param {Number} depth
    */
   showWhatGoesOut(depth) {
     let indent = ""
@@ -4094,7 +4094,7 @@ class Setting extends BreadCrumbs {
           super(literal,key,parent)
           this.addGene(testWorker)
           delete literal["remove"]
-        }          
+        }
       }
       let lit = {__TEST:{remove:"Not removed", stay:"Always there"}}
       Setting.worker = testWorker
@@ -4111,7 +4111,7 @@ class Setting extends BreadCrumbs {
           parent.workersTypeForChildren = "Boolean"
           super(literal,key,parent)
           this.addGene(testWorker)
-        }          
+        }
       }
       let lit = {__TEST:{bool:true, str:"not allowed"}}
       Setting.worker = testWorker
@@ -4215,7 +4215,7 @@ class Setting extends BreadCrumbs {
       }
       _.bassert(21,keyStr == expKeyStr,"all keys should be contained")
       _.bassert(22,valStr == expValStr,"all value.VALUEs should be contained")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = {a:"A",b:2,c:true,d:{da:"A", db:2, dc:true},e:"ja" }
       let set = new Setting(lit)
       let keyStr = ""
@@ -4226,7 +4226,7 @@ class Setting extends BreadCrumbs {
         keyStr+=key + " "
         if(value.FLAT)
           valStr+=value.VALUE + " "
-        else 
+        else
         for (const [k, v] of value) {
           keyStr+=k + " "
           valStr+=v.VALUE + " "
@@ -4243,7 +4243,7 @@ class Setting extends BreadCrumbs {
         keyStr+=key + " "
         if(value.FLAT)
           valStr+=value.VALUE + " "
-        else 
+        else
         for (const [k, v] of value) {
           keyStr+=k + " "
           valStr+=v.VALUE + " "
@@ -4259,7 +4259,7 @@ class Setting extends BreadCrumbs {
         keyStr+=key + " "
         if(value.FLAT)
           valStr+=value.VALUE + " "
-        else 
+        else
         for (const [k, v] of value) {
           keyStr+=k + " "
           valStr+=v.VALUE + " "
@@ -4267,7 +4267,7 @@ class Setting extends BreadCrumbs {
       }
       _.bassert(51,keyStr == expKeyStr,"Should contain all keys")
       _.bassert(52,valStr == expValStr, "Should contain all values")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = {a:"A",b:2,c:true,d:{da:"A", db:2, dc:true},e:"ja" }
       let set = new Setting(lit)
       let keyStr = ""
@@ -4278,7 +4278,7 @@ class Setting extends BreadCrumbs {
         keyStr+=key + " "
         if(value.FLAT)
           valStr+=value.VALUE + " "
-        else 
+        else
         for (const [k, v] of value) {
           keyStr+=k + " "
           valStr+=v.VALUE + " "
@@ -4295,7 +4295,7 @@ class Setting extends BreadCrumbs {
         keyStr+=key + " "
         if(value.FLAT)
           valStr+=value.VALUE + " "
-        else 
+        else
         for (const [k, v] of value) {
           if(k == "db") continue
           keyStr+=k + " "
@@ -4311,7 +4311,7 @@ class Setting extends BreadCrumbs {
         keyStr+=key + " "
         if(value.FLAT)
           valStr+=value.VALUE + " "
-        else 
+        else
         for (const [k, v] of value) {
           keyStr+=k + " "
           valStr+=v.VALUE + " "
@@ -4319,7 +4319,7 @@ class Setting extends BreadCrumbs {
       }
       _.bassert(81,keyStr == expKeyStr,"Should contain all keys")
       _.bassert(82,valStr == expValStr, "Should contain all values")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       class testWorker extends Setting {
         static get workerKey() {
           return "__TEST"
@@ -4328,7 +4328,7 @@ class Setting extends BreadCrumbs {
           parent.workersTypeForChildren = "(Number|Array.<Number>)"
           super(literal,key,parent)
           this.addGene(testWorker)
-        }          
+        }
       }
       let lit = {__TEST:{a:1,b:2,c:3,d:{da:4, db:5, dc:6},e:7 }}
       Setting.worker = testWorker
@@ -4341,7 +4341,7 @@ class Setting extends BreadCrumbs {
         keyStr+=key + " "
         if(value.FLAT)
           valStr+=value.VALUE + " "
-        else 
+        else
         for (const [k, v] of value) {
           keyStr+=k + " "
           valStr+=v.VALUE + " "
@@ -4350,7 +4350,7 @@ class Setting extends BreadCrumbs {
       _.bassert(91,keyStr == expKeyStr,"Should contain all keys")
       _.bassert(92,valStr == expValStr, "Should contain all values")
 
-      }/**********************************************************************/              
+      }/**********************************************************************/
 
     }
     function hasTest() {
@@ -4369,7 +4369,7 @@ class Setting extends BreadCrumbs {
       _.bassert(4,answ4==false,"'neep' does not exist")
       _.bassert(5,answ5==false,"'deep.deeper.xos' does not exist")
       _.bassert(6,answ6==false,"'deep.deeper.pos.ne' does not exist")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       class testWorker extends Setting {
         static get workerKey() {
           return "__TEST"
@@ -4378,7 +4378,7 @@ class Setting extends BreadCrumbs {
           parent.workersTypeForChildren = "(Number|Array.<Number>)"
           super(literal,key,parent)
           this.addGene(testWorker)
-        }          
+        }
       }
       let lit = {__TEST:{pos:[22,12], deep: {deeper: {pos:[14,13,18]}}}}
       Setting.worker = testWorker
@@ -4399,7 +4399,7 @@ class Setting extends BreadCrumbs {
       _.bassert(6,answer6==false,"Workers 'neep' does not exist")
       _.bassert(7,answer7==false,"Workers 'deep.deeper.nos' does not exist")
       _.bassert(8,answer8==false,"Workers 'deep.deeper.pos.ne' does not exist")
-      }/**********************************************************************/              
+      }/**********************************************************************/
     }
     function atTest() {
       /**********************************************************************/{
@@ -4412,7 +4412,7 @@ class Setting extends BreadCrumbs {
       _.bassert(2,answ1.getValue("deeper.pos")[2]==18,"should return its 'deep'")
       _.bassert(3,answ2.getValue("pos")[2]==18,"should return its 'deep.deeper'")
       _.bassert(4,answ3.VALUE[2]==18,"should return its 'deep.deeper.pos'")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       class testWorker extends Setting {
         static get workerKey() {
           return "__TEST"
@@ -4421,7 +4421,7 @@ class Setting extends BreadCrumbs {
           parent.workersTypeForChildren = "(Number|Array.<Number>)"
           super(literal,key,parent)
           this.addGene(testWorker)
-        }          
+        }
       }
       let lit = {__TEST:{pos:[22,12], deep: {deeper: {pos:[14,13,18]}}}}
       Setting.worker = testWorker
@@ -4434,17 +4434,17 @@ class Setting extends BreadCrumbs {
       _.bassert(2,test1.getValue("deeper.pos")[2]==18,"should return Workers 'deep'")
       _.bassert(3,test2.getValue("pos")[2]==18,"should return Workers 'deep.deeper'")
       _.bassert(3,test3.VALUE[2]==18,"should return Workers 'deep.deeper.pos'")
-      }/**********************************************************************/              
+      }/**********************************************************************/
     }
     function getValueTest() {
-      /**********************************************************************/{        
+      /**********************************************************************/{
       let lit = {a:2, b:{bb:"bbValue"}}
       let set = new Setting(lit,"Setting:getValueTest1")
       _.bassert(1,set.getValue("a") ==2,"should return value of a")
       _.bassert(2,set.getValue("b") =="","value for node is empty string")
       _.bassert(3,set.getValue("b.bb") =="bbValue","should return value of bb")
       _.bassert(4,set.getValue("b.bbb") ==undefined,"key not there,should return undefined")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       class testWorker extends Setting {
         static get workerKey() {
           return "__TEST"
@@ -4453,7 +4453,7 @@ class Setting extends BreadCrumbs {
           parent.workersTypeForChildren = "(Number|Array.<Number>)"
           super(literal,key,parent)
           this.addGene(testWorker)
-        }          
+        }
       }
       let lit = {__TEST:{pos:[22,12], str:"not allowed"}}
       Setting.worker = testWorker
@@ -4461,7 +4461,7 @@ class Setting extends BreadCrumbs {
       _.bassert(1,set.getValue("__TEST.pos")[0] ==22,"should return value of Worker")
       _.bassert(2,set.getValue("__TEST.notThere") ==undefined,"is not there, has no VALUE")
       _.bassert(3,set.getValue("__TEST") ==undefined,"is not FLAT, has no VALUE")
-      }/**********************************************************************/              
+      }/**********************************************************************/
     }
     function getFrontmatterYAMLTest() {
       const lit1 = {__SPEC: {RENDER: false}, a: 23}
@@ -4498,10 +4498,10 @@ class Setting extends BreadCrumbs {
         c: {
           __SPEC: {RENDER: true},
           pict: "ja",
-          d: {__SPEC: {RENDER: false}, 
+          d: {__SPEC: {RENDER: false},
              private: true,
              x: {
-              __SPEC: {RENDER: true}, 
+              __SPEC: {RENDER: true},
               y:"z"
              }
           },
@@ -4525,8 +4525,8 @@ class Setting extends BreadCrumbs {
       _.bassert(4,JSON.stringify(answ4) === expAnsw4,`output of JSON.stringify(result) is:'${JSON.stringify(answ4)}',but should be:'${expAnsw4}'`)
     }
     function atomsTest() {
-      /**********************************************************************/{        
-        let lit = {  
+      /**********************************************************************/{
+        let lit = {
         a: "stg",
         b: 22,
         c: true,
@@ -4538,26 +4538,26 @@ class Setting extends BreadCrumbs {
        }
       if(false){
       let ess0 = new AEssence({},un,"atomsTest")
-      console.log(`ess0: '${ess0}'`) 
-      console.log(`ess0.DEFAULT: '${ess0.DEFAULT}'`) 
-      console.log(`ess0.FLAT: '${ess0.FLAT}'`) 
-      console.log(`ess0.IGNORE: '${ess0.IGNORE}'`) 
-      console.log(`ess0.LOCAL: '${ess0.LOCAL}'`) 
-      console.log(`ess0.ONCE: '${ess0.ONCE}'`) 
-      console.log(`ess0.RENDER: '${ess0.RENDER}'`) 
-      console.log(`ess0.REPEAT: '${ess0.REPEAT}'`) 
-      console.log(`ess0.ROOT: '${ess0.ROOT}'`) 
-      console.log(`ess0.TYPE: '${ess0.TYPE}'`) 
-      console.log(`ess0.VALUE: '${ess0.VALUE}'`) 
+      console.log(`ess0: '${ess0}'`)
+      console.log(`ess0.DEFAULT: '${ess0.DEFAULT}'`)
+      console.log(`ess0.FLAT: '${ess0.FLAT}'`)
+      console.log(`ess0.IGNORE: '${ess0.IGNORE}'`)
+      console.log(`ess0.LOCAL: '${ess0.LOCAL}'`)
+      console.log(`ess0.ONCE: '${ess0.ONCE}'`)
+      console.log(`ess0.RENDER: '${ess0.RENDER}'`)
+      console.log(`ess0.REPEAT: '${ess0.REPEAT}'`)
+      console.log(`ess0.ROOT: '${ess0.ROOT}'`)
+      console.log(`ess0.TYPE: '${ess0.TYPE}'`)
+      console.log(`ess0.VALUE: '${ess0.VALUE}'`)
       }
-      
-      }/**********************************************************************/{        
-      }/**********************************************************************/        
+
+      }/**********************************************************************/{
+      }/**********************************************************************/
     }
     function deepLiteralTest() {
-      /************************************************************/if(true){    
+      /************************************************************/if(true){
         let lit0 = { __SPEC: {TYPE: "Number",RENDER: false},
-        pict: {VALUE: "Russian-Matroshka2.jpg", 
+        pict: {VALUE: "Russian-Matroshka2.jpg",
               __SPEC: true, RENDER: true, },
         integer: {VALUE: 127, __SPEC: false, },
         soso: [128,127],
@@ -4576,7 +4576,7 @@ class Setting extends BreadCrumbs {
       _.bassert(7,renderY0["integer"] == undefined,"'integer' should not appear in render YAML")
       _.bassert(8,renderY0["soso"] == undefined,"'soso' should not appear in render YAML")
       _.bassert(9,Object.keys(renderY0).length == 1,"only added entries should appear in render YAML")
-      
+
       }/************************************************************/if(true){
       let lit1 = {  __SPEC: {RENDER: false},
                     a:2,
@@ -4604,7 +4604,7 @@ class Setting extends BreadCrumbs {
       _.bassert(29,frontMY1["i"] === "","Value should be removed, 'bigint' no globalType")
 
       }/************************************************************/if(true){
-        let lit2 = { __SPEC: {RENDER: false},  
+        let lit2 = { __SPEC: {RENDER: false},
                     a:[],
                     b:[1,2,3],
                     c:[false,false,true],
@@ -4644,7 +4644,7 @@ class Setting extends BreadCrumbs {
                   g:Symbol("abc"),
                   h:cbkTypeOf,
                   i:22n,
-                }      
+                }
       let set3 = new Setting(lit3,"Setting:deepLiteralTest3")
       let frontMY3 = set3.getFrontmatterYAML()
       let renderY3 = set3.getRenderYAML()
@@ -4814,7 +4814,7 @@ registeredExceptions.push(
 class GeneralWorker extends Setting {
   static #KEY =  GENERAL_WORKER_KEY // "__GENERAL_SETTINGS"
   static #localType =  GENERAL_TYPE // "(Number|String|Boolean)"
-  
+
   /**
    * Key which this worker will handle
    * @type {String}
@@ -4861,10 +4861,10 @@ class GeneralWorker extends Setting {
       value = atom.VALUE
     } else {
       value = fallback
-    }        
+    }
     return value
   }
-  
+
   //prettier-ignore
   static test(outputObj) { // GeneralWorker
     let _ = null
@@ -4926,7 +4926,7 @@ class GeneralWorker extends Setting {
     function getValueTest() {
       let un
       let par = new Setting({},"GeneralWorker:getValueTest:parent")
-      /**********************************************************************/{        
+      /**********************************************************************/{
       let lit = {LANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest1",par)
       let val = gen.getValue("LANGUAGE")
@@ -4935,7 +4935,7 @@ class GeneralWorker extends Setting {
       let set = new Setting(litS)
       let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE")
       _.bassert(2,areEqual(valS,"abcd"),"get the LANGUAGE value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = {NOLANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
       let val = gen.getValue("LANGUAGE",FALLBACK_LANGUAGE)
@@ -4943,8 +4943,8 @@ class GeneralWorker extends Setting {
       let litS = { __GENERAL_SETTINGS:{NOLANGUAGE:"abcd"}}
       let set = new Setting(litS)
       let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE", FALLBACK_LANGUAGE)
-      _.bassert(12,areEqual(valS,FALLBACK_LANGUAGE),"get the hardcoded LANGAUGE value via Setting") 
-      }/**********************************************************************/{        
+      _.bassert(12,areEqual(valS,FALLBACK_LANGUAGE),"get the hardcoded LANGAUGE value via Setting")
+      }/**********************************************************************/{
       let lit = {NOLANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest21",par)
       let val = gen.getValue("LANGUAGE","ced")
@@ -4952,8 +4952,8 @@ class GeneralWorker extends Setting {
       let litS = { __GENERAL_SETTINGS:{NOLANGUAGE:"abcd"}}
       let set = new Setting(litS)
       let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE","ced")
-      _.bassert(22,areEqual(valS,"ced"),"get the fallback LANGAUGE value via Setting") 
-      }/**********************************************************************/{        
+      _.bassert(22,areEqual(valS,"ced"),"get the fallback LANGAUGE value via Setting")
+      }/**********************************************************************/{
       let lit = {LANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest31",par)
       let val = gen.getValue("notthere")
@@ -4961,9 +4961,9 @@ class GeneralWorker extends Setting {
       let litS = { __GENERAL_SETTINGS:{LANGUAGE:"abcd"}}
       let set = new Setting(litS)
       let valS = set.getValue("__GENERAL_SETTINGS.notthere",)
-      _.bassert(32,areEqual(valS,un),"get value for non existing key via Setting") 
-      }/**********************************************************************/{        
-      }/**********************************************************************/         
+      _.bassert(32,areEqual(valS,un),"get value for non existing key via Setting")
+      }/**********************************************************************/{
+      }/**********************************************************************/
     }
 
     function _tryConstruct(arg1, arg2,arg3) {
@@ -5059,7 +5059,7 @@ class LocalizationWorker extends Setting {
    * let set = new Setting(lit)
    * set.getValue("__TRANSLATE.car", "nl")
    * @param {String} key
-   * @param {String} fallback 
+   * @param {String} fallback
    * @param {String} language - if other langauge string than #defaultLang
    * @returns {String}
    */
@@ -5143,7 +5143,7 @@ class LocalizationWorker extends Setting {
     }
     function getValueTest() {
       let par = new Setting({},"LocalizationWorker:getValueTest:parent")
-      /**********************************************************************/{        
+      /**********************************************************************/{
       let lit = {word: "Wort"}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
       let val = loc.getValue("word")
@@ -5152,7 +5152,7 @@ class LocalizationWorker extends Setting {
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.word")
       _.bassert(2,valS == "Wort","get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = { chapter: {word: "Wort"}}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
       let val = loc.getValue("chapter.word")
@@ -5161,7 +5161,7 @@ class LocalizationWorker extends Setting {
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.chapter.word")
       _.bassert(12,valS == "Wort","get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = {word: ["de","Wort"]}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
       let val = loc.getValue("word")
@@ -5170,7 +5170,7 @@ class LocalizationWorker extends Setting {
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.word")
       _.bassert(22,areEqual(valS,"Wort"),"get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = { chapter: {word: ["de","Wort"]}}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
       let val = loc.getValue("chapter.word")
@@ -5179,15 +5179,15 @@ class LocalizationWorker extends Setting {
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__TRANSLATE.chapter.word")
       _.bassert(32,areEqual(valS,"Wort"),"get the value via Setting")
-      }/**********************************************************************/        
-      let lit = { word: "Wort", 
+      }/**********************************************************************/
+      let lit = { word: "Wort",
                   coffee: ["de","Kaffee"],
                   tree: [["en","tree"],["fr","arbre"],["es","botavara"],["de","Baum"]],
                   notThere: ["some","use","less","words"],
                   noLang: [["some","1"],["use","2"],["less","3"],["words","4"]],
                 }
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest40",par)
-      loc.defaultLang = "de" 
+      loc.defaultLang = "de"
       let val1 = loc.getValue("word")
       let val2 = loc.getValue("coffee")
       let val3 = loc.getValue("tree")
@@ -5253,7 +5253,7 @@ class LocalizationWorker extends Setting {
       _.bassert(74,val4==expAnsw4,"de")
       _.bassert(75,val5==expAnsw5,"de")
 
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       }
 
     function _tryConstruct(arg1, arg2,arg3) {
@@ -5361,7 +5361,7 @@ class DialogWorker extends Setting {
     }
     function getValueTest() {
       let par = new Setting({},"DialogWorker:getValueTest:parent")
-      /**********************************************************************/{        
+      /**********************************************************************/{
       let lit = {pos:22}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
       let val = dlg.getValue("pos")
@@ -5370,7 +5370,7 @@ class DialogWorker extends Setting {
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__DIALOG_SETTINGS.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = { line: {pos:22}}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
       let val = dlg.getValue("line.pos")
@@ -5379,7 +5379,7 @@ class DialogWorker extends Setting {
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = {pos:[22,14]}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
       let val = dlg.getValue("pos")
@@ -5388,7 +5388,7 @@ class DialogWorker extends Setting {
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__DIALOG_SETTINGS.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = { line: {pos:[22,14]}}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
       let val = dlg.getValue("line.pos")
@@ -5397,8 +5397,8 @@ class DialogWorker extends Setting {
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
       let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
-      }/**********************************************************************/{        
-      }/**********************************************************************/         
+      }/**********************************************************************/{
+      }/**********************************************************************/
     }
 
     function _tryConstruct(arg1, arg2,arg3) {
@@ -5571,10 +5571,10 @@ class TypesWorker extends Setting {
       value = atom.VALUE
     } else {
       value = fallback
-    }        
+    }
     return value
   }
-    
+
   //prettier-ignore
   static test(outputObj) { // TypesWorker
     let _ = null
@@ -5635,7 +5635,7 @@ class TypesWorker extends Setting {
     }
     function getValueTest() {
       let par = new Setting({},"TypesWorker:getValueTest:parent")
-      /**********************************************************************/{        
+      /**********************************************************************/{
       let lit = { __SPEC: {REPEAT: true, },  section: {pos:22}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
       let val = typ.getValue("section.pos")
@@ -5644,7 +5644,7 @@ class TypesWorker extends Setting {
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.section.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = { __SPEC: {REPEAT: true, },  section: {line: {pos:22}}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
       let val = typ.getValue("section.line.pos")
@@ -5653,7 +5653,7 @@ class TypesWorker extends Setting {
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.section.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = { __SPEC: {REPEAT: true, },  section: {pos:[22,14]}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
       let val = typ.getValue("section.pos")
@@ -5662,7 +5662,7 @@ class TypesWorker extends Setting {
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.section.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
-      }/**********************************************************************/{        
+      }/**********************************************************************/{
       let lit = { __SPEC: {REPEAT: true, },  section: {line: {pos:[22,14]}}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
       let val = typ.getValue("section.line.pos")
@@ -5671,7 +5671,7 @@ class TypesWorker extends Setting {
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
       let valS = set.getValue("__NOTE_TYPES.section.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
-      }/**********************************************************************/         
+      }/**********************************************************************/
     }
 
     function _tryConstruct(arg1, arg2,arg3) {
@@ -5724,7 +5724,7 @@ class Templater {
   #isNew=false
   #filetitle // Name of file (with marker and name_end)
   #notename  // Name of note (without marker and name_end)
-  
+
   get notetype() {return this.#cfgname}
 
   constructor(setting, tp, app) {
@@ -5754,7 +5754,7 @@ class Templater {
         vals[key]=value(this.#tp, this.#notename, this.#cfgname, this.#cfg, this.#app)
       }
     }
-  
+
   }
   #checkIsNewNote() {
     let answer = false
@@ -5764,17 +5764,17 @@ class Templater {
     if(0 != lang.localeCompare(FALLBACK_LANGUAGE)) {
       lang_array.push(lang)
     }
-    lang_array.forEach((lang) => {     
+    lang_array.forEach((lang) => {
       let title = this.#loc.getValue("TITLE_NEW_FILE","", lang)
       if(title.length > 0) {
         new_titles_array.push(title)
       }
     })
-    new_titles_array.some(prefix => { 
+    new_titles_array.some(prefix => {
       this.#isNew = this.#filetitle.startsWith(prefix) ? true : false
       return this.#isNew
     });
-  } 
+  }
   async #findType() {
     let types_f = []
     let types_m = []
@@ -5789,7 +5789,7 @@ class Templater {
         folderParts = noteWithPath.split("/")
       }
       folderParts.pop()
- 
+
       for (const [key, value] of me.#typ) {
         let folders = me.#typ.getValue(key+".folders")
         if(folders == undefined) continue
@@ -5808,7 +5808,7 @@ class Templater {
           types_f.push(key)
         } else {
           types_wrong_folder.push(key)
-        }     
+        }
       }
     }
     function typesFromMarker(me) {
@@ -5816,12 +5816,12 @@ class Templater {
       let noMarker  = [];
       let markerlen = 0;
       let typelen = 0;
-    
+
       for (const [key, value] of me.#typ) {
         if(value.IGNORE) continue
-        if(types_f.length > 0 && !types_f.includes(key)) 
+        if(types_f.length > 0 && !types_f.includes(key))
           continue;
-        if(types_wrong_folder.length > 0 && types_wrong_folder.includes(key)) 
+        if(types_wrong_folder.length > 0 && types_wrong_folder.includes(key))
           continue;
         let marker = me.#typ.getValue(key+".marker")
         markerlen = marker === undefined ? 0 : marker.length
@@ -5837,7 +5837,7 @@ class Templater {
           }
         }
       }
-      if(type != undefined) { 
+      if(type != undefined) {
         types_m.push(type)
       } else {
         types_m = [...noMarker];
@@ -5861,24 +5861,24 @@ class Templater {
     typesFromFolder(this)
     if(!this.#isNew) {
       typesFromMarker(this)
-    }  
+    }
     let TYPE_PROMPT = this.#loc.getValue("TYPE_PROMPT", "Choose Type")
     let type_max_entries = this.#dlg.getValue("TYPE_MAX_ENTRIES", 10)
     try {
       if(types_m.length > 1) {
-        this.#cfgname = await this.#tp.system.suggester(types_m, 
+        this.#cfgname = await this.#tp.system.suggester(types_m,
           types_m, true, TYPE_PROMPT, type_max_entries);
       } else if(types_f.length > 1) {
-        this.#cfgname = await this.#tp.system.suggester(types_f, 
+        this.#cfgname = await this.#tp.system.suggester(types_f,
           types_f, true, TYPE_PROMPT, type_max_entries);
-      } else { 
-        this.#cfgname = types_m.length > 0 ? types_m[0] : 
+      } else {
+        this.#cfgname = types_m.length > 0 ? types_m[0] :
           types_f.length > 0 ? types_f[0] : defaulttypename
       }
     } catch(e) {
       throw new DialogError("Choose Value Dialog cancelled")
     }
-    this.#cfg = this.#typ.at(this.#cfgname)    
+    this.#cfg = this.#typ.at(this.#cfgname)
   }
   async #findName(){
     this.#notename = ""
@@ -5902,10 +5902,10 @@ class Templater {
       } catch(e) {
         throw new DialogError("Choose Notename Dialog cancelled");
       }
-    }     
+    }
   }
   async #rename(){
-    function purepath (value) {  
+    function purepath (value) {
       let delimiter = "/"
       let substrings = value.split(delimiter)
       if(substrings.length < 2) {
@@ -5944,7 +5944,7 @@ class Templater {
     }
   }
 }
-//#endregion Templater 
+//#endregion Templater
 /** exported function.
  * <p>
  * Name does not matter for templater, but if named 'main' interferes with jsdoc.
