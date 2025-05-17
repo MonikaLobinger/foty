@@ -198,15 +198,19 @@ function cbkFmtCssClass(tp, noteName, noteType, noteSetting, app) {
  * @returns {String}
  */
 function cbkNoteName(tp, noteName, noteType, noteSetting, app) {
-  let name = noteName
   let name_end = ""
+  let marker = ""
   if(typeof noteSetting == "object") {
     name_end = noteSetting.getValue("name_end")
+    marker = noteSetting.getValue("marker")
   }
   if(name_end == undefined) {
     name_end = ""
   }
-  return name+name_end
+  if(marker == undefined) {
+    marker = ""
+  }
+  return noteName
 }
 /** {@link FrontmatterCallback}, returns link to prev diary file 
  * @type {FrontmatterCallback}
