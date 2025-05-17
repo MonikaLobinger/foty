@@ -1,6 +1,5 @@
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
-//@todo adapt paths for windows
 // Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
 // Script for Obsidian to create different note types, see foty.md for details.
 //
@@ -31,21 +30,102 @@ module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 // Only make changes in region USER CONFIGURATION
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  #region DO_NOT_TOUCH
+/** Returns sibling with next/prev date, depending on {@link next}
+ *
+ * @param {*} next 
+ * @param {*} tp
+ * @param {*} app 
+ * @param {*} noteSetting 
+ * @returns {*} 
+ */
+function findSibling(next, tp, app, noteSetting) {
+  function hasDate(fname, dateformat) {
+    let matchstring = dateformat
+    matchstring = matchstring.replaceAll("Y","[0-9]")
+    matchstring = matchstring.replaceAll("M","[0-9]")
+    matchstring = matchstring.replaceAll("D","[0-9]")
+    let answer = fname.match(matchstring)
+    return answer == null ? false : true
+  }   
+  let dateformat = noteSetting.getValue("title_date_format")
+  let currentFile /* TFile */ = app.workspace.getActiveFile();
+  let currentFileName = currentFile.name;
+  let currentFolder /* TFolder */ = currentFile.parent;
+  let currentFolderPath /* string */ = currentFolder.path;
+  text = "";
+  let prevFile /*TFile*/= null;
+  let nextFile /*TFile*/= null;
+  const siblings = app.vault.getAbstractFileByPath(currentFolderPath).children;
+  siblings.forEach((file) => {
+    if(hasDate(file.name, dateformat) && file.name != currentFileName) {
+      if(file.name > currentFileName) {
+        if(nextFile == null) {
+          nextFile = file;
+        } else {
+          if(file.name < nextFile.name) {
+            nextFile = file;
+          }
+        }
+      } else if(file.name < currentFileName) { 
+        if(prevFile == null) {
+          prevFile = file;
+        } else {
+          if(file.name > prevFile.name) {
+            prevFile = file;
+          }
+          
+        }
+      }
+    }
+  });  
+  let answerFile = next === true ? nextFile : prevFile
+  let answer = ""
+  if(answerFile != null) {
+    answer = app.fileManager.generateMarkdownLink(answerFile,currentFolderPath+"/")
+  } else if (next == true) {
+    answer = app.fileManager.generateMarkdownLink(currentFile,currentFolderPath+"/")
+    let tomorrow = tp.date.tomorrow(dateformat)
+    let today = tp.date.now(dateformat)
+    answer = answer.replaceAll(today,tomorrow)
+  }
+  return answer
+}
 /** callback to create frontmatter value
  * @callback FrontmatterCallback
  * @param {Object} tp - templater object
  * @param {String} noteName
  * @param {String} noteType
+ * @param {Setting} noteSetting
+ * @param {Object} app - Obsidian App object
  * @returns {(String|Array.<String>)}
  */
-/** {@link FrontmatterCallback}, returns alias value
+/** {@link FrontmatterCallback}, => title using "title_before_date" and "title_date_format"
  * @type {FrontmatterCallback}
  * @param {Object} tp - templater object
  * @param {String} noteName
  * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
+ * @returns {String}
+ */
+function cbkCalcDateTitle(tp, noteName, noteType, noteSetting, app) {
+  let title_before_date = noteSetting.getValue("title_before_date")
+  if(title_before_date == undefined) title_before_date = ""
+  let title_date_format = noteSetting.getValue("title_date_format")
+  if(title_date_format == undefined) title_date_format = "YYYY-MM-DD"
+  let name = title_before_date + tp.date.now(title_date_format)
+  return name
+}
+/** {@link FrontmatterCallback}, returns alias values
+ * @type {FrontmatterCallback}
+ * @param {Object} tp - templater object
+ * @param {String} noteName
+ * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
  * @returns {(String|Array.<String>)}
  */
-function cbkFmtAlias(tp, noteName, noteType) {
+function cbkFmtAlias(tp, noteName, noteType, noteSetting, app) {
   let alias = noteName
   if (noteType != "ort" && noteType != "person") {
     if(noteName.startsWith("_"))
@@ -68,14 +148,16 @@ function cbkFmtAlias(tp, noteName, noteType) {
   aliases.push(alias)
   return aliases
 }
-/** {@link FrontmatterCallback}, returns tags value
+/** {@link FrontmatterCallback}, returns tags values
  * @type {FrontmatterCallback}
  * @param {Object} tp - templater object
  * @param {String} noteName
  * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
  * @returns {(String|Array.<String>)}
  */
-function cbkFmtTags(tp, noteName, noteType) {
+function cbkFmtTags(tp, noteName, noteType, noteSetting, app) {
   let tags=[]
   tags.push("0/" + noteType.charAt(0).toUpperCase() + noteType.slice(1))
   if(noteName.startsWith("_"))
@@ -87,30 +169,72 @@ function cbkFmtTags(tp, noteName, noteType) {
  * @param {Object} tp - templater object
  * @param {String} noteName
  * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
  * @returns {String}
  */
-function cbkFmtCreated(tp, noteName, noteType) {
+function cbkFmtCreated(tp, noteName, noteType, noteSetting, app) {
   return tp.date.now()
 }
-/** {@link FrontmatterCallback}, returns cssClass
+/** {@link FrontmatterCallback}, returns cssClasses
  * @type {FrontmatterCallback}
  * @param {Object} tp - templater object
  * @param {String} noteName
  * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
  * @returns {String}
  */
-function cbkFmtCssClass(tp, noteName, noteType) {
+function cbkFmtCssClass(tp, noteName, noteType, noteSetting, app) {
   return noteType
 }
-/** {@link FrontmatterCallback}, returns noteName
+/** {@link FrontmatterCallback}, returns semantic noteName (not title)
  * @type {FrontmatterCallback}
  * @param {Object} tp - templater object
  * @param {String} noteName
  * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
  * @returns {String}
  */
-function cbkNoteName(tp, noteName, noteType) {
-  return noteName
+function cbkNoteName(tp, noteName, noteType, noteSetting, app) {
+  let name = noteName
+  let name_end = ""
+  if(typeof noteSetting == "object") {
+    name_end = noteSetting.getValue("name_end")
+  }
+  if(name_end == undefined) {
+    name_end = ""
+  }
+  return name+name_end
+}
+/** {@link FrontmatterCallback}, returns link to prev diary file 
+ * @type {FrontmatterCallback}
+ * @param {Object} tp - templater object
+ * @param {String} noteName
+ * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
+ * @returns {String}
+ */
+function cbkPrevDateLink(tp, noteName, noteType, noteSetting, app) {
+  let prevLink=findSibling(false, tp, app, noteSetting)
+  let answer = prevLink
+  return answer
+}
+/** {@link FrontmatterCallback}, returns link to next diary file
+ * @type {FrontmatterCallback}
+ * @param {Object} tp - templater object
+ * @param {String} noteName
+ * @param {String} noteType
+ * @param {String} noteSetting
+ * @param {Object} app - Obsidian App object
+ * @returns {String}
+ */
+function cbkNextDateLink(tp, noteName, noteType, noteSetting, app) {
+  let nextLink=findSibling(true, tp, app, noteSetting)
+  let answer = nextLink
+  return answer
 }
 //  #endregion DO_NOT_TOUCH
 //  #region USER CONFIGURATION
@@ -121,13 +245,12 @@ let user_configuration = {
   { 
     LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"    
     RELATIVE_PATH: true, 
-    DIRECTORY_SEPARATOR: "/", 
   },
   __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
   { 
+    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
     TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
     TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
-    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
   },
   __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
   { 
@@ -138,13 +261,14 @@ let user_configuration = {
     __SPEC: {DEFAULT: "note"},// If DEFAULT is not or wrong set, first is default
     defaults: {
       __SPEC: {REPEAT: true},
-      date:              {__SPEC:false, DEFAULT:false,TYPE:"Boolean", },
-      dateformat:        {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
-      folders:           {__SPEC:false, IGNORE:true,DEFAULT:[""],TYPE:"(Array.<String>)"},
-      isDiary:           {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
       marker:            {__SPEC:false, DEFAULT:"",TYPE:"String", }, 
-      name_prompt:       {__SPEC:false, DEFAULT:"Titel",TYPE:"String", },
+      name_end:          {__SPEC:false, DEFAULT:"",TYPE:"String", }, 
+      title_function:    {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
       title_before_date: {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      title_date_format: {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
+      name_prompt:       {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      folders:           {__SPEC:false, IGNORE:true,DEFAULT:[""],TYPE:"(Array.<String>)"},
+      create_same_named_file: {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
       frontmatter: {__SPEC: {RENDER: false,},
         aliases:         {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
         cssclass:        {__SPEC:false, DEFAULT: cbkFmtCssClass, TYPE: "(Array.<String>|Function)"},
@@ -156,15 +280,12 @@ let user_configuration = {
       },    
       page: { __SPEC: {RENDER: true,},
         pict:            {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        firstline:       {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        prevdate:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        nextdate:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        prevname:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        nextname:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        lastline:        {__SPEC:false, DEFAULT: "", TYPE: "String",},
-      }    
+        prevlink:        {__SPEC:false, DEFAULT: cbkPrevDateLink, TYPE: "(String|Function)",},
+        nextlink:        {__SPEC:false, DEFAULT: cbkNextDateLink, TYPE: "(String|Function)",},
+        firstline:       {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
+        lastline:        {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+      },  
     },
-
     obsidian: {
       folders: ["Obsidian"],
     },
@@ -181,13 +302,11 @@ let user_configuration = {
       page: { pict: "pexels-gül-işık-2203051_200.jpg", },
     },
     ort:            {
-      marker: "",    
       folders: ["zwischenreich"],
       page: { pict: "pexels-dzenina-lukac-1563005_200.jpg",}, 
       name_prompt: "Ortsname, Land", 
     },
     person:         {
-      marker: "",    
       folders: ["zwischenreich"],
       page: { pict: "pexels-lucas-andrade-14097235_200.jpg",}, 
       name_prompt: "Personnachname, Personvorname ?Geburtsdatum", 
@@ -220,51 +339,40 @@ let user_configuration = {
       name_prompt: "Autornachname - Buchtitel", 
     },
     garten:         {
-      marker: "",    
       folders: ["garten", "temp"],
       name_prompt: "Gartenthema", 
     },
     gartentagebuch: {
-      marker: "",    
       folders: ["gartentagebuch"],
-      isDiary: true,  
-      before_date: "Garten ", 
+      title_before_date: "Garten ", 
     },
     lesetagebuch:   {
-      marker: "",    
       folders: ["lesetagebuch"],
-      isDiary: true, 
       firstline: "## ArticleTitle\n[ntvzdf]link\n\n", 
-      before_date: "Lesetagebucheintrag ", 
+      title_before_date: "Lesetagebucheintrag ", 
     },
     pflanze:        {
-      marker: "",    
       folders: ["pflanzen"],
       name_prompt: "Pflanzenname", 
     },
     unbedacht:      {
-      marker: "",    
-      folders: ["unbedacht"],
-      isDiary: true,  
-      before_date: "Unbedacht ", 
+      title_function:  cbkCalcDateTitle,
+      folders: ["Unbedacht"],
+      title_before_date: "Unbedacht ", 
       frontmatter: { private: true, },
     },
     verwaltung:     {
-      marker: "",    
       folders: ["verwaltung"],
       name_prompt: "Verwaltungsthema", 
       frontmatter: { private: true, },
     },
     diary:          {
-      marker: "",    
+      title_function:  cbkCalcDateTitle,
       folders: ["diary", "temp"],
-      isDiary: true,  
-      dateformat: "YYYY-MM-DD", 
+      title_date_format: "YYYY-MM-DD", 
       frontmatter: { private: true, },
     },
     note:           {
-      marker: "",    
-      name_prompt: "Notizthema", 
     },
   
   },
@@ -5575,41 +5683,55 @@ registeredExceptions.push(
 )
 //  #endregion workers
 //#endregion central code classes
-//#region Templater class
+//#region Templater
+/**
+ * @classdesc Error used for User cancelling
+ * @extends external:Error
+ */
+class DialogError extends Error {
+  constructor(message, ...params) {
+    super(message, ...params)
+    this.name = "DialogError"
+  }
+  toString() {
+    return " °°" + this.constructor.name + " " + this.name
+  }
+}
+
 class Templater {
   #tp
-  #gen
-  #loc
-  #dlg
-  #typ
+  #app
+  #gen //general cfg     // LANGUAGE RELATIVE_PATH
+  #loc //translation cfg // TITLE_NEW_FILE TYPE_PROMPT NAME_PROMPT
+  #dlg //dlg cfg         // TYPE_MAX_ENTRIES
+  #typ //notetyps cfg    // DEFAULT
 
-  #filetitle
-  #path_relative
-  #path_absolute
-  #relative
-  #dirsep
+
+  #cfgname // current notes type name  - only set after done some work
+  #cfg //current notes type cfg - only set after done some work
+    // IGNORE (für alle Typen abgefragt)
+    // "folders" (für alle Typen abgefragt)
+    // "marker" (für alle Typen abgefragt)
+    // "name_end"
+    // "title_function"
+    // "name_prompt"
+    // create_same_named_file
 
   #isNew=false
-  #notetype
-  #notename
-  #marker
+  #filetitle // Name of file (with marker and name_end)
+  #notename  // Name of note (without marker and name_end)
+  
+  get notetype() {return this.#cfgname}
 
-  get notetype() {return this.#notetype}
-
-  constructor(setting, tp) {
+  constructor(setting, tp, app) {
     this.#tp = tp
+    this.#app = app
     this.#gen = setting.at(GENERAL_WORKER_KEY)
     this.#loc = setting.at(LOCALIZATION_WORKER_KEY)
     this.#dlg = setting.at(DIALOG_WORKER_KEY)
     this.#typ = setting.at(TYPES_WORKER_KEY)
 
-    this.#relative = this.#gen.getValue("RELATIVE_PATH", true)
-    this.#dirsep = this.#gen.getValue("DIRECTORY_SEPARATOR", true)
-
-
     this.#filetitle = this.#tp.file.title
-    this.#path_relative = this.#tp.file.path(true)
-    this.#path_absolute = this.#tp.file.path(false)
   }
 
   async doTheWork() {
@@ -5625,7 +5747,7 @@ class Templater {
   setValues(vals) {
     for (let [key, value] of Object.entries(vals)) {
       if(typeof value == "function") {
-        vals[key]=value(this.#tp, this.#notename, this.#notetype)
+        vals[key]=value(this.#tp, this.#notename, this.#cfgname, this.#cfg, this.#app)
       }
     }
   
@@ -5647,16 +5769,23 @@ class Templater {
     new_titles_array.some(prefix => { 
       this.#isNew = this.#filetitle.startsWith(prefix) ? true : false
       return this.#isNew
-    });    
+    });
   } 
-  async #findType(isNew) {
+  async #findType() {
     let types_f = []
     let types_m = []
+    let types_wrong_folder = []
     function typesFromFolder(me) {
-      let noteWithPath = me.#relative ? me.#path_relative : me.#path_absolute
-      let folderParts = noteWithPath.split(me.#dirsep)
+      let relative = me.#gen.getValue("RELATIVE_PATH", true)
+      let path_relative = me.#tp.file.path(true)
+      let path_absolute = me.#tp.file.path(false)
+      let noteWithPath = relative ? path_relative : path_absolute
+      let folderParts = noteWithPath.split("\\")
+      if(folderParts.length < 2) {
+        folderParts = noteWithPath.split("/")
+      }
       folderParts.pop()
-  
+ 
       for (const [key, value] of me.#typ) {
         let folders = me.#typ.getValue(key+".folders")
         if(folders == undefined) continue
@@ -5673,7 +5802,9 @@ class Templater {
         })
         if(answer == true) {
           types_f.push(key)
-        }      
+        } else {
+          types_wrong_folder.push(key)
+        }     
       }
     }
     function typesFromMarker(me) {
@@ -5686,9 +5817,11 @@ class Templater {
         if(value.IGNORE) continue
         if(types_f.length > 0 && !types_f.includes(key)) 
           continue;
+        if(types_wrong_folder.length > 0 && types_wrong_folder.includes(key)) 
+          continue;
         let marker = me.#typ.getValue(key+".marker")
-        if(marker === undefined || marker.length==0) {
-          markerlen = 0
+        markerlen = marker === undefined ? 0 : marker.length
+        if(marker.length==0) {
           noMarker.push(key);
         } else {
           markerlen = marker.length
@@ -5706,60 +5839,108 @@ class Templater {
         types_m = [...noMarker];
       }
     }
-    let defaulttype = this.#typ.DEFAULT
-    if(defaulttype == undefined) {
-      for (const [key, value] of this.#typ) {
-        if(value.IGNORE) continue
-        defaulttype = key
-        break
+    function defaultTypeName(me) {
+      let defaulttypename = me.#typ.DEFAULT
+      if(defaulttypename == undefined) {
+        for (const [key, value] of me.#typ) {
+          if(value.IGNORE) continue
+          defaulttypename = key
+          break
+        }
       }
+      if(defaulttypename == undefined) {
+        defaulttypename = "note"
+      }
+      return defaulttypename
     }
+    let defaulttypename = defaultTypeName(this)
     typesFromFolder(this)
     if(!this.#isNew) {
       typesFromMarker(this)
     }  
     let TYPE_PROMPT = this.#loc.getValue("TYPE_PROMPT", "Choose Type")
-    let type_max_entries = this.#dlg.getValue("type_max_entries", 10)
-    if(types_m.length > 1) {
-      this.#notetype = await this.#tp.system.suggester(types_m, 
-        types_m, false, TYPE_PROMPT, type_max_entries);
-    } else if(types_f.length > 1) {
-      this.#notetype = await this.#tp.system.suggester(types_f, 
-        types_f, false, TYPE_PROMPT, type_max_entries);
-    } else { 
-      this.#notetype = types_m.length > 0 ? types_m[0] : 
-        types_f.length > 0 ? types_f[0] :
-        defaulttype != undefined ? defaulttype : "note";
+    let type_max_entries = this.#dlg.getValue("TYPE_MAX_ENTRIES", 10)
+    try {
+      if(types_m.length > 1) {
+        this.#cfgname = await this.#tp.system.suggester(types_m, 
+          types_m, true, TYPE_PROMPT, type_max_entries);
+      } else if(types_f.length > 1) {
+        this.#cfgname = await this.#tp.system.suggester(types_f, 
+          types_f, true, TYPE_PROMPT, type_max_entries);
+      } else { 
+        this.#cfgname = types_m.length > 0 ? types_m[0] : 
+          types_f.length > 0 ? types_f[0] : defaulttypename
+      }
+    } catch(e) {
+      throw new DialogError("Choose Value Dialog cancelled")
     }
-    this.#marker = this.#typ.getValue(this.#notetype+".marker", "")
+    this.#cfg = this.#typ.at(this.#cfgname)    
   }
   async #findName(){
     this.#notename = ""
     if(!this.#isNew) {
-      this.#notename = this.#filetitle.substring(this.#marker.length)
+      let marker = this.#cfg.getValue("marker", "")
+      this.#notename = this.#filetitle.substring(marker.length)
     } else {
-      let fu = this.#typ.getValue(this.#notetype+".notename", undefined)
+      let fu = this.#cfg.getValue("title_function", undefined)
       if(typeof fu == "function") {
-        this.#notename = fu(this.#tp, this.#notename, this.#notetype)
+        this.#notename = fu(this.#tp, this.#notename, this.#cfgname, this.#cfg, this.#app)
       }
     }
     if(this.#notename == "") {
-      let prompt = this.#loc.getValue("NAME_PROMPT", "Pure Name of Note")
+      let defprompt = this.#loc.getValue("NAME_PROMPT", "Pure Name of Note")
+      let prompt = this.#cfg.getValue("name_prompt")
+      if(prompt == undefined || prompt.length==0) {
+        prompt = defprompt
+      }
       try {
         this.#notename= await this.#tp.system.prompt(prompt,"",true)
       } catch(e) {
-        this.#notename = this.#filetitle
+        throw new DialogError("Choose Notename Dialog cancelled");
       }
     }     
   }
   async #rename(){
-    if(this.#notename.length > 0) {
-      await(this.#tp.file.rename(this.#marker + this.#notename))
+    function purepath (value) {  
+      let delimiter = "/"
+      let substrings = value.split(delimiter)
+      if(substrings.length < 2) {
+        delimiter ="\\"
+        substrings = value.split(delimiter)
+      }
+      return substrings.length === 1
+        ? ""
+        : substrings.slice(0,-1).join(delimiter)+delimiter
+    }
+
+    try {
+      if(this.#notename.length > 0) {
+        let marker = this.#cfg.getValue("marker", "")
+        let name_end = this.#cfg.getValue("name_end", "")
+        let newname = marker + this.#notename + name_end
+        let path = purepath(this.#tp.file.path(true))
+        let purenewname = String(newname)
+        let num=0
+        if(await this.#tp.file.exists(path+newname+".md")) {
+          let create_dupl = this.#cfg.getValue("create_same_named_file", false)
+          if(create_dupl == true) {
+            while(await this.#tp.file.exists(path+newname+".md")) {
+              newname = purenewname + " " + ++num
+            }
+          }
+        }
+        await(this.#tp.file.rename(newname))
+      }
+    } catch(e) {
+      this.#tp.system.prompt("Renaming not possible or supported",
+        "ABORT\n\
+        Renaming not possible or supported in this folder\n\
+        Press ESCAPE or any key",false,true)
+      throw new DialogError("Renaming not possible or supported");
     }
   }
-        
 }
-//#endregion Templater class
+//#endregion Templater 
 /** exported function.
  * <p>
  * Name does not matter for templater, but if named 'main' interferes with jsdoc.
@@ -5781,7 +5962,7 @@ async function foty(tp, app) {
   try {
     let lit = user_configuration
     let setting = new Setting(lit, undefined, undefined, tp)
-    let templ = new Templater(setting, tp)
+    let templ = new Templater(setting, tp, app)
     await templ.doTheWork()
     let notetype = templ.notetype
     let noteCfg = setting.at("__NOTE_TYPES."+notetype)
@@ -5799,6 +5980,8 @@ async function foty(tp, app) {
       let errYAML = {}
       e.errOut(errYAML)
       return errYAML
+    } else if( e instanceof DialogError) {
+      return {CANCELLED: true}
     } else {
       aut("RETHROWING")
       throw e
@@ -5822,3 +6005,4 @@ async function foty(tp, app) {
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
 const lit1 = {__SPEC: {RENDER: true}, a: 23}
+
