@@ -1,3 +1,338 @@
+//#region USER CONFIGURATION
+//prettier-ignore
+let user_configuration = {
+  // General section has to be the first section
+  SECTION_GENERAL: //localType: (Number|String|Boolean)
+  {
+    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
+    RELATIVE_PATH: true, // create links with relative or absolute paths
+  },
+  SECTION_TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
+  {
+    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
+    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
+    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+  },
+  SECTION_DIALOG: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
+  {
+    TYPE_MAX_ENTRIES: 10, // Max entries in select type dialog
+  },
+  SECTION_NOTETYPES:
+  {
+    __SPEC: {DEFAULT: "note"},// If DEFAULT not/wrong set, first unrepeated is default
+    defaults: {
+      __SPEC: {REPEAT: true},  
+      mocstring:          {__SPEC:false, DEFAULT:"_",TYPE:"String", },
+      marker:             {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      name_end:           {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      title_date_function:{__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+      title_before_date:  {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      title_date_format:  {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
+      folders:            {__SPEC:false, IGNORE:true,DEFAULT:[""],TYPE:"(Array.<String>)"},
+      tag_pre:            {__SPEC:false, DEFAULT:"0/",TYPE:"String", },
+      name_prompt:        {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      create_same_named_file: {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+      date_created_date_format: {__SPEC:false, DEFAULT:"YYYY-MM-DD",TYPE:"Date", },
+      frontmatter: {__SPEC: {RENDER: false,},
+        aliases:          {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
+        cssclass:         {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
+        date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
+        position:         {__SPEC:false, IGNORE: true, TYPE: "Boolean", },
+        private:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+        publish:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+        tags:             {__SPEC:false, DEFAULT: cbkFmtTags, TYPE: "(Array.<String>|Function)",},
+        revised:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
+      },
+      page: { __SPEC: {RENDER: true,},
+        type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
+        pict:             {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        pict_width:       {__SPEC:false, DEFAULT:  0, TYPE: "Number",},
+        prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
+        lastline:         {__SPEC:false, DEFAULT: "## -footnotes", TYPE: "(String|Function)",},
+      },
+    },
+    obsidian:      {
+      folders: ["Obsidian"],
+    },
+    audio:          {
+      marker: "{a}",
+      folders: ["zwischenreich"],
+      name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel ?OPTIONAL /ODER",
+      page: { pict: "/_/_resources/pexels-foteros-352505_15p.jpg", pict_width: 100,},
+    },
+    buch:           {
+      marker: "{b}",
+      folders: ["zwischenreich"],
+      name_prompt: "Autornachname - Buchtitel",
+      //page: { pict: "/_/_resources/pexels-suzyhazelwood-1989704_15p.jpg", pict_width: 100,},
+      page: { pict: "/_/_resources/pexels-ekrulila-2203051_22p.jpg", pict_width: 100,},
+    },
+    ort:            {
+      folders: ["zwischenreich"],
+      page: { pict: "/_/_resources/pexels-dzeninalukac-1563005_10p.jpg", pict_width: 100,
+              firstline: headerOrt, },
+      name_prompt: "Ortsname, Land",
+      frontmatter: {aliases: aliasOrt, },
+    },
+    person:         {
+      folders: ["zwischenreich"],
+      page: { pict: "/_/_resources/pexels-lucasandrade-14097235_15p.jpg", pict_width: 100,
+              firstline: headerPerson, },
+      name_prompt: "Personnachname, Personvorname, ?Geburtsdatum ?OPTIONAL",
+      frontmatter: {aliases: aliasPerson,},
+    },
+    video:          {
+      marker: "{v}",
+      folders: ["zwischenreich"],
+      page: { pict: "/_/_resources/pexels-vladvictoria-2363675_10p.jpg", pict_width: 100,},
+      name_prompt: "?Reihe - ?Autornachname - Videotitel ?OPTIONAL",
+    },
+    web:            {
+      marker: "{w}",
+      folders: ["zwischenreich"],
+      //page: { pict: "/_/_resources/pexels-marcelo-gonzalez-1141370437-31546060_20p.jpg", pict_width: 100,},      
+      page: { pict: "/_/_resources/pexels-drector-14023912_10p.jpg", pict_width: 100,},
+      name_prompt: "?Autor - Webseitentitel - ?Datum ?OPTIONAL",
+    },
+    zitat:          {
+      marker: "°",
+      folders: ["zwischenreich"],
+      name_prompt: "Titel Autornachname",
+    },
+    zitate:         {
+      marker: "°°",
+      folders: ["zwischenreich"],
+      name_prompt: "Titel Autornachname",
+    },
+    exzerpt:        {
+      marker: "$",
+      folders: ["Exzerpte"],
+      name_prompt: "Autornachname - Buchtitel",
+    },
+    rezept:         {
+      frontmatter: {extra: "breit", },
+      folders: ["Rezepte"],
+      name_prompt: "Name des Gerichts, das das Kochrezept beschreibt",
+    },
+    garten:         {
+      folders: ["Garten", "temp"],
+      name_prompt: "Gartenthema",
+    },
+    pflanze:        {
+      folders: ["Pflanzen"],
+      name_prompt: "Pflanzenname",
+    },
+    gartentagebuch: {
+      title_date_function:  cbkCalcDateTitle,
+      title_before_date: "Garten ",
+      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+      folders: ["Gartentagebuch"],
+    },
+    lesetagebuch:   {
+      title_date_function:  cbkCalcDateTitle,
+      title_before_date: "Lesetagebucheintrag ",
+      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+      folders: ["Lesetagebuch"],
+      firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
+    },
+    unbedacht:      {
+      date_created_date_format:"dddd, D. MMMM YYYY, H:mm:ss",
+      title_date_format: "YY-MM-DD",
+      title_date_function:  cbkCalcDateTitle,
+      title_before_date: "Unbedacht ",
+      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+      folders: ["Unbedacht"],
+      frontmatter: { private: true, },
+    },
+    diary:          {
+      title_date_function:  cbkCalcDateTitle,
+      title_date_format: "YYYY-MM-DD",
+      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+      folders: ["Diary", "temp"],
+      frontmatter: { private: true, },
+    },
+    verwaltung:     {
+      folders: ["Verwaltung"],
+      name_prompt: "Verwaltungsthema",
+      frontmatter: { private: true, },
+    },
+    done:           {
+      title_date_function:  cbkCalcDateTitle,
+      title_before_date: "Heute erledigt ",
+      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+      folders: ["Done"],
+      frontmatter: { private: true, },
+    },
+    it:             {
+      folders: ["IT"],
+    },
+    cookbook:       {
+      name_end: "_draft",
+      folders: ["Cookbook"],
+      name_prompt: "Receipe, zuerst wird es als Entwurf erstellt",
+      frontmatter: { publish: true, },
+    },
+    software:       {
+      folders: ["Software"],
+      name_prompt: "Name der Software, die beschrieben wird",
+    },
+    linux:          {
+      page: { pict: "/_/_resources/Linux_mascot_tux_80p.png", pict_width: 50,},
+      folders: ["Linux"],
+    },
+    note:           {
+    },
+  },
+}
+// Users can use predefined callback functions and can write and use their own
+function aliasPerson(noteName) {
+  let aliases=[]
+  let name = noteName
+  var count = (noteName.match(/,/g) || []).length;
+  if(count > 1) {
+    let last_idx=noteName.lastIndexOf(",")
+    if(last_idx != -1) {
+      name = noteName.slice(0,last_idx)
+    }
+  }
+  let alias = name.replace(/, /g, ",")
+  let strArr = alias.split(",")
+  alias = strArr[0]
+  strArr.shift()
+  alias = strArr.join(" ") + " " + alias
+
+  aliases.push(alias)
+  return aliases
+}
+function aliasOrt(noteName) {
+  let aliases=[]
+  let alias = noteName.replace(/, /g, ",")
+  let strArr = alias.split(",")
+  alias = strArr[0]
+  strArr.shift()
+  alias += "(" + strArr.join(" ") + ")"
+
+  aliases.push(alias)
+  return aliases
+}
+function headerPerson(noteName) {
+  let header=""
+  let name = noteName
+  var count = (noteName.match(/,/g) || []).length;
+  if(count > 1) {
+    let last_idx=noteName.lastIndexOf(",")
+    if(last_idx != -1) {
+      name = noteName.slice(0,last_idx)
+    }
+  }
+  let strArr = name.split(",")
+  if(strArr.length > 1)
+    header = strArr[1].trim()+" "+strArr[0].trim()
+  else
+    header = name
+  return header
+}
+function headerOrt(noteName) {
+  let header = ""
+  let name = noteName
+  let strArr = name.split(",")
+  if(strArr.length > 1)
+    header = strArr[1].trim()+" "+strArr[0].trim()
+  else
+    header = name
+  return header
+}
+//#endregion USER CONFIGURATION
+//#region EXAMPLE CONFIGURATIONS
+// Entries of the default section are defaults for all sibling sections. Name of
+//    default section does not matter, important is REPEAT: true in __SPEC
+//    (Only one REPEAT is supported)
+// mocstring: "Map of Content" (MOC) Marker at the beginning of a filename.
+//    Is part of the semantic notename. Will not be set by foty, but recognized:
+//    callback functions will remove it.
+// marker: String at the beginning of a filename. 
+//    Is not part of semantic notename. Will be set by foty.
+// name_end: String at the end of a filename (before extension).
+//    Is not part of semantic notename. Will be set by foty.
+// title_date_function: Callback function to calculate the filename.
+//    If set as function, it will be used for a new note to set filename.
+//    It uses title_before_date and title_date_format
+// title_before_date: String part before date if title_date_function is used
+// title_date_format: Format of the date part if title_date_function is used
+//    Only recogizes uppercase letters D, M, Y 
+//    Only accepts formats expanding to pure numbers
+// folders: Names of (sub)folders in which notes of this type will be placed
+//    Only pure folder names are accepted, no paths
+// tag_pre: String to be prepended to every tag created with cbkFmtTags
+// name_promt: Prompt to be used when asking for notename
+//    Replaces the default prompt hardcoded as NAME_PROMPT in SECTION_TRANSLATE
+// create_same_named_files: Same named files will be created appending a number
+//    Default is false. If set to true linking to prev date file will work wrong.
+// date_created_date_format: Dateformat for cbkFmtCreated, used for date_created
+//    Default if not set is Templaters Default "YYYY-MM-DD"
+// frontmatter: Name does not matter, important is RENDER: false in __SPEC
+//    Has to be same name as in notetypes, to get defaults copied.
+//    Each entry is sent to the template as key value pair before the 
+//    key "____" is sent.
+//    aliases: Array of string
+//        Function cbkFmtAlias notename, mocstring removed  and "," replaced with blank
+//    cssclass: Array of string
+//        Function cbkFmtCssClasses returns notType in array
+//    date_created: Date
+//        cbkFmtCreated returns current date, respecting 
+//    position:
+//    private:
+//    publish:
+//    tags: Array of strings
+//       Function cbkFmtTags returns type, first letter uppercase 
+//       and "moc" if mocstring is set and filename starts with mocstring.
+//       Each tag in array will be prepended by String in tag_pre.
+// page: Name does not matter, important is RENDER: true in __SPEC
+//    Has to be same name as in notetypes, to get defaults copied.
+//    Each entry is sent to the template as key value pair after the 
+//    key "____" is sent.
+//    type:
+//    pict:
+//    pict_width:
+//    prevlink:
+//    nextlink:
+//    firstline:
+//    lastline:
+//prettier-ignore
+let example_configuration1 = {
+  SECTION_NOTETYPES: {
+    note: {
+      marker: "{w}",
+      yaml: {__SPEC: {RENDER: false,}, aliases: aliasOrt, borgia: "Lucrezia", },
+      show: {__SPEC: {RENDER: true,}, firstline: "DAS WORT", fugger: true, },
+    },
+  }
+}
+//user_configuration = example_configuration1
+
+let example_configuration2 = {
+  SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
+  SECTION_NOTETYPES: {
+    fueralle: {
+      __SPEC: {REPEAT: true},  
+      yaml: {__SPEC: {RENDER: false,},
+        aliases:   {__SPEC:false, DEFAULT: aliasOrt, TYPE: "(Array.<String>|Function)"},
+        borgia:    {__SPEC:false, DEFAULT: "Lucrezia", TYPE: "String", },
+      },
+      show: { __SPEC: {RENDER: true,},
+        firstline: {__SPEC:false, DEFAULT: "DAS WORT", TYPE: "String",},
+        fugger:    {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
+      },    
+    },
+    alt: { show: { lastline: "ALT", type:"alt"} },
+    note: { marker: "{w}", folders: ["temp"], show: { type:"note"} },
+  }
+}
+//user_configuration = example_configuration2
+//#endregion EXAMPLE CONFIGURATIONS
+
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
 // Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
@@ -12,24 +347,7 @@ module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //
 // Some settings for the script can be adapted to user needs. Those are in
 // region USER CONFIGURATION.
-
-//#region CONFIGURATION
-// This region simulates a configuration dialog
-// It contains a section with code to be used in configuration, which user would
-// never see in a configuration dialog, so it is named DO_NOT_TOUCH.
-// Unfortunately the callback functions defined there have to be written in
-// JavaScript file before they can be used.
-//
-// And it contains the value section, which user can edit, so it is
-// named USER CONFIGURATION.
-//
-// Additionally in a section named EXAMPLE_CONFIGURATIONS it contains example
-// configurations
-//
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// Only make changes in region USER CONFIGURATION
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//  #region DO_NOT_TOUCH
+//#region Configuration callbacks
 /** Returns sibling with next/prev date, depending on {@link next}
  *
  * @param {*} next
@@ -256,346 +574,7 @@ function cbkNextDateLink(noteName, noteType, noteSetting, tp, app) {
   let answer = nextLink
   return answer
 }
-//  #endregion DO_NOT_TOUCH
-//  #region USER CONFIGURATION
-// Entries of the default section are defaults for all sibling sections. Name of
-//    default section does not matter, important is REPEAT: true in __SPEC
-//    (Only one REPEAT is supported)
-// mocstring: "Map of Content" (MOC) Marker at the beginning of a filename.
-//    Is part of the semantic notename. Will not be set by foty, but recognized:
-//    callback functions will remove it.
-// marker: String at the beginning of a filename. 
-//    Is not part of semantic notename. Will be set by foty.
-// name_end: String at the end of a filename (before extension).
-//    Is not part of semantic notename. Will be set by foty.
-// title_date_function: Callback function to calculate the filename.
-//    If set as function, it will be used for a new note to set filename.
-//    It uses title_before_date and title_date_format
-// title_before_date: String part before date if title_date_function is used
-// title_date_format: Format of the date part if title_date_function is used
-//    Only recogizes uppercase letters D, M, Y 
-//    Only accepts formats expanding to pure numbers
-// folders: Names of (sub)folders in which notes of this type will be placed
-//    Only pure folder names are accepted, no paths
-// tag_pre: String to be prepended to every tag created with cbkFmtTags
-// name_promt: Prompt to be used when asking for notename
-//    Replaces the default prompt hardcoded as NAME_PROMPT in __TRANSLATE
-// create_same_named_files: Same named files will be created appending a number
-//    Default is false. If set to true linking to prev date file will work wrong.
-// date_created_date_format: Dateformat for cbkFmtCreated, used for date_created
-//    Default if not set is Templaters Default "YYYY-MM-DD"
-// frontmatter: Name does not matter, important is RENDER: false in __SPEC
-//    Has to be same name as in notetypes, to get defaults copied.
-//    Each entry is sent to the template as key value pair before the 
-//    key "____" is sent.
-//    aliases: Array of string
-//        Function cbkFmtAlias notename, mocstring removed  and "," replaced with blank
-//    cssclass: Array of string
-//        Function cbkFmtCssClasses returns notType in array
-//    date_created: Date
-//        cbkFmtCreated returns current date, respecting 
-//    position:
-//    private:
-//    publish:
-//    tags: Array of strings
-//       Function cbkFmtTags returns type, first letter uppercase 
-//       and "moc" if mocstring is set and filename starts with mocstring.
-//       Each tag in array will be prepended by String in tag_pre.
-// page: Name does not matter, important is RENDER: true in __SPEC
-//    Has to be same name as in notetypes, to get defaults copied.
-//    Each entry is sent to the template as key value pair after the 
-//    key "____" is sent.
-//    type:
-//    pict:
-//    pict_width:
-//    prevlink:
-//    nextlink:
-//    firstline:
-//    lastline:
-//    #region USER CALLBACKS
-// User can write own type specific functions and call them in a type definition
-function aliasPerson(noteName) {
-  let aliases=[]
-  let name = noteName
-  var count = (noteName.match(/,/g) || []).length;
-  if(count > 1) {
-    let last_idx=noteName.lastIndexOf(",")
-    if(last_idx != -1) {
-      name = noteName.slice(0,last_idx)
-    }
-  }
-  let alias = name.replace(/, /g, ",")
-  let strArr = alias.split(",")
-  alias = strArr[0]
-  strArr.shift()
-  alias = strArr.join(" ") + " " + alias
-
-  aliases.push(alias)
-  return aliases
-}
-function aliasOrt(noteName) {
-  let aliases=[]
-  let alias = noteName.replace(/, /g, ",")
-  let strArr = alias.split(",")
-  alias = strArr[0]
-  strArr.shift()
-  alias += "(" + strArr.join(" ") + ")"
-
-  aliases.push(alias)
-  return aliases
-}
-function headerPerson(noteName) {
-  let header=""
-  let name = noteName
-  var count = (noteName.match(/,/g) || []).length;
-  if(count > 1) {
-    let last_idx=noteName.lastIndexOf(",")
-    if(last_idx != -1) {
-      name = noteName.slice(0,last_idx)
-    }
-  }
-  let strArr = name.split(",")
-  if(strArr.length > 1)
-    header = strArr[1].trim()+" "+strArr[0].trim()
-  else
-    header = name
-  return header
-}
-function headerOrt(noteName) {
-  let header = ""
-  let name = noteName
-  let strArr = name.split(",")
-  if(strArr.length > 1)
-    header = strArr[1].trim()+" "+strArr[0].trim()
-  else
-    header = name
-  return header
-}
-//    #endregion USER CALLBACKS
-//prettier-ignore
-let user_configuration = {
-  // General section has to be the first section
-  __GENERAL_SETTINGS: //localType: (Number|String|Boolean)
-  {
-    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
-    RELATIVE_PATH: true,
-  },
-  __TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
-  {
-    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
-    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
-    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
-  },
-  __DIALOG_SETTINGS: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
-  {
-    TYPE_MAX_ENTRIES: 10,
-  },
-  __NOTE_TYPES:
-  {
-    __SPEC: {DEFAULT: "note"},// If DEFAULT not/wrong set, first unrepeated is default
-    defaults: {
-      __SPEC: {REPEAT: true},  
-      mocstring:          {__SPEC:false, DEFAULT:"_",TYPE:"String", },
-      marker:             {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      name_end:           {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      title_date_function:{__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-      title_before_date:  {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      title_date_format:  {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
-      folders:            {__SPEC:false, IGNORE:true,DEFAULT:[""],TYPE:"(Array.<String>)"},
-      tag_pre:            {__SPEC:false, DEFAULT:"0/",TYPE:"String", },
-      name_prompt:        {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      create_same_named_file: {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
-      date_created_date_format: {__SPEC:false, DEFAULT:"YYYY-MM-DD",TYPE:"Date", },
-      frontmatter: {__SPEC: {RENDER: false,},
-        aliases:          {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
-        cssclass:         {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
-        date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
-        position:         {__SPEC:false, IGNORE: true, TYPE: "Boolean", },
-        private:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
-        publish:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
-        tags:             {__SPEC:false, DEFAULT: cbkFmtTags, TYPE: "(Array.<String>|Function)",},
-        revised:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
-      },
-      page: { __SPEC: {RENDER: true,},
-        type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
-        pict:             {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        pict_width:       {__SPEC:false, DEFAULT:  0, TYPE: "Number",},
-        prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
-        lastline:         {__SPEC:false, DEFAULT: "## -footnotes", TYPE: "(String|Function)",},
-      },
-    },
-    obsidian: {
-      folders: ["Obsidian"],
-    },
-    audio: {
-      marker: "{a}",
-      folders: ["zwischenreich"],
-      name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel ?OPTIONAL /ODER",
-      page: { pict: "/_/_resources/pexels-foteros-352505_15p.jpg", pict_width: 100,},
-    },
-    buch:           {
-      marker: "{b}",
-      folders: ["zwischenreich"],
-      name_prompt: "Autornachname - Buchtitel",
-      //page: { pict: "/_/_resources/pexels-suzyhazelwood-1989704_15p.jpg", pict_width: 100,},
-      page: { pict: "/_/_resources/pexels-ekrulila-2203051_22p.jpg", pict_width: 100,},
-    },
-    ort:            {
-      folders: ["zwischenreich"],
-      page: { pict: "/_/_resources/pexels-dzeninalukac-1563005_10p.jpg", pict_width: 100,
-              firstline: headerOrt, },
-      name_prompt: "Ortsname, Land",
-      frontmatter: {aliases: aliasOrt, },
-    },
-    person:         {
-      folders: ["zwischenreich"],
-      page: { pict: "/_/_resources/pexels-lucasandrade-14097235_15p.jpg", pict_width: 100,
-              firstline: headerPerson, },
-      name_prompt: "Personnachname, Personvorname, ?Geburtsdatum ?OPTIONAL",
-      frontmatter: {aliases: aliasPerson,},
-    },
-    video:          {
-      marker: "{v}",
-      folders: ["zwischenreich"],
-      page: { pict: "/_/_resources/pexels-vladvictoria-2363675_10p.jpg", pict_width: 100,},
-      name_prompt: "?Reihe - ?Autornachname - Videotitel ?OPTIONAL",
-    },
-    web:            {
-      marker: "{w}",
-      folders: ["zwischenreich"],
-      //page: { pict: "/_/_resources/pexels-marcelo-gonzalez-1141370437-31546060_20p.jpg", pict_width: 100,},      
-      page: { pict: "/_/_resources/pexels-drector-14023912_10p.jpg", pict_width: 100,},
-      name_prompt: "?Autor - Webseitentitel - ?Datum ?OPTIONAL",
-    },
-    zitat:          {
-      marker: "°",
-      folders: ["zwischenreich"],
-      name_prompt: "Titel Autornachname",
-    },
-    zitate:         {
-      marker: "°°",
-      folders: ["zwischenreich"],
-      name_prompt: "Titel Autornachname",
-    },
-    exzerpt:        {
-      marker: "$",
-      folders: ["Exzerpte"],
-      name_prompt: "Autornachname - Buchtitel",
-    },
-    rezept:        {
-      frontmatter: {extra: "breit", },
-      folders: ["Rezepte"],
-      name_prompt: "Name des Gerichts, das das Kochrezept beschreibt",
-    },
-    garten:         {
-      folders: ["Garten", "temp"],
-      name_prompt: "Gartenthema",
-    },
-    pflanze:        {
-      folders: ["Pflanzen"],
-      name_prompt: "Pflanzenname",
-    },
-    gartentagebuch: {
-      title_date_function:  cbkCalcDateTitle,
-      title_before_date: "Garten ",
-      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-      folders: ["Gartentagebuch"],
-    },
-    lesetagebuch:   {
-      title_date_function:  cbkCalcDateTitle,
-      title_before_date: "Lesetagebucheintrag ",
-      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-      folders: ["Lesetagebuch"],
-      firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
-    },
-    unbedacht:      {
-      date_created_date_format:"dddd, D. MMMM YYYY, H:mm:ss",
-      title_date_format: "YY-MM-DD",
-      title_date_function:  cbkCalcDateTitle,
-      title_before_date: "Unbedacht ",
-      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-      folders: ["Unbedacht"],
-      frontmatter: { private: true, },
-    },
-    diary:          {
-      title_date_function:  cbkCalcDateTitle,
-      title_date_format: "YYYY-MM-DD",
-      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-      folders: ["Diary", "temp"],
-      frontmatter: { private: true, },
-    },
-    verwaltung:     {
-      folders: ["Verwaltung"],
-      name_prompt: "Verwaltungsthema",
-      frontmatter: { private: true, },
-    },
-    done:   {
-      title_date_function:  cbkCalcDateTitle,
-      title_before_date: "Heute erledigt ",
-      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-      folders: ["Done"],
-      frontmatter: { private: true, },
-    },
-    it:             {
-      folders: ["IT"],
-    },
-    cookbook:       {
-      name_end: "_draft",
-      folders: ["Cookbook"],
-      name_prompt: "Receipe, zuerst wird es als Entwurf erstellt",
-      frontmatter: { publish: true, },
-    },
-    software:       {
-      folders: ["Software"],
-      name_prompt: "Name der Software, die beschrieben wird",
-    },
-    linux:          {
-      page: { pict: "/_/_resources/Linux_mascot_tux_80p.png", pict_width: 50,},
-      folders: ["Linux"],
-    },
-    note:           {
-    },
-  },
-}
-//  #endregion USER CONFIGURATION
-//  #region EXAMPLE CONFIGURATIONS
-
-//prettier-ignore
-let example_configuration = {
-  __NOTE_TYPES: {
-    note: {
-      marker: "{w}",
-      yaml: {__SPEC: {RENDER: false,}, aliases: aliasOrt, borgia: "Lucrezia", },
-      show: {__SPEC: {RENDER: true,}, firstline: "DAS WORT", fugger: true, },
-    },
-  }
-}
-//user_configuration = example_configuration
-
-let example_configuration2 = {
-  __TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
-  __NOTE_TYPES: {
-    fueralle: {
-      __SPEC: {REPEAT: true},  
-      yaml: {__SPEC: {RENDER: false,},
-        aliases:   {__SPEC:false, DEFAULT: aliasOrt, TYPE: "(Array.<String>|Function)"},
-        borgia:    {__SPEC:false, DEFAULT: "Lucrezia", TYPE: "String", },
-      },
-      show: { __SPEC: {RENDER: true,},
-        firstline: {__SPEC:false, DEFAULT: "DAS WORT", TYPE: "String",},
-        fugger:    {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
-      },    
-    },
-    alt: { show: { lastline: "ALT", type:"alt"} },
-    note: { marker: "{w}", folders: ["temp"], show: { type:"note"} },
-  }
-}
-//user_configuration = example_configuration2
-
-//  #endregion EXAMPLE CONFIGURATIONS
-//#endregion CONFIGURATION
+//#endregion Configuration callbacks
 //#region globals and externals
 var GLOBAL_SYMBOL_COUNTER = 0
 /**
@@ -618,18 +597,18 @@ const Dialog = {
 }
 
 // TypesWorker
-const TYPES_WORKER_KEY = "__NOTE_TYPES"
+const TYPES_WORKER_KEY = "SECTION_NOTETYPES"
 const TYPES_TYPE =
   "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
 // DialogWorker
-const DIALOG_WORKER_KEY = "__DIALOG_SETTINGS"
+const DIALOG_WORKER_KEY = "SECTION_DIALOG"
 const DIALOG_TYPE = "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
 // LocalizationWorker
-const LOCALIZATION_WORKER_KEY = "__TRANSLATE"
+const LOCALIZATION_WORKER_KEY = "SECTION_TRANSLATE"
 const LOCALIZATION_TYPE = "(String|Array.<String>|Array.<Array.<String>>)"
 const FALLBACK_LANGUAGE = "en"
 // GeneralWorker
-const GENERAL_WORKER_KEY = "__GENERAL_SETTINGS"
+const GENERAL_WORKER_KEY = "SECTION_GENERAL"
 const GENERAL_TYPE = "(Number|String|Boolean)"
 // Setting
 const GLOBAL_ROOT_KEY = "/"
@@ -4248,7 +4227,7 @@ class Setting extends BreadCrumbs {
       let sym = Symbol("a")
       let setting1 = new Setting({},"Setting:getterLiteralTest02",un)
       let setting2 = new Setting({sym: {}},"Setting:getterLiteralTest03",un)
-      let setting3 = new Setting({"__NOTE_TYPES": {}},"Setting:getterLiteralTest04",un)
+      let setting3 = new Setting({"SECTION_NOTETYPES": {}},"Setting:getterLiteralTest04",un)
       let setting4 = new Setting({"a": {"MARKER":"2"}},"Setting:getterLiteralTest05",un)
       let setting5 = new Setting({"a": {"MARKER":"2","DATE":true,}},"Setting:getterLiteralTest06",un)
       let setting6 = new Setting({"a": {MARKER:"2",DATE:false,},"d": {TITLE_BEFORE_DATE:"abc"}},"Setting:getterLiteralTest07",un)
@@ -4262,7 +4241,7 @@ class Setting extends BreadCrumbs {
       _.bassert(2,Object.keys(lit2).length === 1,"only 1 value should be contained, as only one given")
       _.bassert(3,Object.keys(lit2.sym).length === 0,"object assigned to symbol key should be empty as given")
       _.bassert(4,Object.keys(lit3).length === 1,"only 1 value should be contained, as only one given")
-      _.bassert(5,Object.keys(lit3.__NOTE_TYPES).length === 0,"object assigned to '__NOTE_TYPES' key should be empty as given")
+      _.bassert(5,Object.keys(lit3.SECTION_NOTETYPES).length === 0,"object assigned to 'SECTION_NOTETYPES' key should be empty as given")
       _.bassert(6,Object.keys(lit4).length === 1,"only 1 value should be contained, as only one given")
       _.bassert(7,Object.keys(lit4.a).length === 1,"object assigned to 'a' should only contain one entry as only one given")
       _.bassert(8,lit4.a.MARKER === "2","value of a.MARKER should be '2' as given")
@@ -4992,7 +4971,7 @@ registeredExceptions.push(
 
 //  #region workers
 class GeneralWorker extends Setting {
-  static #KEY =  GENERAL_WORKER_KEY // "__GENERAL_SETTINGS"
+  static #KEY =  GENERAL_WORKER_KEY // "SECTION_GENERAL"
   static #localType =  GENERAL_TYPE // "(Number|String|Boolean)"
 
   /**
@@ -5111,36 +5090,36 @@ class GeneralWorker extends Setting {
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest1",par)
       let val = gen.getValue("LANGUAGE")
       _.bassert(1,areEqual(val,"abcd"),"get the LANGUAGE value via GeneralWorker")
-      let litS = { __GENERAL_SETTINGS:{LANGUAGE:"abcd"}}
+      let litS = { SECTION_GENERAL:{LANGUAGE:"abcd"}}
       let set = new Setting(litS)
-      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE")
+      let valS = set.getValue("SECTION_GENERAL.LANGUAGE")
       _.bassert(2,areEqual(valS,"abcd"),"get the LANGUAGE value via Setting")
       }/**********************************************************************/{
       let lit = {NOLANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest11",par)
       let val = gen.getValue("LANGUAGE",FALLBACK_LANGUAGE)
       _.bassert(11,areEqual(val,FALLBACK_LANGUAGE),"get the hardcoded LANGUAGE value via GeneralWorker")
-      let litS = { __GENERAL_SETTINGS:{NOLANGUAGE:"abcd"}}
+      let litS = { SECTION_GENERAL:{NOLANGUAGE:"abcd"}}
       let set = new Setting(litS)
-      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE", FALLBACK_LANGUAGE)
+      let valS = set.getValue("SECTION_GENERAL.LANGUAGE", FALLBACK_LANGUAGE)
       _.bassert(12,areEqual(valS,FALLBACK_LANGUAGE),"get the hardcoded LANGAUGE value via Setting")
       }/**********************************************************************/{
       let lit = {NOLANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest21",par)
       let val = gen.getValue("LANGUAGE","ced")
       _.bassert(21,areEqual(val,"ced"),"get the fallback LANGUAGE value via GeneralWorker")
-      let litS = { __GENERAL_SETTINGS:{NOLANGUAGE:"abcd"}}
+      let litS = { SECTION_GENERAL:{NOLANGUAGE:"abcd"}}
       let set = new Setting(litS)
-      let valS = set.getValue("__GENERAL_SETTINGS.LANGUAGE","ced")
+      let valS = set.getValue("SECTION_GENERAL.LANGUAGE","ced")
       _.bassert(22,areEqual(valS,"ced"),"get the fallback LANGAUGE value via Setting")
       }/**********************************************************************/{
       let lit = {LANGUAGE:"abcd"}
       let gen = new GeneralWorker(lit,"GeneralWorker:getValueTest31",par)
       let val = gen.getValue("notthere")
       _.bassert(31,areEqual(val,un),"get value for non existing key via GeneralWorker")
-      let litS = { __GENERAL_SETTINGS:{LANGUAGE:"abcd"}}
+      let litS = { SECTION_GENERAL:{LANGUAGE:"abcd"}}
       let set = new Setting(litS)
-      let valS = set.getValue("__GENERAL_SETTINGS.notthere",)
+      let valS = set.getValue("SECTION_GENERAL.notthere",)
       _.bassert(32,areEqual(valS,un),"get value for non existing key via Setting")
       }/**********************************************************************/{
       }/**********************************************************************/
@@ -5159,7 +5138,7 @@ registeredExceptions.push(
 )
 
 class LocalizationWorker extends Setting {
-  static #KEY =  LOCALIZATION_WORKER_KEY //  "__TRANSLATE"
+  static #KEY =  LOCALIZATION_WORKER_KEY //  "SECTION_TRANSLATE"
   static #localType =  LOCALIZATION_TYPE // "(String|Array.<String>|Array.<Array.<String>>)"
   #defaultLang = FALLBACK_LANGUAGE
   /** Key which this worker will handle
@@ -5219,25 +5198,25 @@ class LocalizationWorker extends Setting {
    * If this is not found, the 2nd value of the first pair is returned.
    * @example
    * // returns "word"
-   * let lit =  { __TRANSLATE: {
+   * let lit =  { SECTION_TRANSLATE: {
    *             word: [ ["de", "Wort"], ["en", "word"] ]
    * }          }
    * let set = new Setting(lit)
-   * set.getValue("__TRANSLATE.word", "en")
+   * set.getValue("SECTION_TRANSLATE.word", "en")
    * @example
    * // returns "word", if "en" is default language
-   * let lit =  { __TRANSLATE: {
+   * let lit =  { SECTION_TRANSLATE: {
    *            word: [ ["de", "Wort"], ["en", "word"] ]
    * }          }
    * let set = new Setting(lit)
-   * set.getValue("__TRANSLATE.word", "nl")
+   * set.getValue("SECTION_TRANSLATE.word", "nl")
    * @example
    * // returns "Auto"
-   * let lit ={  __TRANSLATE: {
+   * let lit ={  SECTION_TRANSLATE: {
    *            car: ["de", "Auto"],
    * }         }
    * let set = new Setting(lit)
-   * set.getValue("__TRANSLATE.car", "nl")
+   * set.getValue("SECTION_TRANSLATE.car", "nl")
    * @param {String} key
    * @param {String} fallback
    * @param {String} language - if other langauge string than #defaultLang
@@ -5328,36 +5307,36 @@ class LocalizationWorker extends Setting {
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
       let val = loc.getValue("word")
       _.bassert(1,val == "Wort","get the value via DialogWorker")
-      let litS = { __TRANSLATE:{word: "Wort"}}
+      let litS = { SECTION_TRANSLATE:{word: "Wort"}}
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE.word")
+      let valS = set.getValue("SECTION_TRANSLATE.word")
       _.bassert(2,valS == "Wort","get the value via Setting")
       }/**********************************************************************/{
       let lit = { chapter: {word: "Wort"}}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
       let val = loc.getValue("chapter.word")
       _.bassert(11,val == "Wort","get the value via Setting")
-      let litS = { __TRANSLATE:{chapter: {word: "Wort"}}}
+      let litS = { SECTION_TRANSLATE:{chapter: {word: "Wort"}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE.chapter.word")
+      let valS = set.getValue("SECTION_TRANSLATE.chapter.word")
       _.bassert(12,valS == "Wort","get the value via Setting")
       }/**********************************************************************/{
       let lit = {word: ["de","Wort"]}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest1",par)
       let val = loc.getValue("word")
       _.bassert(21,areEqual(val,"Wort"),"get the value via DialogWorker")
-      let litS = { __TRANSLATE:{word: ["de","Wort"]}}
+      let litS = { SECTION_TRANSLATE:{word: ["de","Wort"]}}
       let set = new Setting(litS,"LocalizationWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE.word")
+      let valS = set.getValue("SECTION_TRANSLATE.word")
       _.bassert(22,areEqual(valS,"Wort"),"get the value via Setting")
       }/**********************************************************************/{
       let lit = { chapter: {word: ["de","Wort"]}}
       let loc = new LocalizationWorker(lit,"LocalizationWorker:getValueTest11",par)
       let val = loc.getValue("chapter.word")
       _.bassert(31,areEqual(val,"Wort"),"get the value via Setting")
-      let litS = { __TRANSLATE:{chapter: {word: ["de","Wort"]}}}
+      let litS = { SECTION_TRANSLATE:{chapter: {word: ["de","Wort"]}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__TRANSLATE.chapter.word")
+      let valS = set.getValue("SECTION_TRANSLATE.chapter.word")
       _.bassert(32,areEqual(valS,"Wort"),"get the value via Setting")
       }/**********************************************************************/
       let lit = { word: "Wort",
@@ -5415,13 +5394,13 @@ class LocalizationWorker extends Setting {
       _.bassert(64,val4==expAnsw4,"language 'nl' not found")
       _.bassert(65,val5==expAnsw5,"language 'nl' not found")
 
-      let litS = { __TRANSLATE:lit}
+      let litS = { SECTION_TRANSLATE:lit}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      val1 = set.getValue("__TRANSLATE.word","de")
-      val2 = set.getValue("__TRANSLATE.coffee","de")
-      val3 = set.getValue("__TRANSLATE.tree","de")
-      val4 = set.getValue("__TRANSLATE.notThere","de")
-      val5 = set.getValue("__TRANSLATE.noLang","de")
+      val1 = set.getValue("SECTION_TRANSLATE.word","de")
+      val2 = set.getValue("SECTION_TRANSLATE.coffee","de")
+      val3 = set.getValue("SECTION_TRANSLATE.tree","de")
+      val4 = set.getValue("SECTION_TRANSLATE.notThere","de")
+      val5 = set.getValue("SECTION_TRANSLATE.noLang","de")
       expAnsw1 = "Wort"
       expAnsw2 = "de"
       expAnsw3 = "tree"
@@ -5449,7 +5428,7 @@ registeredExceptions.push(
 )
 
 class DialogWorker extends Setting {
-  static #KEY = DIALOG_WORKER_KEY // "__DIALOG_SETTINGS"
+  static #KEY = DIALOG_WORKER_KEY // "SECTION_DIALOG"
   static #localType =  DIALOG_TYPE // "(Number|Boolean|Array.<Number>|Array.<Boolean>)"
   /**
    * Key which this worker will handle
@@ -5546,36 +5525,36 @@ class DialogWorker extends Setting {
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
       let val = dlg.getValue("pos")
       _.bassert(1,val == 22,"get the value via DialogWorker")
-      let litS = { __DIALOG_SETTINGS:{pos:22}}
+      let litS = { SECTION_DIALOG:{pos:22}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.pos")
+      let valS = set.getValue("SECTION_DIALOG.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
       }/**********************************************************************/{
       let lit = { line: {pos:22}}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
       let val = dlg.getValue("line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
-      let litS = { __DIALOG_SETTINGS:{line: {pos:22}}}
+      let litS = { SECTION_DIALOG:{line: {pos:22}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
+      let valS = set.getValue("SECTION_DIALOG.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{
       let lit = {pos:[22,14]}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest1",par)
       let val = dlg.getValue("pos")
       _.bassert(21,areEqual(val,[22,14]),"get the value via DialogWorker")
-      let litS = { __DIALOG_SETTINGS:{pos:[22,14]}}
+      let litS = { SECTION_DIALOG:{pos:[22,14]}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.pos")
+      let valS = set.getValue("SECTION_DIALOG.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{
       let lit = { line: {pos:[22,14]}}
       let dlg = new DialogWorker(lit,"DialogWorker:getValueTest11",par)
       let val = dlg.getValue("line.pos")
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
-      let litS = { __DIALOG_SETTINGS:{line: {pos:[22,14]}}}
+      let litS = { SECTION_DIALOG:{line: {pos:[22,14]}}}
       let set = new Setting(litS,"DialogWorker:getValueTest12",par)
-      let valS = set.getValue("__DIALOG_SETTINGS.line.pos")
+      let valS = set.getValue("SECTION_DIALOG.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{
       }/**********************************************************************/
@@ -5594,7 +5573,7 @@ registeredExceptions.push(
 )
 
 class TypesWorker extends Setting {
-  static #KEY = TYPES_WORKER_KEY // "__NOTE_TYPES"
+  static #KEY = TYPES_WORKER_KEY // "SECTION_NOTETYPES"
   static #localType = TYPES_TYPE  // "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>|Function)"
   /** Key which this worker will handle
    * @type {String}
@@ -5817,36 +5796,36 @@ class TypesWorker extends Setting {
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
       let val = typ.getValue("section.pos")
       _.bassert(1,val == 22,"get the value via TypesWorker")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {pos:22}}}
+      let litS = { SECTION_NOTETYPES:{__SPEC: {REPEAT: true, },  section: {pos:22}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.section.pos")
+      let valS = set.getValue("SECTION_NOTETYPES.section.pos")
       _.bassert(2,valS == 22,"get the value via Setting")
       }/**********************************************************************/{
       let lit = { __SPEC: {REPEAT: true, },  section: {line: {pos:22}}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
       let val = typ.getValue("section.line.pos")
       _.bassert(11,val == 22,"get the value via Setting")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {line: {pos:22}}}}
+      let litS = { SECTION_NOTETYPES:{__SPEC: {REPEAT: true, },  section: {line: {pos:22}}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.section.line.pos")
+      let valS = set.getValue("SECTION_NOTETYPES.section.line.pos")
       _.bassert(12,valS == 22,"get the value via Setting")
       }/**********************************************************************/{
       let lit = { __SPEC: {REPEAT: true, },  section: {pos:[22,14]}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest1",par)
       let val = typ.getValue("section.pos")
       _.bassert(21,areEqual(val,[22,14]),"get the value via TypesWorker")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {pos:[22,14]}}}
+      let litS = { SECTION_NOTETYPES:{__SPEC: {REPEAT: true, },  section: {pos:[22,14]}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.section.pos")
+      let valS = set.getValue("SECTION_NOTETYPES.section.pos")
       _.bassert(22,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/{
       let lit = { __SPEC: {REPEAT: true, },  section: {line: {pos:[22,14]}}}
       let typ = new TypesWorker(lit,"TypesWorker:getValueTest11",par)
       let val = typ.getValue("section.line.pos")
       _.bassert(31,areEqual(val,[22,14]),"get the value via Setting")
-      let litS = { __NOTE_TYPES:{__SPEC: {REPEAT: true, },  section: {line: {pos:[22,14]}}}}
+      let litS = { SECTION_NOTETYPES:{__SPEC: {REPEAT: true, },  section: {line: {pos:[22,14]}}}}
       let set = new Setting(litS,"TypesWorker:getValueTest12",par)
-      let valS = set.getValue("__NOTE_TYPES.section.line.pos")
+      let valS = set.getValue("SECTION_NOTETYPES.section.line.pos")
       _.bassert(32,areEqual(valS,[22,14]),"get the value via Setting")
       }/**********************************************************************/
     }
@@ -6182,7 +6161,7 @@ async function foty(tp, app) {
     let templ = new Templater(setting, tp, app)
     await templ.doTheWork()
     let notetype = templ.notetype
-    let noteCfg = setting.at("__NOTE_TYPES."+notetype)
+    let noteCfg = setting.at("SECTION_NOTETYPES."+notetype)
     //setting.showWhatGoesOut(0)
     //noteCfg.showWhatGoesOut(0)
     //noteCfg.showVALUES(0)
