@@ -1,7 +1,50 @@
 # foty
 Erzeugen Sie eine neue Notiz in [Obsidian](https://obsidian.md/) und ein Template wird eingefügt, das vom Namen des Ordners abhängt.
 
-## Einrichtung
+## English
+### Installation
+- Copy [foty.js](https://github.com/MonikaLobinger/foty/blob/main/_scripts/foty.js) to `SCRIPTFOLDER`
+- Copy [foty_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/atest_Vorlage.md) to `TEMPLATEFOLDER`
+- Install Plugin [Templater](https://github.com/SilentVoid13/Templater) 
+- Configure Templater 
+  - Set `Template folder location` to `TEMPLATEFOLDER` 
+  - Switch `Trigger Templater on new file creation` on
+  - Switch `Enable file regex templates` on
+  - Next line create a `file regex` for all files: 
+    - `.*` `TEMPLATEFOLDER/foty_Vorlage.md` 
+  - Set `Script file folder location` to `SCRIPTFOLDER`
+
+### Benutzung
+On Creating new notes template `foty_Vorlage.md` now will alway be inserted, this calls script `foty.js`. 
+
+With Plugin `Templater` the template can be inserted directly in existing files.
+
+### Anpassung
+On top of file `SCRIPTFOLDER/foty.js` in section SECTION_NOTETYPES (of object `user_configuration`) note types are stored.
+
+SECTION_NOTETYPES has an entry `__SPEC` and an entry `defaults` - those are not a note type. All the other entires are note types, which will be created depending on the folder of the new note.
+
+All of the notetypes besides one can be deleted. They can be renamed. They can be changed.
+
+To link a folder to a note type, add folders to the key `folders`. 
+
+If notes of a type should have a marker at the beginning of the name, add this string to the key `marker`.
+
+The key `frontmatter` contains all entires which will be written as YAML to the notes header.
+
+The key `page` contains all entries, which `foty_Vorlage` will retrieve for further work.
+
+The names `frontmatter` and `page` are not important, that it works the entry `RENDER` has to exist in a `__SPEC` section. For `frontmatter` `RENDER` has to be `false`, for `page` true, in any other case `RENDER` should not be there. 
+
+Is there a note type `buch` defined, having a  `folders` value `["buch"]` notes which will be created in folder `/buch` but even in subfolder `/buch/test` will get note type `buch`. But not if you additionally have defined a note type  `test`, with `folders` value `["test"], because the most deepest folder will be choosen.
+
+### Example
+In `SCRIPTFOLDER/foty.js` are two (very) simple example configurations. Activate them by removing the comment form the line `//user_configuration = example_configurationN`. Line then will look so: `user_configuration = example_configurationN`. (`N` means number of exmaple )
+
+Über den Beispielen sind auf Englisch die Werte der Einträge genauer erklärt als dies ein einfacher Name kann.
+
+## Deutsch
+### Einrichtung
 - Kopiere [foty.js](https://github.com/MonikaLobinger/foty/blob/main/_scripts/foty.js) nach `SCRIPTFOLDER`
 - Kopiere [foty_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/atest_Vorlage.md) nach `TEMPLATEFOLDER`
 - Installiere Plugin [Templater](https://github.com/SilentVoid13/Templater) 
@@ -13,12 +56,12 @@ Erzeugen Sie eine neue Notiz in [Obsidian](https://obsidian.md/) und ein Templat
     - `.*` `TEMPLATEFOLDER/foty_Vorlage.md` 
   - `Script file folder location` auf `SCRIPTFOLDER` setzen
 
-## Benutzung
+### Benutzung
 Bei der Erzeugung neuer Notizen wird das Template `foty_Vorlage.md` nun immer eingefügt, und dies ruft das Script `foty.js` auf. 
 
 Auch kann man über das Plugin `Templater` die Vorlage direkt in existiernede Dateien einfügen.
 
-## Anpassung
+### Anpassung
 Ganz oben in der Datei `SCRIPTFOLDER/foty.js` im Abschnitt SECTION_NOTETYPES (des Objekts `user_configuration`) verwalten Sie Typen für Notizen.
 
 SECTION_NOTETYPES enthält einen Eintrag `__SPEC` und einen Eintrag `defaults` - diese beiden sind keine Notiztypen. Alles andere sind Notiztypen die abhängig vom Verzeichnis der neuen Notiz erzeugt werden.
@@ -37,32 +80,13 @@ Die Namen `frontmatter` und `page` sind nicht wesentlich, wichtig für diese Fun
 
 Haben Sie einen Notiztyp `buch`, mit einem `folders` Wert von `["buch"]` werden im Verzeichnis `/buch` aber auch im Verzeichnis `/buch/test` erzeugte Notizen den Typ `buch` erhalten. Ausser Sie haben noch einen Notiztyp `test`, mit einem `folders` Wert von `["test"], denn es wird die spezialisierteste Typedefinition gewählt, das tiefste Verzeichnis.
 
-## Beispiel
+### Beispiel
 In `SCRIPTFOLDER/foty.js` stehen zwei (sehr) einfache Beispielkonfigurationen. Die können sie aktivieren, indem Sie den Kommentar von der Zeile `//user_configuration = example_configurationN` entfernen - die Zeile sähe dann so aus: `user_configuration = example_configurationN`. (Das große `N` am Ende steht für die Nummer des Beispieles )
 
 Über den Beispielen sind auf Englisch die Werte der Einträge genauer erklärt als dies ein einfacher Name kann.
 
-## Some old English Words
 
-Folder Types for [Obsidian](https://obsidian.md/), Plugin [Templater](https://github.com/SilentVoid13/Templater) has to be installed
-
-|| [History of foty.js](https://github.com/MonikaLobinger/foty/commits/main/_scripts/foty.js) || [All main commits](https://github.com/MonikaLobinger/foty/commits/main) ||
-
-This script [foty.js](https://github.com/MonikaLobinger/foty/blob/main/_scripts/foty.js) is called from template [atest_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/atest_Vorlage.md)
-
-### Previous
-
-The precursor of this script [onne.js](https://github.com/MonikaLobinger/foty/blob/main/_scripts/onne.js) is called from template [One_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/One_Vorlage.md)
-
-But this is much to complicated and unstructured for my taste and it is not generic - changing my needs or being used for other users needs will result in code changes (not only data changes)
-
-### Current
-
-So I am working on a generic version.
-
-Every line of code you do not write is good 
-
-### JSDoc
+## JSDoc
 
 - `cd NotebookDirectory/_`
 - `npm install -D jsdoc`
