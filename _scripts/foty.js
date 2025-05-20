@@ -355,14 +355,20 @@ function headerPerson(noteName) {
     }
   }
   let strArr = name.split(",")
-  header = strArr[1].trim()+" "+strArr[0].trim()
+  if(strArr.length > 1)
+    header = strArr[1].trim()+" "+strArr[0].trim()
+  else
+    header = name
   return header
 }
 function headerOrt(noteName) {
   let header = ""
   let name = noteName
   let strArr = name.split(",")
-  header = strArr[0].trim()+" in "+strArr[1].trim()
+  if(strArr.length > 1)
+    header = strArr[1].trim()+" "+strArr[0].trim()
+  else
+    header = name
   return header
 }
 //    #endregion USER CALLBACKS
@@ -408,6 +414,7 @@ let user_configuration = {
         private:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
         publish:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
         tags:             {__SPEC:false, DEFAULT: cbkFmtTags, TYPE: "(Array.<String>|Function)",},
+        revised:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
       },
       page: { __SPEC: {RENDER: true,},
         type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
@@ -416,7 +423,7 @@ let user_configuration = {
         prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
         nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
         firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
-        lastline:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        lastline:         {__SPEC:false, DEFAULT: "## -footnotes", TYPE: "(String|Function)",},
       },
     },
     obsidian: {
@@ -524,6 +531,13 @@ let user_configuration = {
       name_prompt: "Verwaltungsthema",
       frontmatter: { private: true, },
     },
+    done:   {
+      title_date_function:  cbkCalcDateTitle,
+      title_before_date: "Heute erledigt ",
+      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+      folders: ["Done"],
+      frontmatter: { private: true, },
+    },
     it:             {
       folders: ["IT"],
     },
@@ -537,6 +551,10 @@ let user_configuration = {
       folders: ["Software"],
       name_prompt: "Name der Software, die beschrieben wird",
     },
+    linux:          {
+      page: { pict: "/_/_resources/Linux_mascot_tux_80p.png", pict_width: 50,},
+      folders: ["Linux"],
+    },
     note:           {
     },
   },
@@ -546,8 +564,7 @@ let user_configuration = {
 
 //prettier-ignore
 let example_configuration = {
-  __NOTE_TYPES:
-  {
+  __NOTE_TYPES: {
     note: {
       marker: "{w}",
       yaml: {__SPEC: {RENDER: false,}, aliases: aliasOrt, borgia: "Lucrezia", },
@@ -563,12 +580,12 @@ let example_configuration2 = {
     fueralle: {
       __SPEC: {REPEAT: true},  
       yaml: {__SPEC: {RENDER: false,},
-        aliases:          {__SPEC:false, DEFAULT: aliasOrt, TYPE: "(Array.<String>|Function)"},
-        borgia:           {__SPEC:false, DEFAULT: "Lucrezia", TYPE: "String", },
+        aliases:   {__SPEC:false, DEFAULT: aliasOrt, TYPE: "(Array.<String>|Function)"},
+        borgia:    {__SPEC:false, DEFAULT: "Lucrezia", TYPE: "String", },
       },
       show: { __SPEC: {RENDER: true,},
-        firstline:        {__SPEC:false, DEFAULT: "DAS WORT", TYPE: "String",},
-        fugger:           {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
+        firstline: {__SPEC:false, DEFAULT: "DAS WORT", TYPE: "String",},
+        fugger:    {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
       },    
     },
     alt: { show: { lastline: "ALT", type:"alt"} },
@@ -6206,5 +6223,4 @@ async function foty(tp, app) {
   if (!DEBUG) dbgYAML = undefined
   return Object.assign({}, frontmatterYAML, dbgYAML, testYAML, renderYAML)
 }
-const lit1 = {__SPEC: {RENDER: true}, a: 23}
 

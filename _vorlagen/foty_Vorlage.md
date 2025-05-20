@@ -1,27 +1,4 @@
----
-<%_*
-// line "## -footnotes" is for css:
-// [data-heading="-footnotes"] {
-//     display: none;
-// }
-    let notelastline="\
-## Automatische Auflistungen\n\
-### Tasks (automatisch)\n\
-```dataview\n\
-TASK WHERE file.name = this.file.name\n\
-     AND !fullyCompleted\n\
-```\n\
-### Tags (automatisch)\n\
-```dataview\n\
-LIST WITHOUT ID file.tags \n\
-WHERE file.name = this.file.name \n\
-SORT file.tags DESC\n\
-```\n\
-## -footnotes\
-"
-    let didarylastline="## -footnotes"
-
-
+<%*
     let rendermode = false;
     let type       = "";
     let pict       = "";
@@ -29,16 +6,16 @@ SORT file.tags DESC\n\
     let firstline  = "";
     let prevlink   = "";
     let nextlink   = "";
-    let lastline   = notelastline;
-    let fugger     = false;
+    let lastline   = "";
+    let fugger     = false; // used by example configurations
+    
+    
+    let knownYAML  = ["aliases", "cssclass", "date_created", "private", "publish", 
+                      "tags", "revised"];
+    const inYAML   = new Map()
     let results    = await tp.user.foty(tp, app); 
-    if(results.CANCELLED == true) {
-        return
-    }
 
-    let knownKeys = ["aliases", "cssclass", "date_created", "private", "publish", "tags"];
-    const yamlentries = new Map()
-    let ll = false; 
+    if(results.CANCELLED == true) { return }
 
     for (const [key, value] of Object.entries(results)) {
         if(value == undefined) continue;
@@ -49,55 +26,55 @@ SORT file.tags DESC\n\
                 case "type":      type       = value; break;
                 case "pict":      pict       = value; break;
                 case "pict_width":pict_width = value; break;
-                case "firstline": firstline   = value; break;
-                case "prevlink":  prevlink    = value; break;
-                case "nextlink":  nextlink    = value; 
-                                  if(nextlink != "") lastline  = didarylastline; 
-                                  break;
-                case "lastline":  lastline     = value; ll=true; break;
-                case "fugger":    fugger       = value; break;
+                case "firstline": firstline  = value; break;
+                case "prevlink":  prevlink   = value; break;
+                case "nextlink":  nextlink   = value; break;
+                case "lastline":  lastline   = value; break;
+                case "fugger":    fugger     = value; break;
                 default: break;
             }
-        }
-        if(!rendermode) {
-            yamlentries.set(key,value);
+        } else { 
+         inYAML.set(key,value); 
         }
     } 
-    if(fugger && !ll) {
-        lastline="am ende "+type+"!"
-    }
+    if(fugger && lastline != "") lastline="am ende "+type+"!";%>
 
-    knownKeys.forEach(key => {%>
-<% key %>: <% yamlentries.get(key) %>
-<%_*    yamlentries.delete(key);
+
+<%_*// ***** WRITING Frontmatter ***** 
+%>---<%*
+    knownYAML.forEach(key => {%>
+<% key %>: <% inYAML.get(key) %>
+<%_*    inYAML.delete(key);
     })
-    yamlentries.forEach((val, key, m) => {%>
+    inYAML.forEach((val, key, m) => {%>
 <% key %>: <% val %>
-<%_*    yamlentries.delete(key);
+<%_*    inYAML.delete(key);
     })
 %>
 ---
 
 
-<%_* if(pict!="") { 
-         if(pict_width!=0) { %>
+<%_*// ***** WRITING Picture ***** 
+    if(pict!="") { 
+        if(pict_width!=0) { %>
 ![|<% pict_width %>](<% pict %>)
-<%_*     } else { %>
+<%_*} else { %>
 ![](<% pict %>)
-<%_*     } %>
-<%_* } %>
+<%_*    } %>
+<%_*} %>
 
 
 
-<%_* if(firstline!="") { %>
+<%_* // ***** WRITING Firstline and setting Cursor***** 
+    if(firstline!="") { %>
 # <% firstline %>
-<%_* } -%>
+<%_*} -%>
 
 <% tp.file.cursor(1) %>
 
 
-
-<%_* if(nextlink!="") { %>
+<%_* // ***** WRITING links to prev/next ***** 
+if(nextlink!="") { %>
 <%*      if(prevlink!="") { %>
 &#9668;<% prevlink %>
 <%_*     } _%>
@@ -106,6 +83,7 @@ SORT file.tags DESC\n\
 
 
 
-<%_* if(lastline!="") { %>
+<%_* // ***** WRITING Lastline ***** 
+    if(lastline!="") { %>
 <% lastline %>
 <%_* } %>
