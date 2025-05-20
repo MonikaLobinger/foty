@@ -1,10 +1,10 @@
 # foty
 Erzeugen Sie eine neue Notiz in [Obsidian](https://obsidian.md/) und ein Template wird eingefügt, das vom Namen des Ordners abhängt.
-
+  
 ## English
 ### Installation
 - Copy [foty.js](https://github.com/MonikaLobinger/foty/blob/main/_scripts/foty.js) to `SCRIPTFOLDER`
-- Copy [foty_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/atest_Vorlage.md) to `TEMPLATEFOLDER`
+- Copy [foty_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/foty_Vorlage.md) to `TEMPLATEFOLDER`
 - Install Plugin [Templater](https://github.com/SilentVoid13/Templater) 
 - Configure Templater 
   - Set `Template folder location` to `TEMPLATEFOLDER` 
@@ -46,7 +46,7 @@ In `SCRIPTFOLDER/foty.js` are two (very) simple example configurations. Activate
 ## Deutsch
 ### Einrichtung
 - Kopiere [foty.js](https://github.com/MonikaLobinger/foty/blob/main/_scripts/foty.js) nach `SCRIPTFOLDER`
-- Kopiere [foty_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/atest_Vorlage.md) nach `TEMPLATEFOLDER`
+- Kopiere [foty_Vorlage.md](https://github.com/MonikaLobinger/foty/blob/main/_vorlagen/foty_Vorlage.md) nach `TEMPLATEFOLDER`
 - Installiere Plugin [Templater](https://github.com/SilentVoid13/Templater) 
 - Konfiguriere Templater 
   - `Template folder location` auf `TEMPLATEFOLDER` setzen
