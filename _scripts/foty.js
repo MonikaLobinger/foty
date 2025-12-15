@@ -337,6 +337,25 @@ let example_configuration2 = {
   }
 }
 //user_configuration = example_configuration2
+let example_configuration3 = {
+  SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
+  SECTION_NOTETYPES: {
+    defaults: {
+      __SPEC: {REPEAT: true},  
+      yaml: {__SPEC: {RENDER: false,},
+        publish:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
+      },
+      show: { __SPEC: {RENDER: true,},
+        type:      {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
+        firstline: {__SPEC:false, DEFAULT: "First Line", TYPE: "String",},
+        lastline: {__SPEC:false, DEFAULT: "##Footnotes", TYPE: "String",},
+      },    
+    },
+    book: { folders: ["book"], },
+    test: { folders: ["test"], yaml: { publish: false, }, },
+  }
+}
+//user_configuration = example_configuration3
 //#endregion EXAMPLE CONFIGURATIONS
 
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
@@ -5967,15 +5986,45 @@ class Templater {
           let f = String(folders)
           folders = [f]
         }
+        let containssubpaths = folders.some(f => {
+          let hasdelimiter = f.includes("\\")
+          if(!hasdelimiter) {
+            hasdelimiter = f.includes("/")
+          }
+          return hasdelimiter
+        })
         let depth=0
-        let answer = pathParts.some(part => {
-          depth++
-          return folders.some(folder => {
-            if(0 == part.localeCompare(folder)) {
-              return true
+        let answer = false
+        if(containssubpaths) {
+          // folders with subpaths have higher priority
+          // more subpaths have higher priority
+          folders.some(folder => {
+            let factor = 0
+            let idx = -1
+            if(folder.includes("\\") || folder.includes("/")) {
+              idx = noteWithPath.lastIndexOf(folder) 
+              factor = (folder.match(/\//g) || []).length
+              if(factor == 0) {
+                factor = (folder.match(/\\/g) || []).length
+              }
+            }
+            if(idx>-1) {
+              depth=factor*100+idx
+              answer = true
+            console.log( folders[0] + " " + depth + " " + noteWithPath )
             }
           })
-        })
+        } 
+        if(answer == false) {
+          answer = pathParts.some(part => {
+            depth++
+            return folders.some(folder => {
+              if(0 == part.localeCompare(folder)) {
+                return true
+              }
+            })
+          })
+        }
         if(answer == true) {
           if(depthArr.some(d => d > depth)) {
             answer = false
