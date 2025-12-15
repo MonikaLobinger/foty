@@ -35,7 +35,7 @@ let user_configuration = {
       date_created_date_format: {__SPEC:false, DEFAULT:"YYYY-MM-DD",TYPE:"Date", },
       frontmatter: {__SPEC: {RENDER: false,},
         aliases:          {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
-        cssclass:         {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
+        cssclasses:       {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
         date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
         position:         {__SPEC:false, IGNORE: true, TYPE: "Boolean", },
         private:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
@@ -174,6 +174,12 @@ let user_configuration = {
       name_prompt: "Receipe, zuerst wird es als Entwurf erstellt",
       frontmatter: { publish: true, },
     },
+    blog:       {
+      name_end: "_draft",
+      folders: ["Blog"],
+      name_prompt: "Allgemeiner Blogeintrag, zuerst wird es als Entwurf erstellt",
+      frontmatter: { publish: true, },
+    },
     software:       {
       folders: ["Software"],
       name_prompt: "Name der Software, die beschrieben wird",
@@ -278,7 +284,7 @@ function headerOrt(noteName) {
 //    key "____" is sent.
 //    aliases: Array of string
 //        Function cbkFmtAlias notename, mocstring removed  and "," replaced with blank
-//    cssclass: Array of string
+//    cssclasses: Array of string
 //        Function cbkFmtCssClasses returns notType in array
 //    date_created: Date
 //        cbkFmtCreated returns current date, respecting 
