@@ -1,6 +1,20 @@
+module.exports = foty // templater call: "await tp.user.foty(tp, app)"
+// caveat:
+//    Obsidian Preferences Section Appearance
+//      - Show inline title
+//      - Show tab title bar
+//    seem to change the way this template works when creating new unnamed files.
+//    They do not - they change the way, obsidian works on new file creation.
+//    If no inline title and no tab title bar is given, it will pop up a dialog
+//    asking for a filename.
+//    If no inline title but tab title bar is given, one has to press return
+//    after new file creation.
+//    See following post, which describes the solution
+//    https://forum.obsidian.md/t/templater-triggering-before-choosing-files-title/52968/11
+//    and the containing thread, which describes the problem.
 //#region USER CONFIGURATION
 //prettier-ignore
-let user_configuration = {
+let user_configuration_original = {
   // General section has to be the first section
   SECTION_GENERAL: //localType: (Number|String|Boolean)
   {
@@ -11,6 +25,7 @@ let user_configuration = {
   {
     NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
     TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
+      // !! Has to be set correctly to name of untitled files in your vault
     TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
   },
   SECTION_DIALOG: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
@@ -133,9 +148,10 @@ let user_configuration = {
     lesetagebuch:   {
       title_date_function:  cbkCalcDateTitle,
       title_before_date: "Lesetagebucheintrag ",
-      page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-      folders: ["Lesetagebuch"],
+        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink,
       firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
+        },
+        folders: ["Lesetagebuch"],
     },
     unbedacht:      {
       date_created_date_format:"dddd, D. MMMM YYYY, H:mm:ss",
@@ -192,6 +208,7 @@ let user_configuration = {
     },
   },
 }
+user_configuration = user_configuration_original
 // Users can use predefined callback functions and can write and use their own
 function aliasPerson(noteName) {
   let aliases=[]
@@ -337,6 +354,7 @@ let example_configuration2 = {
   }
 }
 //user_configuration = example_configuration2
+
 let example_configuration3 = {
   SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
   SECTION_NOTETYPES: {
@@ -358,7 +376,6 @@ let example_configuration3 = {
 //user_configuration = example_configuration3
 //#endregion EXAMPLE CONFIGURATIONS
 
-module.exports = foty // templater call: "await tp.user.foty(tp, app)"
 //@todo return default value of allowed type if type of given value not allowed
 // Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
 // Script for Obsidian to create different note types, see foty.md for details.
