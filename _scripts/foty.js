@@ -85,6 +85,7 @@ let user_configuration_original = {
       page: { pict: "/_/_resources/pexels-ekrulila-2203051_22p.jpg", pict_width: 100,},
     },
     ort:            {
+        marker: "&",
       folders: ["zwischenreich"],
       page: { pict: "/_/_resources/pexels-dzeninalukac-1563005_10p.jpg", pict_width: 100,
               firstline: headerOrt, },
@@ -92,6 +93,7 @@ let user_configuration_original = {
       frontmatter: {aliases: aliasOrt, },
     },
     person:         {
+        marker: "=",
       folders: ["zwischenreich"],
       page: { pict: "/_/_resources/pexels-lucasandrade-14097235_15p.jpg", pict_width: 100,
               firstline: headerPerson, },
@@ -123,7 +125,12 @@ let user_configuration_original = {
     },
     exzerpt:        {
       marker: "$",
-      folders: ["Exzerpte"],
+        folders: ["zwischenreich"],
+        name_prompt: "Autornachname - Buchtitel",
+      },
+      mitschrift:        {
+        marker: "@",
+        folders: ["zwischenreich"],
       name_prompt: "Autornachname - Buchtitel",
     },
     rezept:         {
@@ -287,7 +294,12 @@ function headerOrt(noteName) {
 //    Only recogizes uppercase letters D, M, Y 
 //    Only accepts formats expanding to pure numbers
 // folders: Names of (sub)folders in which notes of this type will be placed
-//    Only pure folder names are accepted, no paths
+//    Pure folder names are accepted and path parts, e.g. whit two folder types
+//    lettrs:{folders: ["Letters"],} and mylettrs:{folders: ["Private/Letters"],}
+//    lettrs will apply to all folders which contain a pathpart "Letters", e.g.
+//    root/Composers/b/Bach/Letters and root/Letters/from but not to folders
+//    which contain the pathpart "Private/Letters", e.g.  root/Private/Letters
+//    there the folder type mylettrs will apply.
 // tag_pre: String to be prepended to every tag created with cbkFmtTags
 // name_promt: Prompt to be used when asking for notename
 //    Replaces the default prompt hardcoded as NAME_PROMPT in SECTION_TRANSLATE
@@ -375,6 +387,587 @@ let example_configuration3 = {
 }
 //user_configuration = example_configuration3
 //#endregion EXAMPLE CONFIGURATIONS
+
+// Eine erweiterte Konfiguration, die die neuen Features:
+// 1) Foldertype mit Pfad und
+// 2) Kommunikation zwischen den Callback Funktionen.
+// verwendet.
+//
+// zu 1) Neue Notizen in XXXStutiis/Mitschriften werden mit dem Foldertype
+// stuttiismitschrift erstellt und neue Notizen in allen anderen Verzeichnissen,
+// die "Mitschriften" als Pfadbestandteil enthalten mit dem Foldertype
+// werkstattmitschrift. Die Notizen haben unterschiedliche YAML.
+//
+// zu 2) Die Callbackfunktionen haben nun einen optionalen 6. Paramter, ein
+// Objekt, in das sie Eigenschaften schreiben können oder die lesen können, die
+// andere Callback Funktionen gesetzt haben.
+// Die title_date_function cbkAskGoogleForTitle erfrägt von google books
+// eine Liste von bis zu 30 Büchern zu den vom Nutzer gegebenen Suchangaben. Der
+// Nutzer wählt davon ein Buch aus. Aus den Werten dieses ausgewählten Buches
+// sollen später in verschiedenen Callback Funktionen verschiedene YAML Einträge
+// gebildet werden. All diese Werte trägt cbkAskGoogleForTitle als Properties
+// in den 6. Parameter ein. Die anderen Callback Funktionen cbkBuchTitel,
+// cbkBuchAutor, cbkBuchVerlag lesen die Information, die sie brauchen aus
+// dem Objekt und übergeben sie ans YAML.
+// Anmerkung: Dieser Parameter ist immer da, auch wenn nicht alle Funktionen ihn
+// angeben. In Javascript kann man Parameter, die man nicht braucht weglassen.
+let schule_configuration = {
+  // General section has to be the first section
+  SECTION_GENERAL: {
+    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
+    RELATIVE_PATH: true, // create links with relative or absolute paths
+  },
+  SECTION_TRANSLATE: {
+    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+  },
+  SECTION_NOTETYPES: {
+    __SPEC: {DEFAULT: "note"},
+    defaults: {
+      __SPEC: {REPEAT: true},
+      mocstring:          {__SPEC:false, DEFAULT:"-",TYPE:"String", },
+      schoolyaml: {__SPEC: {RENDER: false,},
+                          // returns Name of the note type
+        cssclasses:       {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
+        date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
+        author:           {__SPEC:false, DEFAULT: "Ueberphilosophy", TYPE: "String", },
+        publish:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
+        tags:             {__SPEC:false, DEFAULT: "[]", TYPE: "(String|Array.<String>|Function)",},
+      },
+      schoolshow: { __SPEC: {RENDER: true,},
+        type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
+        prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        scriptline:       {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
+        sndline:          {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        thrdline:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        lastline:         {__SPEC:false, DEFAULT: cbkFmtLastLine, TYPE: "(String|Function)",},
+      },
+    },
+    note:                 { // note
+      schoolyaml: { },
+      schoolshow: { },
+    },
+    diary:                { // diary
+      folders: ["Diary", ],
+      title_date_function:  cbkCalcDateTitle,
+      title_date_format: "YYYY-MM-DD",
+      schoolyaml: { publish: false, },
+      schoolshow: {
+        prevlink:  cbkPrevDateLink,
+        nextlink:  cbkNextDateLink,
+        firstline: cbkNoteName,
+        sndline:   "## ",
+      },
+    },
+    material:             { // foldernote, catalog, material
+      folders: ["Materialien", ],
+      name_prompt: "Titel_der_Vorlesung_Jahr_Institut_Speaker",
+      schoolyaml: {
+        cssclasses:   cbkMaterialCssClasses,
+        date_created: cbkMaterialDateCreated,
+        publish:      cbkMaterialPublish,
+        tags:         cbkMaterialTags,
+        ddckey:       cbkMaterialDdcKey,
+        media:        cbkMaterialMedia,
+        author:       cbkMaterialAuthor,
+      },
+      schoolshow: {
+        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```",
+        sndline:     cbkMaterialSndLine,
+        thrdline:    cbkMaterialThrdLine,
+        fourthline:  cbkMaterialFourthLine,
+        fifthline:   cbkMaterialFifthLine,
+        lastline:    cbkMaterialLastLine,
+      },
+    },
+    autor:                { // autor
+      folders: ["Autoren",],
+      name_prompt: "Autornachname",
+      name_end: " Quellen",
+      schoolyaml: {
+        ddckey:  {__SPEC:false, VALUE: "", TYPE: "String", },
+        tags:    cbkAutorTag,
+      },
+      schoolshow: {
+        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```\n",
+        firstline: cbkNoteName,
+        sndline:  cbkTimeLine,
+      },
+    },
+    autorsek:             { // sekundaer
+      folders: ["Autoren-Sekundaer",],
+      name_prompt: "Autornachname",
+      name_end: " Sekundaer",
+      schoolyaml: {
+        cssclasses: "sekundaer",
+        tags:    cbkAutorTag,
+      },
+      schoolshow: {
+        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```\n",
+        firstline: cbkSekundaerName,
+      },
+    },
+    feld:                 { // feld
+      folders: ["Feld"],
+      schoolyaml: {
+        date_created: cbkFmtCreated,
+        author: "Ueberphilosophy",
+        publish: false,
+      },
+      schoolshow: {
+        scriptline: cbkScriptLineFeld,
+        firstline: cbkFrstLineFeld,
+        sndline:   cbkSndLineFeld,
+        thrdline:  cbkThrdLineFeld,
+        lastline:  cbkFmtLastLine,
+      },
+    },
+    // XXXstutiis/ ist die öffentliche Version von Werkstatt/
+    // Vor der Veröffentlichung wird (priv) Werkstatt/ als .Werkstatt/ versteckt
+    // und XXXstutiis/ zu Werkstatt/ umbenannt
+    stutiis:              { // studies
+      folders: ["XXXstutiis"],
+      schoolyaml: {
+        date_created: "",
+        author: "",
+        cssclasses: "studies",
+        publish: false,
+      },
+    },
+    stutiismitschrift:    { // studies @
+      folders: ["XXXstutiis/Mitschriften"],
+      marker: "@",
+      name_prompt: "Titel der Veranstaltung",
+      schoolyaml: {
+        date_created: "",
+        author: "",
+        cssclasses: "studies",
+        publish: false,
+      },
+      schoolshow: {
+        firstline: "Mitschrift",
+        sndline:   cbkSndLineMitschrift,
+        thrdline:  "## Offen",
+      },
+    },
+    werkstattmitschrift : { // werkstatt @
+      folders: ["Mitschriften"],
+      marker: "@",
+      name_prompt: "Titel der Veranstaltung",
+      schoolyaml: {
+        // /* schule_public */  date_created: "",
+        /* schule_private */ date_created: cbkFmtCreated,
+        // /* schule_public */  author: "",
+        /* schule_private */ author: "Ueberphilosophy",
+        // /* schule_public */  cssclasses: "studies",
+        /* schule_private */ cssclasses: "werkstatt",
+        publish: false,
+      },
+      schoolshow: {
+        firstline: "Mitschrift",
+        sndline:   cbkSndLineMitschrift,
+        thrdline:  "## Offen",
+      },
+    },
+    audio:                { // audio {a}
+      folders: ["Werkstatt"],
+      marker: "{a}",
+      name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel ?OPTIONAL /ODER",
+    },
+    buch:                 { // buch {b}
+      folders: ["Werkstatt"],
+      marker: "{b}",
+      name_prompt: "Autornachname - Buchtitel",
+      title_date_function: cbkAskGoogleForTitle,
+      schoolyaml: {
+        buchtitel: cbkBuchTitel,
+        buchuntertitel: cbkBuchUntertitel,
+        buchautor: cbkBuchAutor,
+        buchautorv: cbkBuchAutorv,
+        buchdatum: cbkBuchDatum,
+        buchverlag: cbkBuchVerlag,
+        buchseiten: cbkBuchSeiten,
+        buchsprache: cbkBuchSprache,
+        buchisbn: cbkBuchIsbn,
+        buchisbn13: cbkBuchIsbn13,
+        buchebook: cbkBuchEbook,
+        // ungelesen, gelesen, nochmal, teilweise, aktuell
+        buchstatus: [
+          "gelesen",
+          "aktuell",
+          "teilweise",
+          "nochmal",
+          "ungelesen",
+        ],
+      }
+    },
+    exzerpt:              { // exzerpt $
+      folders: ["Werkstatt"],
+      marker: "$",
+      name_prompt: "Autornachname - Buchtitel",
+    },
+    mitschrift:           { // mitschrift @
+      folders: ["Werkstatt", "Buchmitschriften"],
+      marker: "@",
+      name_prompt: "Autornachname - Buchtitel",
+    },
+    ort:                  { // ort &
+      folders: ["Werkstatt"],
+      marker: "&",
+      name_prompt: "Ortsname, Land",
+    },
+    person:               { // person =
+      folders: ["Werkstatt"],
+      marker: "=",
+      name_prompt: "Personnachname, Personvorname, ?Geburtsdatum ?OPTIONAL",
+    },
+    video:                { // video {v}
+      folders: ["Werkstatt"],
+      marker: "{v}",
+      name_prompt: "?Reihe - ?Autornachname - Videotitel ?OPTIONAL",
+    },
+    web:                  { // web {w}
+      folders: ["Werkstatt"],
+      marker: "{w}",
+      name_prompt: "?Autor - Webseitentitel - ?Datum ?OPTIONAL",
+    },
+    zitat:                { // zitat °
+      folders: ["Werkstatt"],
+      marker: "°",
+      name_prompt: "Titel Autornachname",
+    },
+    zitate:               { // zitate °°
+      folders: ["Werkstatt"],
+      marker: "°°",
+      name_prompt: "Titel Autornachname",
+    },
+  },
+}
+
+function cbkMitschrift(noteName, noteType, noteSetting, tp, app) {
+  return "[[Werkstatt/Mitschriften/@"+noteName+"|Mitschrift]]\n"
+}
+function cbkFmtLastLine(noteName, noteType, noteSetting, tp, app) {
+  let lastline="## -footnotes"
+  let mocstring = noteSetting.getValue("mocstring")
+  if(noteName.startsWith(mocstring)) {
+    lastline = ""
+  }
+  return lastline
+}
+function cbkAutorTag(noteName, noteType, noteSetting, tp, app) {
+  return noteName.replace(/ /g, '-');
+}
+function cbkTimeLine(noteName, noteType, noteSetting, tp, app) {
+  return "[[timeline#"+noteName+"|Zeitleiste]]"
+}
+function cbkSekundaerName(noteName, noteType, noteSetting, tp, app) {
+  return noteName+" Sekundaer";
+}
+function cbkSndLineMitschrift(noteName, noteType, noteSetting, tp, app) {
+  return "zu [[" + noteName + "]]"
+}
+function cbkTest(noteName, noteType, noteSetting, tp, app) {
+  return "yyyy"
+}
+function cbkBuchTitel(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchtitel
+}
+function cbkBuchUntertitel(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchuntertitel
+}
+function cbkBuchAutor(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchautor
+}
+function cbkBuchAutorv(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchautorv
+}
+function cbkBuchDatum(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchdatum
+}
+function cbkBuchVerlag(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchverlag
+}
+function cbkBuchSeiten(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchseiten
+}
+function cbkBuchSprache(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchsprache
+}
+function cbkBuchIsbn(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchisbn
+}
+function cbkBuchIsbn13(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchisbn13
+}
+function cbkBuchEbook(noteName, noteType, noteSetting, tp, app, computedValues) {
+  return computedValues.buchebook
+}
+async function cbkAskGoogleForTitle(noteName, noteType, noteSetting, tp, app, computedValues) {
+  let noteTitle=""
+  function nachname(name) {
+    return /[^ ]*$/.exec(name)[0]
+  }
+  function vorname(name) {
+    return name.substring(0, name.lastIndexOf(' '))
+  }
+  function jahr(datum) {
+    let jahr = ""
+    if(datum != undefined) {
+      jahr = datum.slice(0,4)
+    }
+    return jahr
+  }
+
+  let maxResults = 20
+  let bookQuery
+  bookQuery = await tp.system.prompt("Angaben um Buch bei Google Books zu suchen 📚🔎");
+  if (bookQuery == undefined) {
+    console.log("User cancelled")
+    return noteTitle
+  }
+  let url = "https://www.googleapis.com/books/v1/volumes?q=" + bookQuery + "&maxResults=" + maxResults.toString()
+  const resp = await fetch(url)
+  if (!resp.ok) {
+    console.log("Fetch klappte nicht")
+    return noteTitle
+  }
+  let data
+  try {
+    data = await resp.json()
+  } catch(e) {
+    console.log("Json klappte nicht")
+    return noteTitle
+  }
+
+  let books = data.items;
+  let texts = []
+  books.map(function(book) {
+    let text=""
+    if(book.saleInfo.isEbook) {
+      text = "ebook: "
+    } else {
+      text = ""
+    }
+    text+= book.volumeInfo.title
+    if(book.volumeInfo.authors != undefined) {
+      book.volumeInfo.authors.forEach((a,i) => {
+        if(i==0) {
+          text+=" - "
+        } else {
+          text+=", "
+        }
+        text+=nachname(a)
+      })
+    }
+    text+= " - " + jahr(book.volumeInfo.publishedDate)
+    text+= " - " + book.volumeInfo.language
+    texts.push(text)
+  })
+  const choosenbook = await tp.system.suggester(texts, books, true, "Buch wählen")
+  if (choosenbook == undefined) {
+    console.log("User cancelled")
+    return noteTitle
+  }
+
+  let title = ""
+  let subtitle = ""
+  let writer = "N/A"
+  let writerv = ""
+  let publishedDate = ""
+  let publisher = "N/A"
+  let description = ""
+  let pageCount = ""
+  let language = ""
+  let isbn = ""
+  let isbn13 = ""
+  let ebook = "papier"
+          // console.log("TITEL")
+  title = choosenbook.volumeInfo.title;
+  if(choosenbook.volumeInfo.subtitle != undefined) {
+    subtitle = choosenbook.volumeInfo.subtitle;
+  }
+          // console.log("AUTOR")
+  if(choosenbook.volumeInfo.authors != undefined) {
+    writer = ""
+    choosenbook.volumeInfo.authors.forEach((a,i) => {
+      if(i>0) {
+        writer+=", "
+        writerv+=", "
+      }
+      writer+=nachname(a)
+      writerv+=vorname(a)
+    })
+  }
+          // console.log("JAHR")
+  publishedDate = jahr(choosenbook.volumeInfo.publishedDate) ;
+          // console.log("VERLAG")
+  if(choosenbook.volumeInfo.publisher != undefined) {
+    publisher = choosenbook.volumeInfo.publisher
+  }
+          // console.log("BESCHREIBUNG")
+  if(choosenbook.volumeInfo.description != undefined) {
+    description = choosenbook.volumeInfo.description;
+  }
+          // console.log("SEITEN")
+  if(choosenbook.volumeInfo.pageCount != undefined) {
+    pageCount = choosenbook.volumeInfo.pageCount ;
+  }
+          // console.log("SPRACHE")
+  if(choosenbook.volumeInfo.language != undefined) {
+    language = choosenbook.volumeInfo.language ;
+  }
+  if(choosenbook.volumeInfo.industryIdentifiers != undefined) {
+            // console.log("ISBN")
+    if (choosenbook.volumeInfo.industryIdentifiers[0] != undefined) {
+      isbn = choosenbook.volumeInfo.industryIdentifiers[0].identifier
+    }
+            // console.log("ISBN13")
+    if (choosenbook.volumeInfo.industryIdentifiers[1] != undefined) {
+      isbn13 = choosenbook.volumeInfo.industryIdentifiers[1].identifier
+    }
+  }
+          // console.log("EBOOK")
+  if(choosenbook.saleInfo.isEbook != undefined) {
+    if (choosenbook.saleInfo.isEbook == true ) {
+      ebook = "EBOOK";
+    }
+  }
+  noteTitle=writer + " - " + title + " - " + publishedDate
+  computedValues.buchtitel = title
+  computedValues.buchuntertitel = subtitle
+  computedValues.buchautor = writer
+  computedValues.buchautorv = writerv
+  computedValues.buchdatum = publishedDate
+  computedValues.buchverlag = publisher
+  computedValues.buchseiten = pageCount
+  computedValues.buchsprache = language
+  computedValues.buchisbn = isbn
+  computedValues.buchisbn13 = isbn13
+  computedValues.buchebook = ebook
+  /*
+  console.log(computedValues.buchtitel)
+  console.log(computedValues.buchuntertitel)
+  console.log(computedValues.buchautor)
+  console.log(computedValues.buchautorv)
+  console.log(computedValues.buchdatum)
+  console.log(computedValues.buchverlag)
+  console.log(computedValues.buchseiten)
+  console.log(computedValues.buchsprache)
+  console.log(computedValues.buchisbn)
+  console.log(computedValues.buchisbn13)
+  console.log(computedValues.buchebook)
+  */
+  let adaptedTitle = noteTitle.replace(/:/g," ")
+  noteTitle = adaptedTitle.replace(/\//g,"")
+  console.log("NOTETITLE: " + noteTitle);
+  return noteTitle
+}
+function isMok(noteName, tp) {
+  let answer = false
+  let path = tp.file.path(true)
+  let parts = path.split("\\")
+  if(parts.length < 2) { parts = path.split("/") }
+  if(parts.length > 1 && parts[parts.length-2] == noteName) {
+    answer = true
+  }
+  return answer
+}
+function isCatalog(noteName,noteSetting) {
+  let answer = false
+  let mocstring = noteSetting.getValue("mocstring")
+  if(noteName.startsWith(mocstring)) {
+    answer = true
+    console.log("ist katalog")
+  }
+  return answer
+}
+function cbkMaterialCssClasses(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return "foldernote"
+  else if(isCatalog(noteName,noteSetting)) return "catalog"
+  else return cbkFmtCssClasses(noteName, noteType, noteSetting, tp, app)
+}
+function cbkMaterialDateCreated(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return "!no!"
+  else return cbkFmtCreated(noteName, noteType, noteSetting, tp, app)
+}
+function cbkMaterialPublish(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return "!no!"
+  else return true
+}
+function cbkMaterialTags(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return "MOC"
+  else return "[]"
+}
+function cbkMaterialDdcKey(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return "!no!"
+  else if(isCatalog(noteName,noteSetting)) return "!no!"
+  else return ""
+}
+function cbkMaterialMedia(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return "!no!"
+  else if(isCatalog(noteName,noteSetting)) return "!no!"
+  else return "video"
+}
+function cbkMaterialAuthor(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return "!no!"
+  else return "Ueberphilosophy"
+}
+function cbkMaterialSndLine(noteName, noteType, noteSetting, tp, app) {
+  // Das Waypoint Plugin schreibt bei korrektem Kommentar Errormeldung in DIESE !js! Datei
+  if(isMok(noteName, tp)) return "% Waypoint %%" 
+  else if(isCatalog(noteName,noteSetting)) {
+    let path = tp.file.path(true)
+    let parts = path.split("\\")
+    if(parts.length < 2) { parts = path.split("/") }
+    if(parts.length > 1) {
+      let heading = ""
+      for(let i = 1; i < parts.length; i++) {
+        heading += "#"
+      }
+      return heading + " " + parts[parts.length-2]
+    } else {
+      return ""
+    }
+  }
+  else return "## []()"
+}
+function cbkMaterialThrdLine(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return ""
+  else if(isCatalog(noteName,noteSetting)) {
+    return "```dataviewjs\nawait dv.executeJs(await dv.io.load(\"Materialien/catalog.js\"));\n```"
+  }
+  else return "#speaker/  #wird_fortgesetzt\n"
+}
+function cbkMaterialFourthLine(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return ""
+  else if(isCatalog(noteName,noteSetting)) return ""
+  else return cbkMitschrift(noteName, noteType, noteSetting, tp, app)
+}
+function cbkMaterialFifthLine(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return ""
+  else if(isCatalog(noteName,noteSetting)) return ""
+  else return "- []()"
+}
+function cbkMaterialLastLine(noteName, noteType, noteSetting, tp, app) {
+  if(isMok(noteName, tp)) return ""
+  else if(isCatalog(noteName,noteSetting)) return ""
+  else return cbkFmtLastLine(noteName, noteType, noteSetting, tp, app)
+}
+function cbkScriptLineFeld(noteName, noteType, noteSetting, tp, app) {
+  return ""
+}
+function cbkFrstLineFeld(noteName, noteType, noteSetting, tp, app) {
+  return noteName + " #" + noteName;
+}
+function cbkSndLineFeld(noteName, noteType, noteSetting, tp, app) {
+  return "## Zeitliche Einordnung\n![[zeitliche Einordnung]]\n## Quellen\n![["+noteName+" Quellen]]"
+}
+function cbkThrdLineFeld(noteName, noteType, noteSetting, tp, app) {
+  return "## Adamson\n![[Adamson nnn "+noteName+"]]\n## Weitere"
+}
+//user_configuration = schule_configuration
 
 //@todo return default value of allowed type if type of given value not allowed
 // Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
@@ -4175,13 +4768,18 @@ class Setting extends BreadCrumbs {
   }
 
   /** LOGS all key.VALUE pairs recursive to console
+   * Functions are shortenend to String "FUNCTION"
    * @param {Number} depth
    */
   showVALUES(depth) {
     let indent = ""
     for(let d=depth;d>0;d--) indent += "    "
     for (const [key, value] of this) {
-      vaut(indent+key, value.VALUE)
+      if(typeof value.VALUE == "function") {
+        vaut(indent+key+".VALUE", "FUNCTION")
+      } else {
+        vaut(indent+key, value.VALUE)
+      }
       if(value.isA(value, Setting))
         value.showVALUES(depth+1)
     }
@@ -5910,6 +6508,7 @@ class Templater {
 
   #cfgname // current notes type name  - only set after done some work
   #cfg //current notes type cfg - only set after done some work
+  #cfgComputedValues={} // title_date_function can add properties to this
 
   #isNew=false
   #filetitle // Name of file (with marker and name_end)
@@ -5945,13 +6544,13 @@ class Templater {
       throw e
     }
   }
-  setValues(vals) {
+  applyFunctions(vals) {
     for (let [key, value] of Object.entries(vals)) {
       if(typeof value == "function") {
-        vals[key]=value(this.#notename, this.#cfgname, this.#cfg, this.#tp, this.#app)
+        vals[key]=value(this.#notename, this.#cfgname, this.#cfg,
+                        this.#tp, this.#app, this.#cfgComputedValues)
       }
     }
-
   }
   #checkIsNewNote() {
     let answer = false
@@ -6148,7 +6747,8 @@ class Templater {
     } else {
       let fu = this.#cfg.getValue("title_date_function", undefined)
       if(typeof fu == "function") {
-        this.#notename = fu(this.#notename, this.#cfgname, this.#cfg, this.#tp, this.#app)
+        this.#notename = await fu(this.#notename, this.#cfgname, this.#cfg,
+                                  this.#tp, this.#app, this.#cfgComputedValues)
       }
     }
     if(this.#notename == "") {
@@ -6243,8 +6843,8 @@ async function foty(tp, app) {
       Object.assign(frontmatterYAML, noteCfg.getFrontmatterYAML())
     if(noteCfg != undefined)
       Object.assign(renderYAML, setting.getRenderYAML(), noteCfg.getRenderYAML())
-    templ.setValues(frontmatterYAML)
-    templ.setValues(renderYAML)
+    templ.applyFunctions(frontmatterYAML)
+    templ.applyFunctions(renderYAML)
   } catch (e) {
     if (e instanceof FotyError) {
       let errYAML = {}
