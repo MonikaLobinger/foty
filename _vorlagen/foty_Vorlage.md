@@ -3,7 +3,12 @@
     let type       = "";
     let pict       = "";
     let pict_width = 0;
+    let scriptline = "";
     let firstline  = "";
+    let sndline    = "";
+    let thrdline   = "";
+    let fourthline = "";
+    let fifthline  = "";
     let prevlink   = "";
     let nextlink   = "";
     let lastline   = "";
@@ -26,7 +31,12 @@
                 case "type":      type       = value; break;
                 case "pict":      pict       = value; break;
                 case "pict_width":pict_width = value; break;
+                case "scriptline":scriptline = value; break;
                 case "firstline": firstline  = value; break;
+                case "sndline":   sndline    = value; break;
+                case "thrdline":  thrdline   = value; break;
+                case "fourthline":fourthline = value; break;
+                case "fifthline": fifthline  = value; break;
                 case "prevlink":  prevlink   = value; break;
                 case "nextlink":  nextlink   = value; break;
                 case "lastline":  lastline   = value; break;
@@ -34,10 +44,18 @@
                 default: break;
             }
         } else { 
+          if(value != "!no!") {
          inYAML.set(key,value); 
+          } else {
+            let idx = knownYAML.indexOf(key);
+            if (idx >= 0) {
+              knownYAML.splice( idx, 1 );
         }
     } 
-    if(fugger && lastline != "") lastline="am ende "+type+"!";%>
+        }
+    }
+    if(fugger && lastline != "") lastline="am ende "+type+"!";
+%>
 
 
 <%_*// ***** WRITING Frontmatter ***** 
@@ -46,9 +64,20 @@
 <% key %>: <% inYAML.get(key) %>
 <%_*    inYAML.delete(key);
     })
-    inYAML.forEach((val, key, m) => {%>
+    inYAML.forEach((val, key, m) => {
+        if(Array.isArray(val)) {%>
+<% key %>:
+  - <% val[0] %>
+x<%key %>:
+<%*         val.forEach((v,i) => {
+                if(i!=0) {%>
+  - <% v %>
+<%_*            }
+            })
+        } else {%>
 <% key %>: <% val %>
-<%_*    inYAML.delete(key);
+<%_*    }
+        inYAML.delete(key);
     })
 %>
 ---
@@ -65,11 +94,37 @@
 
 
 
-<%_* // ***** WRITING Firstline and setting Cursor***** 
+<%_* // ***** WRITING Scriptline ***** 
+    if(scriptline!="") { %>
+<% scriptline %>
+<%_*} -%>
+
+<%_* // ***** WRITING Firstline ***** 
     if(firstline!="") { %>
 # <% firstline %>
 <%_*} -%>
 
+<%_* // ***** WRITING Sndline ***** 
+    if(sndline!="") { %>
+<% sndline %>
+<%_*} -%>
+
+<%_* // ***** WRITING Thrdline ***** 
+    if(thrdline!="") { %>
+<% thrdline %>
+<%_*} -%>
+
+<%_* // ***** WRITING Fourthline ***** 
+    if(fourthline!="") { %>
+<% fourthline %>
+<%_*} -%>
+
+<%_* // ***** WRITING Fifthline ***** 
+    if(fifthline!="") { %>
+<% fifthline %>
+<%_*} -%>
+
+<%_* // ***** Setting Cursor ***** %>
 <% tp.file.cursor(1) %>
 
 
