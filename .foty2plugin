@@ -27,6 +27,7 @@ sed -i '/^let user_configuration_original = {$/,/^};$/d' _scripts/test.js
 sed -i '/.*user_configuration_original.*$/d' _scripts/test.js
 sed -i '/^function aliasPerson(noteName) {$/,/^user_configuration = schule_configuration;$/d' _scripts/test.js
 sed -i 's/^module.exports = foty;/module.exports = poty;\n\
+\/\/#region PLUGIN CONFIGURATION\
 poty_configuration = {\
   SECTION_NOTETYPES: {\
     note: {\
@@ -35,6 +36,7 @@ poty_configuration = {\
     },\
   }\
 }\
+\/\/#endregion PLUGIN CONFIGURATION\
 /' _scripts/test.js
 sed -i 's/foty(/poty(/' _scripts/test.js
 sed -i 's/user_configuration/poty_configuration/' _scripts/test.js
