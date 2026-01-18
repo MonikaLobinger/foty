@@ -1,0 +1,40 @@
+#! /usr/bin/env bash
+cp _scripts/foty.js _scripts/zwi.js
+sed -i '/^registeredTests\.push(.*$/d' _scripts/zwi.js
+sed -i '/^  static test(outputObj) {.*$/,/^  }$/d' _scripts/zwi.js
+# uglify muss installiert sein, mit:
+# npm install uglify-js -g
+# js-beautify muss man installiert haben:
+# npm -g install js-beautify
+uglifyjs _scripts/zwi.js  | js-beautify > _scripts/test.js
+rm _scripts/zwi.js
+sed -i '/^        if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {$/,/^        }$/d' _scripts/test.js
+sed -i '/.*[( ]TESTING.*$/d' _scripts/test.js
+sed -i '/^function testGlobals(outputObj) {$/,/^}$/d' _scripts/test.js
+sed -i '/^function flatten(inp) {$/,/^}$/d' _scripts/test.js
+sed -i '/^function letAllThrow(YAML) {$/,/^}$/d' _scripts/test.js
+sed -i '/.*letAllThrow.*$/d' _scripts/test.js
+sed -i '/.*registeredExceptions.*$/d' _scripts/test.js
+sed -i '/^function areEqual(arg1, arg2, lv = 0) {$/,/^}$/d' _scripts/test.js
+sed -i '/^function dbg(\.\.\.strs) {$/,/^}$/d' _scripts/test.js
+sed -i '/^class TestSuite {$/,/^}$/d' _scripts/test.js
+sed -i '/^class TestError extends Error {$/,/^}$/d' _scripts/test.js
+sed -i '/^class CodingError extends FotyError {$/,/^}$/d' _scripts/test.js
+sed -i '/^class Event {$/,/^}$/d' _scripts/test.js
+sed -i '/^class Dispatcher {$/,/^}$/d' _scripts/test.js
+sed -i '/^    dbgYAML = {$/,/^    };$/d' _scripts/test.js
+sed -i '/^let user_configuration_original = {$/,/^};$/d' _scripts/test.js
+sed -i '/.*user_configuration_original.*$/d' _scripts/test.js
+sed -i '/^function aliasPerson(noteName) {$/,/^user_configuration = schule_configuration;$/d' _scripts/test.js
+sed -i 's/^module.exports = foty;/module.exports = poty;\n\
+poty_configuration = {\
+  SECTION_NOTETYPES: {\
+    note: {\
+      yaml: {__SPEC: {RENDER: false,},  },\
+      show: {__SPEC: {RENDER: true,}, firstline: "firstline",  },\
+    },\
+  }\
+}\
+/' _scripts/test.js
+sed -i 's/foty(/poty(/' _scripts/test.js
+sed -i 's/user_configuration/poty_configuration/' _scripts/test.js
