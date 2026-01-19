@@ -365,7 +365,7 @@ let example_configuration2 = {
         fugger:    {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
       },
     },
-    alt: { folders: ["alt"], show: { lastline: "ALT", type:"alt"} },
+    alt: { folders: ["alt", "antik"], show: { lastline: "ALT", type:"alt"} },
     note: { marker: "{w}", folders: ["temp"], show: { type:"note"} },
   }
 }
@@ -1329,6 +1329,8 @@ const GLOBAL_ONCE_DEFAULT = false
 const GLOBAL_REPEAT_DEFAULT = false
 
 //  #region Colors
+/** Color, to be used without quotation marks during development. */
+const white = "white"
 /** Color, to be used without quotation marks during development. */
 const black = "black"
 /** Color, to be used without quotation marks during development. */
@@ -4794,6 +4796,60 @@ class Setting extends BreadCrumbs {
     return answ
   }
 
+  /** returns the settings object as string
+   *
+   */
+  toPlainString(indent="\n") {
+    let plainString = ""
+    if(indent === "\n") {
+      plainString += "{"
+    }
+    let sectionKeys = Object.keys(this.#works)
+    for(const key in this.#works) {
+      if(this.#works.hasOwnProperty(key)) {
+        plainString += indent + key + ": "
+        plainString += "{"
+        plainString += this.#works[key].toPlainString(indent+"  ")
+        plainString += indent + "}"
+        plainString += ","
+      }
+    }
+    for (const [key, value] of this) {
+      plainString+= indent + key + ": "
+      if (value.FLAT) {
+        plainString+= Setting.valueString(value.VALUE)
+      } else {
+        plainString+= "{"
+        plainString+=value.toPlainString(indent+"  ")
+        plainString+= indent + "}"
+      }
+      plainString+= ","
+    }
+    if(indent === "\n") {
+      plainString += "\n}"
+    }
+    return plainString
+  }
+  static valueString(value) {
+    let valueString = ""
+    if (typeof value=== "function") {
+      valueString += value.name
+    } else if (typeof value === "string") {
+      valueString += "\"" + value+"\""
+    } else if (typeof value=== "boolean") {
+      valueString+= value
+    } else if (Array.isArray(value)) {
+      valueString+= "["
+      value.forEach((ele) => {
+        valueString+= Setting.valueString(ele)
+        valueString+= ","
+      })
+      valueString+= "]"
+    } else {
+      valueString+= value
+    }
+    return valueString
+  }
   /** Returns all frontmatter entries of this instance and descendants
    * besides IGNORED ones.
    * Workers are not treated as descendants. Otherwise entries
@@ -6283,6 +6339,8 @@ class TypesWorker extends Setting {
   static get workerKey() {
     return TypesWorker.#KEY
   }
+  static #plainStaticString = ""
+  #plainString = ""
 
   /**
    * @classdesc For note types
@@ -6327,8 +6385,11 @@ class TypesWorker extends Setting {
       )
     }
     parent.workersTypeForChildren = TypesWorker.#localType
+    TypesWorker.#toPlainString(literal)
     TypesWorker.#cpRepeatedDefaults(literal)
     super(literal, key, parent)
+    this.#plainString = TypesWorker.#plainStaticString
+    TypesWorker.#plainStaticString = ""
     this.addGene(TypesWorker)
     // literal {(Object)} checked by superclass
     // key {(String|Symbol)} checked by superclass
@@ -6359,6 +6420,27 @@ class TypesWorker extends Setting {
 ===  ${name_x}  =========================================================`,
         pink
       )
+    }
+  }
+  static #toPlainString(literal, indent="\n  ") {
+    let indentToUse=indent
+    for (const [key, value] of Object.entries(literal)) {
+      if(key == AEssence.SPEC_KEY) {
+        indentToUse=" "
+      }
+      TypesWorker.#plainStaticString += indentToUse + key + ": "
+      if(typeof value != "object" ||
+         Object.getOwnPropertyNames(value).length === 0) {
+        TypesWorker.#plainStaticString += Setting.valueString(value)
+      } else {
+        TypesWorker.#plainStaticString += "{"
+        TypesWorker.#toPlainString(value, indentToUse+"  ")
+        TypesWorker.#plainStaticString += indentToUse + "}"
+      }
+      TypesWorker.#plainStaticString += ","
+      if(key == AEssence.SPEC_KEY) {
+        indentToUse=indent
+      }
     }
   }
   static #cpRepeatedDefaults(literal) {
@@ -6413,6 +6495,9 @@ class TypesWorker extends Setting {
         TypesWorker.#deepCopy(whatvalue, to[name], whatkey, name, depth+1)
       }
   }
+  }
+  toPlainString(indent) {
+    return this.#plainString
   }
   /**
    * Returns value of {@link key} or {@link fallback} as caller fallback
