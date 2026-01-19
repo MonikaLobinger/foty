@@ -365,7 +365,7 @@ let example_configuration2 = {
         fugger:    {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
       },
     },
-    alt: { show: { lastline: "ALT", type:"alt"} },
+    alt: { folders: ["alt"], show: { lastline: "ALT", type:"alt"} },
     note: { marker: "{w}", folders: ["temp"], show: { type:"note"} },
   }
 }
@@ -375,7 +375,7 @@ let example_configuration3 = {
   SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
   SECTION_NOTETYPES: {
     defaults: {
-      __SPEC: {REPEAT: true},  
+      __SPEC: {REPEAT: true},
       yaml: {__SPEC: {RENDER: false,},
         publish:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
       },
@@ -383,7 +383,7 @@ let example_configuration3 = {
         type:      {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
         firstline: {__SPEC:false, DEFAULT: "First Line", TYPE: "String",},
         lastline: {__SPEC:false, DEFAULT: "##Footnotes", TYPE: "String",},
-      },    
+      },
     },
     book: { folders: ["book"], },
     test: { folders: ["test"], yaml: { publish: false, }, },
@@ -1846,12 +1846,12 @@ class TestSuite {
     if (this.#failed === 0) {
       this.#praut(
         this.s,
-        `Suite "${this.#name}": ${this.#succeeded} ${suc_Str} succeeded`
+        `Suite "${this.#name}":${this.#succeeded} ${suc_Str} succeeded`
       )
     } else {
       this.#praut(
         this.f,
-        `Suite "${this.#name}": ${this.#failed} ${failStr} failed, ${
+        `Suite "${this.#name}":${this.#failed} ${failStr} failed, ${
           this.#succeeded
         } succeeded`
       )
@@ -2042,7 +2042,7 @@ class TestSuite {
      * d = "details"
      * e = "none"
      * z = "summary" */
-    let nl_indent = "\n        "
+    let nl_indent = "\n\n        "
     if (key != this.s && key != this.f && key != this.d) {
       let errStr = "%c" + key
       console.log(errStr, "background: rgba(255, 99, 71, 0.5)")
@@ -2071,8 +2071,9 @@ class TestSuite {
       // "details" or "success"
       this.o[key] = this.o[key] + nl_indent + str
     }
+    // No Space after colon, otherwise YAMLParserError
     // prettier-ignore
-    this.o[this.z] = `Suites: ${TestSuite.#totalSuites} | Tests: ${TestSuite.#totalTests} | Cases: ${TestSuite.#totalCases}`
+    this.o[this.z] = `Suites:${TestSuite.#totalSuites} | Tests:${TestSuite.#totalTests} | Cases:${TestSuite.#totalCases}`
   }
 }
 /**
@@ -6918,7 +6919,8 @@ async function foty(tp, app) {
 
   dbgYAML = {
     __notePath: tp.file.path(true /*relative*/),
-    __noteTitle: tp.file.title,
+    //For some FileNames there is a YAMLParserError if no string before
+    __noteTitle: "is    "+tp.file.title,
     __activeFile: tp.config.active_file.path,
     /* 1-create with alt-e
      * 2-create from link or create with ctrl-n
