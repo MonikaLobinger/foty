@@ -1,227 +1,7 @@
 module.exports = foty // templater call: "await tp.user.foty(tp, app)"
-// caveat:
-//    Obsidian Preferences Section Appearance
-//      - Show inline title
-//      - Show tab title bar
-//    seem to change the way this template works when creating new unnamed files.
-//    They do not - they change the way, obsidian works on new file creation.
-//    If no inline title and no tab title bar is given, it will pop up a dialog
-//    asking for a filename.
-//    If no inline title but tab title bar is given, one has to press return
-//    after new file creation.
-//    See following post, which describes the solution
-//    https://forum.obsidian.md/t/templater-triggering-before-choosing-files-title/52968/11
-//    and the containing thread, which describes the problem.
-//#region USER CONFIGURATION
-//prettier-ignore
-let user_configuration_original = {
-  // General section has to be the first section
-  SECTION_GENERAL: //localType: (Number|String|Boolean)
-  {
-    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
-  },
-  SECTION_TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
-  {
-    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
-    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
-      // !! Has to be set correctly to name of untitled files in your vault
-    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
-  },
-  SECTION_DIALOG: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
-  {
-    TYPE_MAX_ENTRIES: 10, // Max entries in select type dialog
-  },
-  SECTION_NOTETYPES:
-  {
-    __SPEC: {DEFAULT: "note"},// If DEFAULT not/wrong set, first unrepeated is default
-    defaults: {
-      __SPEC: {REPEAT: true},
-      mocstring:          {__SPEC:false, DEFAULT:"_",TYPE:"String", },
-      marker:             {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      name_end:           {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      title_date_function:{__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-      title_before_date:  {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      title_date_format:  {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
-      folders:            {__SPEC:false, IGNORE:true,DEFAULT:[""],TYPE:"(Array.<String>)"},
-      tag_pre:            {__SPEC:false, DEFAULT:"0/",TYPE:"String", },
-      name_prompt:        {__SPEC:false, DEFAULT:"",TYPE:"String", },
-      create_same_named_file: {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
-      date_created_date_format: {__SPEC:false, DEFAULT:"YYYY-MM-DD",TYPE:"Date", },
-      frontmatter: {__SPEC: {RENDER: false,},
-        aliases:          {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
-        cssclasses:       {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
-        date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
-        position:         {__SPEC:false, IGNORE: true, TYPE: "Boolean", },
-        private:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
-        publish:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
-        tags:             {__SPEC:false, DEFAULT: cbkFmtTags, TYPE: "(Array.<String>|Function)",},
-        revised:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
-      },
-      page: { __SPEC: {RENDER: true,},
-        type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
-        pict:             {__SPEC:false, DEFAULT: "", TYPE: "String",},
-        pict_width:       {__SPEC:false, DEFAULT:  0, TYPE: "Number",},
-        prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
-        lastline:         {__SPEC:false, DEFAULT: "## -footnotes", TYPE: "(String|Function)",},
-      },
-    },
-      obsidian:      {
-        folders: ["Obsidian"],
-      },
-      audio:          {
-        marker: "{a}",
-        folders: ["zwischenreich"],
-        name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel ?OPTIONAL /ODER",
-        page: { pict: "/_/_resources/pexels-foteros-352505_15p.jpg", pict_width: 100,},
-      },
-      buch:           {
-        marker: "{b}",
-        folders: ["zwischenreich"],
-        name_prompt: "Autornachname - Buchtitel",
-        //page: { pict: "/_/_resources/pexels-suzyhazelwood-1989704_15p.jpg", pict_width: 100,},
-        page: { pict: "/_/_resources/pexels-ekrulila-2203051_22p.jpg", pict_width: 100,},
-      },
-      exzerpt:        {
-        marker: "$",
-        folders: ["zwischenreich"],
-        name_prompt: "Autornachname - Buchtitel",
-      },
-      mitschrift:        {
-        marker: "@",
-        folders: ["zwischenreich"],
-        name_prompt: "Exakter Titel der Veranstaltung: Titel_der_Vorlesung_Jahr_Institut_Speaker",
-      },
-      ort:            {
-        marker: "&",
-        folders: ["zwischenreich"],
-        page: { pict: "/_/_resources/pexels-dzeninalukac-1563005_10p.jpg", pict_width: 100,
-                firstline: headerOrt, },
-        name_prompt: "Ortsname, Land",
-        frontmatter: {aliases: aliasOrt, },
-      },
-      person:         {
-        marker: "=",
-        folders: ["zwischenreich"],
-        page: { pict: "/_/_resources/pexels-lucasandrade-14097235_15p.jpg", pict_width: 100,
-                firstline: headerPerson, },
-        name_prompt: "Personnachname, Personvorname, ?Geburtsdatum ?OPTIONAL",
-        frontmatter: {aliases: aliasPerson,},
-      },
-      randnotizen:        {
-        marker: "@",
-        folders: ["zwischenreich"],
-        name_prompt: "Autornachname - Buchtitel",
-      },
-      video:          {
-        marker: "{v}",
-        folders: ["zwischenreich"],
-        page: { pict: "/_/_resources/pexels-vladvictoria-2363675_10p.jpg", pict_width: 100,},
-        name_prompt: "?Reihe - ?Autornachname - Videotitel ?OPTIONAL",
-      },
-      web:            {
-        marker: "{w}",
-        folders: ["zwischenreich"],
-        //page: { pict: "/_/_resources/pexels-marcelo-gonzalez-1141370437-31546060_20p.jpg", pict_width: 100,},      
-        page: { pict: "/_/_resources/pexels-drector-14023912_10p.jpg", pict_width: 100,},
-        name_prompt: "?Autor - Webseitentitel - ?Datum ?OPTIONAL",
-      },
-      zitat:          {
-        marker: "°",
-        folders: ["zwischenreich"],
-        name_prompt: "Titel Autornachname",
-      },
-      zitate:         {
-        marker: "°°",
-        folders: ["zwischenreich"],
-        name_prompt: "Titel Autornachname",
-      },
-      rezept:         {
-        frontmatter: {extra: "breit", },
-        folders: ["Rezepte"],
-        name_prompt: "Name des Gerichts, das das Kochrezept beschreibt",
-      },
-      garten:         {
-        folders: ["Garten", "temp"],
-        name_prompt: "Gartenthema",
-      },
-      pflanze:        {
-        folders: ["Pflanzen"],
-        name_prompt: "Pflanzenname",
-      },
-      gartentagebuch: {
-        title_date_function:  cbkCalcDateTitle,
-        title_before_date: "Garten ",
-        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-        folders: ["Gartentagebuch"],
-      },
-      lesetagebuch:   {
-        title_date_function:  cbkCalcDateTitle,
-        title_before_date: "Lesetagebucheintrag ",
-        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink,
-          firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
-        },
-        folders: ["Lesetagebuch"],
-      },
-      unbedacht:      {
-        date_created_date_format:"dddd, D. MMMM YYYY, H:mm:ss",
-        title_date_format: "YY-MM-DD",
-        title_date_function:  cbkCalcDateTitle,
-        title_before_date: "Unbedacht ",
-        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-        folders: ["Unbedacht"],
-        frontmatter: { private: true, },
-      },
-      diary:          {
-        title_date_function:  cbkCalcDateTitle,
-        title_date_format: "YYYY-MM-DD",
-        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-        folders: ["Diary", "temp"],
-        frontmatter: { private: true, },
-      },
-      verwaltung:     {
-        folders: ["Verwaltung"],
-        name_prompt: "Verwaltungsthema",
-        frontmatter: { private: true, },
-      },
-      done:           {
-        title_date_function:  cbkCalcDateTitle,
-        title_before_date: "Heute erledigt ",
-        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
-        folders: ["Done"],
-        frontmatter: { private: true, },
-      },
-      it:             {
-        folders: ["IT"],
-      },
-      cookbook:       {
-        name_end: "_draft",
-        folders: ["Cookbook"],
-        name_prompt: "Receipe, zuerst wird es als Entwurf erstellt",
-        frontmatter: { publish: true, },
-      },
-      blog:       {
-        name_end: "_draft",
-        folders: ["Blog"],
-        name_prompt: "Allgemeiner Blogeintrag, zuerst wird es als Entwurf erstellt",
-        frontmatter: { publish: true, },
-      },
-      software:       {
-        folders: ["Software"],
-        name_prompt: "Name der Software, die beschrieben wird",
-      },
-      linux:          {
-        page: { pict: "/_/_resources/Linux_mascot_tux_80p.png", pict_width: 50,},
-        folders: ["Linux"],
-      },
-      note:           {
-      },
-  },
-}
-user_configuration = user_configuration_original
-// Users can use predefined callback functions and can write and use their own
-function aliasPerson(noteName) {
+
+//#region Configuration callbacks
+function cbkAliasPerson(noteName) {
   let aliases=[]
   let name = noteName
   var count = (noteName.match(/,/g) || []).length;
@@ -240,7 +20,7 @@ function aliasPerson(noteName) {
   aliases.push(alias)
   return aliases
 }
-function aliasOrt(noteName) {
+function cbkAliasOrt(noteName) {
   let aliases=[]
   let alias = noteName.replace(/, /g, ",")
   let strArr = alias.split(",")
@@ -251,7 +31,7 @@ function aliasOrt(noteName) {
   aliases.push(alias)
   return aliases
 }
-function headerPerson(noteName) {
+function cbkHeaderPerson(noteName) {
   let header=""
   let name = noteName
   var count = (noteName.match(/,/g) || []).length;
@@ -268,7 +48,7 @@ function headerPerson(noteName) {
     header = name
   return header
 }
-function headerOrt(noteName) {
+function cbkHeaderOrt(noteName) {
   let header = ""
   let name = noteName
   let strArr = name.split(",")
@@ -277,458 +57,6 @@ function headerOrt(noteName) {
   else
     header = name
   return header
-}
-//#endregion USER CONFIGURATION
-//#region EXAMPLE CONFIGURATIONS
-// Entries of the default section are defaults for all sibling sections. Name of
-//    default section does not matter, important is REPEAT: true in __SPEC
-//    (Only one REPEAT is supported)
-// mocstring: "Map of Content" (MOC) Marker at the beginning of a filename.
-//    Is part of the semantic notename. Will not be set by foty, but recognized:
-//    callback functions will remove it.
-// marker: String at the beginning of a filename.
-//    Is not part of semantic notename. Will be set by foty.
-// name_end: String at the end of a filename (before extension).
-//    Is not part of semantic notename. Will be set by foty.
-// title_date_function: Callback function to calculate the filename.
-//    If set as function, it will be used for a new note to set filename.
-//    It uses title_before_date and title_date_format
-// title_before_date: String part before date if title_date_function is used
-// title_date_format: Format of the date part if title_date_function is used
-//    Only recogizes uppercase letters D, M, Y
-//    Only accepts formats expanding to pure numbers
-// folders: Names of (sub)folders in which notes of this type will be placed
-//    Pure folder names are accepted and path parts, e.g. whit two folder types
-//    lettrs:{folders: ["Letters"],} and mylettrs:{folders: ["Private/Letters"],}
-//    lettrs will apply to all folders which contain a pathpart "Letters", e.g.
-//    root/Composers/b/Bach/Letters and root/Letters/from but not to folders
-//    which contain the pathpart "Private/Letters", e.g.  root/Private/Letters
-//    there the folder type mylettrs will apply.
-// tag_pre: String to be prepended to every tag created with cbkFmtTags
-// name_promt: Prompt to be used when asking for notename
-//    Replaces the default prompt hardcoded as NAME_PROMPT in SECTION_TRANSLATE
-// create_same_named_files: Same named files will be created appending a number
-//    Default is false. If set to true linking to prev date file will work wrong.
-// date_created_date_format: Dateformat for cbkFmtCreated, used for date_created
-//    Default if not set is Templaters Default "YYYY-MM-DD"
-// frontmatter: Name does not matter, important is RENDER: false in __SPEC
-//    Has to be same name as in notetypes, to get defaults copied.
-//    Each entry is sent to the template as key value pair before the
-//    key "____" is sent.
-//    aliases: Array of string
-//        Function cbkFmtAlias notename, mocstring removed  and "," replaced with blank
-//    cssclasses: Array of string
-//        Function cbkFmtCssClasses returns notType in array
-//    date_created: Date
-//        cbkFmtCreated returns current date, respecting
-//    position:
-//    private:
-//    publish:
-//    tags: Array of strings
-//       Function cbkFmtTags returns type, first letter uppercase
-//       and "moc" if mocstring is set and filename starts with mocstring.
-//       Each tag in array will be prepended by String in tag_pre.
-// page: Name does not matter, important is RENDER: true in __SPEC
-//    Has to be same name as in notetypes, to get defaults copied.
-//    Each entry is sent to the template as key value pair after the
-//    key "____" is sent.
-//    type:
-//    pict:
-//    pict_width:
-//    prevlink:
-//    nextlink:
-//    firstline:
-//    lastline:
-//prettier-ignore
-let example_configuration1 = {
-  SECTION_NOTETYPES: {
-    note: {
-      marker: "{w}",
-      yaml: {__SPEC: {RENDER: false,}, aliases: aliasOrt, borgia: "Lucrezia", },
-      show: {__SPEC: {RENDER: true,}, firstline: "DAS WORT", fugger: true, },
-    },
-  }
-}
-//user_configuration = example_configuration1
-
-let example_configuration2 = {
-  SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
-  SECTION_NOTETYPES: {
-    fueralle: {
-      __SPEC: {REPEAT: true},
-      yaml: {__SPEC: {RENDER: false,},
-        aliases:   {__SPEC:false, DEFAULT: aliasOrt, TYPE: "(Array.<String>|Function)"},
-        borgia:    {__SPEC:false, DEFAULT: "Lucrezia", TYPE: "String", },
-      },
-      show: { __SPEC: {RENDER: true,},
-        firstline: {__SPEC:false, DEFAULT: "DAS WORT", TYPE: "String",},
-        fugger:    {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
-      },
-    },
-    alt: { folders: ["alt", "antik"], show: { lastline: "ALT", type:"alt"} },
-    note: { marker: "{w}", folders: ["temp"], show: { type:"note"} },
-  }
-}
-//user_configuration = example_configuration2
-
-let example_configuration3 = {
-  SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
-  SECTION_NOTETYPES: {
-    defaults: {
-      __SPEC: {REPEAT: true},
-      yaml: {__SPEC: {RENDER: false,},
-        publish:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
-      },
-      show: { __SPEC: {RENDER: true,},
-        type:      {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
-        firstline: {__SPEC:false, DEFAULT: "First Line", TYPE: "String",},
-        lastline: {__SPEC:false, DEFAULT: "##Footnotes", TYPE: "String",},
-      },
-    },
-    book: { folders: ["book"], },
-    test: { folders: ["test"], yaml: { publish: false, }, },
-  }
-}
-//user_configuration = example_configuration3
-//#endregion EXAMPLE CONFIGURATIONS
-
-//#region SCHULE CONFIGURATIONS
-// Eine erweiterte Konfiguration, die die neuen Features:
-// 1) Foldertype mit Pfad und
-// 2) Kommunikation zwischen den Callback Funktionen.
-// verwendet.
-//
-// zu 1) Neue Notizen in XXXStutiis/Mitschriften werden mit dem Foldertype
-// stuttiismitschrift erstellt und neue Notizen in allen anderen Verzeichnissen,
-// die "Mitschriften" als Pfadbestandteil enthalten mit dem Foldertype
-// werkstattmitschrift. Die Notizen haben unterschiedliche YAML.
-//
-// zu 2) Die Callbackfunktionen haben nun einen optionalen 6. Paramter, ein
-// Objekt, in das sie Eigenschaften schreiben können oder die lesen können, die
-// andere Callback Funktionen gesetzt haben.
-// Die title_date_function cbkAskGoogleForTitle erfrägt von google books
-// eine Liste von bis zu 30 Büchern zu den vom Nutzer gegebenen Suchangaben. Der
-// Nutzer wählt davon ein Buch aus. Aus den Werten dieses ausgewählten Buches
-// sollen später in verschiedenen Callback Funktionen verschiedene YAML Einträge
-// gebildet werden. All diese Werte trägt cbkAskGoogleForTitle als Properties
-// in den 6. Parameter ein. Die anderen Callback Funktionen cbkBuchTitel,
-// cbkBuchAutor, cbkBuchVerlag lesen die Information, die sie brauchen aus
-// dem Objekt und übergeben sie ans YAML.
-// Anmerkung: Dieser Parameter ist immer da, auch wenn nicht alle Funktionen ihn
-// angeben. In Javascript kann man Parameter, die man nicht braucht weglassen.
-let schule_configuration = {
-  // General section has to be the first section
-  SECTION_GENERAL: {
-    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
-  },
-  SECTION_TRANSLATE: {
-    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
-  },
-  SECTION_NOTETYPES: {
-    __SPEC: {DEFAULT: "note"},
-    defaults: {
-      __SPEC: {REPEAT: true},
-      mocstring:          {__SPEC:false, DEFAULT:"-",TYPE:"String", },
-      schoolyaml: {__SPEC: {RENDER: false,},
-                          // returns Name of the note type
-        cssclasses:       {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
-        date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
-        // /* schule_public */  author:           {__SPEC:false, DEFAULT: "", TYPE: "String", },
-        /* schule_private */ author:           {__SPEC:false, DEFAULT: "Ueberphilosophy", TYPE: "String", },
-        publish:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
-        tags:             {__SPEC:false, DEFAULT: "[]", TYPE: "(String|Array.<String>|Function)",},
-      },
-      schoolshow: { __SPEC: {RENDER: true,},
-        type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
-        prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        scriptline:       {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
-        sndline:          {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        thrdline:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
-        lastline:         {__SPEC:false, DEFAULT: cbkFmtLastLine, TYPE: "(String|Function)",},
-      },
-    },
-    note:                 { // note
-      schoolyaml: { },
-      schoolshow: { },
-    },
-    diary:                { // diary
-      folders: ["Diary", ],
-      title_date_function:  cbkCalcDateTitle,
-      title_date_format: "YYYY-MM-DD",
-      schoolyaml: { publish: false, },
-      schoolshow: {
-        prevlink:  cbkPrevDateLink,
-        nextlink:  cbkNextDateLink,
-        firstline: cbkNoteName,
-        sndline:   "## ",
-      },
-    },
-    material:             { // foldernote, catalog, material
-      folders: ["Materialien", ],
-      name_prompt: "Titel_der_Vorlesung_Jahr_Institut_Speaker",
-      schoolyaml: {
-        cssclasses:   cbkMaterialCssClasses,
-        date_created: cbkMaterialDateCreated,
-        publish:      cbkMaterialPublish,
-        tags:         cbkMaterialTags,
-        ddckey:       cbkMaterialDdcKey,
-        media:        cbkMaterialMedia,
-        author:       cbkMaterialAuthor,
-      },
-      schoolshow: {
-        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```",
-        sndline:     cbkMaterialSndLine,
-        thrdline:    cbkMaterialThrdLine,
-        fourthline:  cbkMaterialFourthLine,
-        fifthline:   cbkMaterialFifthLine,
-        lastline:    cbkMaterialLastLine,
-      },
-    },
-    autor:                { // autor
-      folders: ["Autoren",],
-      name_prompt: "Autornachname",
-      name_end: " Quellen",
-      schoolyaml: {
-        ddckey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
-        gndkey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
-        gndlink: {__SPEC:false, VALUE: "", TYPE: "String", },
-        tags:    cbkAutorTag,
-      },
-      schoolshow: {
-        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```\n",
-        firstline: cbkNoteName,
-        sndline:  cbkTimeLine,
-      },
-    },
-    autorsek:             { // sekundaer
-      folders: ["Autoren-Sekundaer",],
-      name_prompt: "Autornachname",
-      name_end: " Sekundaer",
-      schoolyaml: {
-        cssclasses: "sekundaer",
-        tags:    cbkAutorTag,
-      },
-      schoolshow: {
-        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```\n",
-        firstline: cbkSekundaerName,
-      },
-    },
-    feld:                 { // feld
-      folders: ["Feld"],
-      schoolyaml: {
-        publish: false,
-      },
-      schoolshow: {
-        scriptline: cbkScriptLineFeld,
-        firstline: cbkFrstLineFeld,
-        sndline:   cbkSndLineFeld,
-        thrdline:  cbkThrdLineFeld,
-        lastline:  cbkFmtLastLine,
-      },
-    },
-    stutiis:              { // studies
-      // XXXstutiis/ ist die öffentliche Version von Werkstatt/
-      // Vor der Veröffentlichung wird (priv) Werkstatt/ als .Werkstatt/ versteckt
-      // und XXXstutiis/ zu Werkstatt/ umbenannt
-      folders: ["XXXstutiis"],
-      schoolyaml: {
-        date_created: "",
-        author: "",
-        cssclasses: "studies",
-        publish: false,
-      },
-    },
-    stutiismitschrift:    { // studies @
-      folders: ["XXXstutiis/Mitschriften"],
-      marker: "@",
-      name_prompt: "Exakter Titel der Veranstaltung: Titel_der_Vorlesung_Jahr_Institut_Speaker",
-      schoolyaml: {
-        date_created: "",
-        author: "",
-        cssclasses: "studies",
-        publish: false,
-      },
-      schoolshow: {
-        firstline: "Mitschrift",
-        sndline:   cbkSndLineMitschrift,
-        thrdline:  "## Offen",
-      },
-    },
-    werkstattmitschrift : { // private: werkstatt @, public: studies @
-      folders: ["Mitschriften"],
-      marker: "@",
-      name_prompt: "Exakter Titel der Veranstaltung: Titel_der_Vorlesung_Jahr_Institut_Speaker",
-      schoolyaml: {
-        // /* schule_public */  date_created: "",
-        // /* schule_public */  cssclasses: "studies",
-        /* schule_private */ cssclasses: "werkstatt",
-        publish: false,
-      },
-      schoolshow: {
-        firstline: "Mitschrift",
-        sndline:   cbkSndLineMitschrift,
-        thrdline:  "## Offen",
-      },
-    },
-    audio:                { // audio {a}
-      folders: ["Werkstatt"],
-      marker: "{a}",
-      name_prompt: "OPTIONAL Podcast ODER Reihe - Autornachname - Audiotitel",
-    },
-    buch:                 { // buch {b}
-      folders: ["Werkstatt"],
-      marker: "{b}",
-      name_prompt: "Autornachname - Buchtitel",
-      title_date_function: cbkAskGoogleForTitle,
-      schoolyaml: {
-        tags: cbkBookAliasAsTag,
-        aliases:  cbkBookAlias,
-        buchtitel: cbkBuchTitel,
-        buchuntertitel: cbkBuchUntertitel,
-        buchautor: cbkBuchAutor,
-        buchautorv: cbkBuchAutorv,
-        buchdatum: cbkBuchDatum,
-        buchverlag: cbkBuchVerlag,
-        buchseiten: cbkBuchSeiten,
-        buchsprache: cbkBuchSprache,
-        buchisbn: cbkBuchIsbn,
-        buchisbn13: cbkBuchIsbn13,
-        buchebook: cbkBuchEbook,
-        // ungelesen, gelesen, nochmal, teilweise, aktuell, egal
-        buchstatus: [
-          "egal",
-        ],
-        xbuchstatus: [
-          "gelesen",
-          "aktuell",
-          "teilweise",
-          "nochmal",
-          "ungelesen",
-        ],
-      }
-    },
-    exzerpt:              { // exzerpt $
-      folders: ["Werkstatt"],
-      marker: "$",
-      name_prompt: "Autornachname - Buchtitel",
-    },
-    ort:                  { // ort &
-      folders: ["Werkstatt"],
-      marker: "&",
-      name_prompt: "Ortsname, Land",
-      schoolyaml: {
-        aliases: cbkFmtOneAlias,
-        gndkey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
-        gndlink: {__SPEC:false, VALUE: "", TYPE: "String", },
-      },
-    },
-    person:               { // person =
-      folders: ["Werkstatt"],
-      marker: "=",
-      name_prompt: "Personnachname, Personvorname OPTIONAL , Geburtsdatum",
-      schoolyaml: {
-        aliases: cbkFmtOneAliasSwitch,
-        gndkey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
-        gndlink: {__SPEC:false, VALUE: "", TYPE: "String", },
-      },
-      schoolshow: {
-        pict: "teacher-295387_640-pixabay_2026-01-07.png", 
-        pict_width: 100,
-        firstline: headerPerson,
-      }
-    },
-    randnotizen:           { // randnotizen @
-      folders: ["Werkstatt", "Buchmitschriften"],
-      marker: "@",
-      name_prompt: "Autornachname - Buchtitel",
-    },
-    video:                { // video {v}
-      folders: ["Werkstatt"],
-      marker: "{v}",
-      name_prompt: "OPTIONAL Reihe - OPTIONAL Autornachname - Videotitel",
-    },
-    web:                  { // web {w}
-      folders: ["Werkstatt"],
-      marker: "{w}",
-      name_prompt: "OPTIONAL Autor - Webseitentitel - OPTIONAL Datum",
-    },
-    zitat:                { // zitat °
-      folders: ["Werkstatt"],
-      marker: "°",
-      name_prompt: "Titel Autornachname",
-    },
-    zitate:               { // zitate °°
-      folders: ["Werkstatt"],
-      marker: "°°",
-      name_prompt: "Titel Autornachname",
-    },
-  },
-}
-
-function cbkMitschrift(noteName, noteType, noteSetting, tp, app) {
-  return "[[Werkstatt/Mitschriften/@"+noteName+"|Mitschrift]]\n"
-}
-function cbkFmtLastLine(noteName, noteType, noteSetting, tp, app) {
-  let lastline="## -footnotes"
-  let mocstring = noteSetting.getValue("mocstring")
-  if(noteName.startsWith(mocstring)) {
-    lastline = ""
-  }
-  return lastline
-}
-function cbkAutorTag(noteName, noteType, noteSetting, tp, app) {
-  return noteName.replace(/ /g, '-');
-}
-function cbkTimeLine(noteName, noteType, noteSetting, tp, app) {
-  return "[[timeline#"+noteName+"|Zeitleiste]]"
-}
-function cbkSekundaerName(noteName, noteType, noteSetting, tp, app) {
-  return noteName+" Sekundaer";
-}
-function cbkSndLineMitschrift(noteName, noteType, noteSetting, tp, app) {
-  return "zu [[" + noteName + "]]"
-}
-function cbkTest(noteName, noteType, noteSetting, tp, app) {
-  return "yyyy"
-}
-function cbkFmtOneAlias(noteName, noteType, noteSetting, tp, app) {
-  let alias = noteName
-  let mocstring = noteSetting.getValue("mocstring")
-  if(noteName.startsWith(mocstring)) {
-    alias = noteName.slice(mocstring.length)
-  }
-  alias = alias.replace(/,/g, ` `).replace(/  /g, ` `)
-
-  if(0 == alias.localeCompare(noteName)) {
-    alias=""
-  }
-  return alias
-}
-function cbkFmtOneAliasSwitch(noteName, noteType, noteSetting, tp, app) {
-  let alias = noteName
-  let mocstring = noteSetting.getValue("mocstring")
-  if(noteName.startsWith(mocstring)) {
-    alias = noteName.slice(mocstring.length)
-  }
-  let idx1=alias.indexOf(",")
-  let idx2=alias.indexOf(",",idx1+1)
-  if(idx2 < 1) idx2 = alias.length-1
-  if(idx1 > 0 && idx2 > 0) {
-    let part1=alias.substring(0,idx1)
-    let part2=alias.substring(idx1+1,idx2)
-    let zwi = "xxxx"
-    alias=alias.replace(part1,zwi)
-    alias=alias.replace(part2,part1)
-    alias=alias.replace(zwi,part2)
-  }
-  alias = alias.replace(/,/g, ` `).replace(/  /g, ` `)
-
-  if(0 == alias.localeCompare(noteName)) {
-    alias=""
-  }
-  return alias
 }
 function cbkBookAlias(noteName, noteType, noteSetting, tp, app, computedValues) {
   let alias = computedValues.buchautor.slice(0,3) +
@@ -1038,23 +366,70 @@ function cbkSndLineFeld(noteName, noteType, noteSetting, tp, app) {
 function cbkThrdLineFeld(noteName, noteType, noteSetting, tp, app) {
   return "## Adamson\n![[Adamson nnn "+noteName+"]]\n## Weitere"
 }
-user_configuration = schule_configuration
-//#endregion SCHULE CONFIGURATIONS
 
-//@todo return default value of allowed type if type of given value not allowed
-// Skript für Obsidian um Notizen verschiedener Art zu erstellen, siehe foty.md.
-// Script for Obsidian to create different note types, see foty.md for details.
-//
-// Different parts of codes are in different regions.
-// A region starts with //#region REGION_NAME or //# REGION_NAME
-// and it ends with //#endregion REGION_NAME or //#endregion REGION_NAME
-// Regions can be nested.
-// Using Visual Studio Code (and perhaps other source code editors) regions
-// marked this way can be folded for convenience.
-//
-// Some settings for the script can be adapted to user needs. Those can be seen
-// in USER CONFIGURATION region
-//#region Configuration callbacks
+function cbkMitschrift(noteName, noteType, noteSetting, tp, app) {
+  return "[[Werkstatt/Mitschriften/@"+noteName+"|Mitschrift]]\n"
+}
+function cbkFmtLastLine(noteName, noteType, noteSetting, tp, app) {
+  let lastline="## -footnotes"
+  let mocstring = noteSetting.getValue("mocstring")
+  if(noteName.startsWith(mocstring)) {
+    lastline = ""
+  }
+  return lastline
+}
+function cbkAutorTag(noteName, noteType, noteSetting, tp, app) {
+  return noteName.replace(/ /g, '-');
+}
+function cbkTimeLine(noteName, noteType, noteSetting, tp, app) {
+  return "[[timeline#"+noteName+"|Zeitleiste]]"
+}
+function cbkSekundaerName(noteName, noteType, noteSetting, tp, app) {
+  return noteName+" Sekundaer";
+}
+function cbkSndLineMitschrift(noteName, noteType, noteSetting, tp, app) {
+  return "zu [[" + noteName + "]]"
+}
+function cbkTest(noteName, noteType, noteSetting, tp, app) {
+  return "yyyy"
+}
+function cbkFmtOneAlias(noteName, noteType, noteSetting, tp, app) {
+  let alias = noteName
+  let mocstring = noteSetting.getValue("mocstring")
+  if(noteName.startsWith(mocstring)) {
+    alias = noteName.slice(mocstring.length)
+  }
+  alias = alias.replace(/,/g, ` `).replace(/  /g, ` `)
+
+  if(0 == alias.localeCompare(noteName)) {
+    alias=""
+  }
+  return alias
+}
+function cbkFmtOneAliasSwitch(noteName, noteType, noteSetting, tp, app) {
+  let alias = noteName
+  let mocstring = noteSetting.getValue("mocstring")
+  if(noteName.startsWith(mocstring)) {
+    alias = noteName.slice(mocstring.length)
+  }
+  let idx1=alias.indexOf(",")
+  let idx2=alias.indexOf(",",idx1+1)
+  if(idx2 < 1) idx2 = alias.length-1
+  if(idx1 > 0 && idx2 > 0) {
+    let part1=alias.substring(0,idx1)
+    let part2=alias.substring(idx1+1,idx2)
+    let zwi = "xxxx"
+    alias=alias.replace(part1,zwi)
+    alias=alias.replace(part2,part1)
+    alias=alias.replace(zwi,part2)
+  }
+  alias = alias.replace(/,/g, ` `).replace(/  /g, ` `)
+
+  if(0 == alias.localeCompare(noteName)) {
+    alias=""
+  }
+  return alias
+}
 /** Returns sibling with next/prev date, depending on {@link next}
  *
  * @param {*} next
@@ -1282,8 +657,620 @@ function cbkNextDateLink(noteName, noteType, noteSetting, tp, app) {
   return answer
 }
 //#endregion Configuration callbacks
-//#region PLUGIN CONFIGURATION
-//#endregion PLUGIN CONFIGURATION
+
+
+// caveat:
+//    Obsidian Preferences Section Appearance
+//      - Show inline title
+//      - Show tab title bar
+//    seem to change the way this template works when creating new unnamed files.
+//    They do not - they change the way, obsidian works on new file creation.
+//    If no inline title and no tab title bar is given, it will pop up a dialog
+//    asking for a filename.
+//    If no inline title but tab title bar is given, one has to press return
+//    after new file creation.
+//    See following post, which describes the solution
+//    https://forum.obsidian.md/t/templater-triggering-before-choosing-files-title/52968/11
+//    and the containing thread, which describes the problem.
+//#region USER CONFIGURATION
+//prettier-ignore
+let user_configuration_original = {
+  // General section has to be the first section
+  SECTION_GENERAL: //localType: (Number|String|Boolean)
+  {
+    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
+  },
+  SECTION_TRANSLATE: //localType: (String|Array.<String>|Array.<Array.<String>>)
+  {
+    NAME_PROMPT:         [ ["en", "Pure Name of Note"], ["de", "Name der Notiz (ohne Kenner/Marker)"] ],
+    TYPE_PROMPT:         [ ["en", "Choose type"], ["de", "Typ wählen"] ],
+      // !! Has to be set correctly to name of untitled files in your vault
+    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+  },
+  SECTION_DIALOG: //localType: (Number|Boolean|Array.<Number>|Array.<Boolean>)
+  {
+    TYPE_MAX_ENTRIES: 10, // Max entries in select type dialog
+  },
+  SECTION_NOTETYPES:
+  {
+    __SPEC: {DEFAULT: "note"},// If DEFAULT not/wrong set, first unrepeated is default
+    defaults: {
+      __SPEC: {REPEAT: true},
+      mocstring:          {__SPEC:false, DEFAULT:"_",TYPE:"String", },
+      marker:             {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      name_end:           {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      title_date_function:{__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+      title_before_date:  {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      title_date_format:  {__SPEC:false, DEFAULT:"YY-MM-DD",TYPE:"Date", },
+      folders:            {__SPEC:false, IGNORE:true,DEFAULT:[""],TYPE:"(Array.<String>)"},
+      tag_pre:            {__SPEC:false, DEFAULT:"0/",TYPE:"String", },
+      name_prompt:        {__SPEC:false, DEFAULT:"",TYPE:"String", },
+      create_same_named_file: {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+      date_created_date_format: {__SPEC:false, DEFAULT:"YYYY-MM-DD",TYPE:"Date", },
+      frontmatter: {__SPEC: {RENDER: false,},
+        aliases:          {__SPEC:false, DEFAULT: cbkFmtAlias, TYPE: "(Array.<String>|Function)"},
+        cssclasses:       {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
+        date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
+        position:         {__SPEC:false, IGNORE: true, TYPE: "Boolean", },
+        private:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+        publish:          {__SPEC:false, DEFAULT: false, TYPE: "Boolean", },
+        tags:             {__SPEC:false, DEFAULT: cbkFmtTags, TYPE: "(Array.<String>|Function)",},
+        revised:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
+      },
+      page: { __SPEC: {RENDER: true,},
+        type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
+        pict:             {__SPEC:false, DEFAULT: "", TYPE: "String",},
+        pict_width:       {__SPEC:false, DEFAULT:  0, TYPE: "Number",},
+        prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
+        lastline:         {__SPEC:false, DEFAULT: "## -footnotes", TYPE: "(String|Function)",},
+      },
+    },
+      obsidian:      {
+        folders: ["Obsidian"],
+      },
+      audio:          {
+        marker: "{a}",
+        folders: ["zwischenreich"],
+        name_prompt: "?Podcast/Reihe - Autornachname - Audiotitel ?OPTIONAL /ODER",
+        page: { pict: "/_/_resources/pexels-foteros-352505_15p.jpg", pict_width: 100,},
+      },
+      buch:           {
+        marker: "{b}",
+        folders: ["zwischenreich"],
+        name_prompt: "Autornachname - Buchtitel",
+        //page: { pict: "/_/_resources/pexels-suzyhazelwood-1989704_15p.jpg", pict_width: 100,},
+        page: { pict: "/_/_resources/pexels-ekrulila-2203051_22p.jpg", pict_width: 100,},
+      },
+      exzerpt:        {
+        marker: "$",
+        folders: ["zwischenreich"],
+        name_prompt: "Autornachname - Buchtitel",
+      },
+      mitschrift:        {
+        marker: "@",
+        folders: ["zwischenreich"],
+        name_prompt: "Exakter Titel der Veranstaltung: Titel_der_Vorlesung_Jahr_Institut_Speaker",
+      },
+      ort:            {
+        marker: "&",
+        folders: ["zwischenreich"],
+        page: { pict: "/_/_resources/pexels-dzeninalukac-1563005_10p.jpg", pict_width: 100,
+                firstline: cbkHeaderOrt, },
+        name_prompt: "Ortsname, Land",
+        frontmatter: {aliases: cbkAliasOrt, },
+      },
+      person:         {
+        marker: "=",
+        folders: ["zwischenreich"],
+        page: { pict: "/_/_resources/pexels-lucasandrade-14097235_15p.jpg", pict_width: 100,
+                firstline: cbkHeaderPerson, },
+        name_prompt: "Personnachname, Personvorname, ?Geburtsdatum ?OPTIONAL",
+        frontmatter: {aliases: cbkAliasPerson,},
+      },
+      randnotizen:        {
+        marker: "@",
+        folders: ["zwischenreich"],
+        name_prompt: "Autornachname - Buchtitel",
+      },
+      video:          {
+        marker: "{v}",
+        folders: ["zwischenreich"],
+        page: { pict: "/_/_resources/pexels-vladvictoria-2363675_10p.jpg", pict_width: 100,},
+        name_prompt: "?Reihe - ?Autornachname - Videotitel ?OPTIONAL",
+      },
+      web:            {
+        marker: "{w}",
+        folders: ["zwischenreich"],
+        //page: { pict: "/_/_resources/pexels-marcelo-gonzalez-1141370437-31546060_20p.jpg", pict_width: 100,},      
+        page: { pict: "/_/_resources/pexels-drector-14023912_10p.jpg", pict_width: 100,},
+        name_prompt: "?Autor - Webseitentitel - ?Datum ?OPTIONAL",
+      },
+      zitat:          {
+        marker: "°",
+        folders: ["zwischenreich"],
+        name_prompt: "Titel Autornachname",
+      },
+      zitate:         {
+        marker: "°°",
+        folders: ["zwischenreich"],
+        name_prompt: "Titel Autornachname",
+      },
+      rezept:         {
+        frontmatter: {extra: "breit", },
+        folders: ["Rezepte"],
+        name_prompt: "Name des Gerichts, das das Kochrezept beschreibt",
+      },
+      garten:         {
+        folders: ["Garten", "temp"],
+        name_prompt: "Gartenthema",
+      },
+      pflanze:        {
+        folders: ["Pflanzen"],
+        name_prompt: "Pflanzenname",
+      },
+      gartentagebuch: {
+        title_date_function:  cbkCalcDateTitle,
+        title_before_date: "Garten ",
+        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+        folders: ["Gartentagebuch"],
+      },
+      lesetagebuch:   {
+        title_date_function:  cbkCalcDateTitle,
+        title_before_date: "Lesetagebucheintrag ",
+        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink,
+          firstline: "## ArticleTitle\n[ntvzdf]link\n\n",
+        },
+        folders: ["Lesetagebuch"],
+      },
+      unbedacht:      {
+        date_created_date_format:"dddd, D. MMMM YYYY, H:mm:ss",
+        title_date_format: "YY-MM-DD",
+        title_date_function:  cbkCalcDateTitle,
+        title_before_date: "Unbedacht ",
+        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+        folders: ["Unbedacht"],
+        frontmatter: { private: true, },
+      },
+      diary:          {
+        title_date_function:  cbkCalcDateTitle,
+        title_date_format: "YYYY-MM-DD",
+        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+        folders: ["Diary", "temp"],
+        frontmatter: { private: true, },
+      },
+      verwaltung:     {
+        folders: ["Verwaltung"],
+        name_prompt: "Verwaltungsthema",
+        frontmatter: { private: true, },
+      },
+      done:           {
+        title_date_function:  cbkCalcDateTitle,
+        title_before_date: "Heute erledigt ",
+        page: { prevlink: cbkPrevDateLink, nextlink: cbkNextDateLink, },
+        folders: ["Done"],
+        frontmatter: { private: true, },
+      },
+      it:             {
+        folders: ["IT"],
+      },
+      cookbook:       {
+        name_end: "_draft",
+        folders: ["Cookbook"],
+        name_prompt: "Receipe, zuerst wird es als Entwurf erstellt",
+        frontmatter: { publish: true, },
+      },
+      blog:       {
+        name_end: "_draft",
+        folders: ["Blog"],
+        name_prompt: "Allgemeiner Blogeintrag, zuerst wird es als Entwurf erstellt",
+        frontmatter: { publish: true, },
+      },
+      software:       {
+        folders: ["Software"],
+        name_prompt: "Name der Software, die beschrieben wird",
+      },
+      linux:          {
+        page: { pict: "/_/_resources/Linux_mascot_tux_80p.png", pict_width: 50,},
+        folders: ["Linux"],
+      },
+      note:           {
+      },
+  },
+}
+user_configuration = user_configuration_original
+//#endregion USER CONFIGURATION
+//#region EXAMPLE CONFIGURATIONS
+// Entries of the default section are defaults for all sibling sections. Name of
+//    default section does not matter, important is REPEAT: true in __SPEC
+//    (Only one REPEAT is supported)
+// mocstring: "Map of Content" (MOC) Marker at the beginning of a filename.
+//    Is part of the semantic notename. Will not be set by foty, but recognized:
+//    callback functions will remove it.
+// marker: String at the beginning of a filename.
+//    Is not part of semantic notename. Will be set by foty.
+// name_end: String at the end of a filename (before extension).
+//    Is not part of semantic notename. Will be set by foty.
+// title_date_function: Callback function to calculate the filename.
+//    If set as function, it will be used for a new note to set filename.
+//    It uses title_before_date and title_date_format
+// title_before_date: String part before date if title_date_function is used
+// title_date_format: Format of the date part if title_date_function is used
+//    Only recogizes uppercase letters D, M, Y
+//    Only accepts formats expanding to pure numbers
+// folders: Names of (sub)folders in which notes of this type will be placed
+//    Pure folder names are accepted and path parts, e.g. whit two folder types
+//    lettrs:{folders: ["Letters"],} and mylettrs:{folders: ["Private/Letters"],}
+//    lettrs will apply to all folders which contain a pathpart "Letters", e.g.
+//    root/Composers/b/Bach/Letters and root/Letters/from but not to folders
+//    which contain the pathpart "Private/Letters", e.g.  root/Private/Letters
+//    there the folder type mylettrs will apply.
+// tag_pre: String to be prepended to every tag created with cbkFmtTags
+// name_promt: Prompt to be used when asking for notename
+//    Replaces the default prompt hardcoded as NAME_PROMPT in SECTION_TRANSLATE
+// create_same_named_files: Same named files will be created appending a number
+//    Default is false. If set to true linking to prev date file will work wrong.
+// date_created_date_format: Dateformat for cbkFmtCreated, used for date_created
+//    Default if not set is Templaters Default "YYYY-MM-DD"
+// frontmatter: Name does not matter, important is RENDER: false in __SPEC
+//    Has to be same name as in notetypes, to get defaults copied.
+//    Each entry is sent to the template as key value pair before the
+//    key "____" is sent.
+//    aliases: Array of string
+//        Function cbkFmtAlias notename, mocstring removed  and "," replaced with blank
+//    cssclasses: Array of string
+//        Function cbkFmtCssClasses returns notType in array
+//    date_created: Date
+//        cbkFmtCreated returns current date, respecting
+//    position:
+//    private:
+//    publish:
+//    tags: Array of strings
+//       Function cbkFmtTags returns type, first letter uppercase
+//       and "moc" if mocstring is set and filename starts with mocstring.
+//       Each tag in array will be prepended by String in tag_pre.
+// page: Name does not matter, important is RENDER: true in __SPEC
+//    Has to be same name as in notetypes, to get defaults copied.
+//    Each entry is sent to the template as key value pair after the
+//    key "____" is sent.
+//    type:
+//    pict:
+//    pict_width:
+//    prevlink:
+//    nextlink:
+//    firstline:
+//    lastline:
+//prettier-ignore
+let example_configuration1 = {
+  SECTION_NOTETYPES: {
+    note: {
+      marker: "{w}",
+      yaml: {__SPEC: {RENDER: false,}, aliases: cbkAliasOrt, borgia: "Lucrezia", },
+      show: {__SPEC: {RENDER: true,}, firstline: "DAS WORT", fugger: true, },
+    },
+  }
+}
+//user_configuration = example_configuration1
+
+let example_configuration2 = {
+  SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
+  SECTION_NOTETYPES: {
+    fueralle: {
+      __SPEC: {REPEAT: true},
+      yaml: {__SPEC: {RENDER: false,},
+        aliases:   {__SPEC:false, DEFAULT: cbkAliasOrt, TYPE: "(Array.<String>|Function)"},
+        borgia:    {__SPEC:false, DEFAULT: "Lucrezia", TYPE: "String", },
+      },
+      show: { __SPEC: {RENDER: true,},
+        firstline: {__SPEC:false, DEFAULT: "DAS WORT", TYPE: "String",},
+        fugger:    {__SPEC:false, DEFAULT: true, TYPE: "Boolean",},
+      },
+    },
+    alt: { folders: ["alt", "antik"], show: { lastline: "ALT", type:"alt"} },
+    note: { marker: "{w}", folders: ["temp"], show: { type:"note"} },
+  }
+}
+//user_configuration = example_configuration2
+
+let example_configuration3 = {
+  SECTION_TRANSLATE: { TITLE_NEW_FILE: "Unbenannt",  },
+  SECTION_NOTETYPES: {
+    defaults: {
+      __SPEC: {REPEAT: true},
+      yaml: {__SPEC: {RENDER: false,},
+        publish:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
+      },
+      show: { __SPEC: {RENDER: true,},
+        type:      {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
+        firstline: {__SPEC:false, DEFAULT: "First Line", TYPE: "String",},
+        lastline: {__SPEC:false, DEFAULT: "##Footnotes", TYPE: "String",},
+      },
+    },
+    book: { folders: ["book"], },
+    test: { folders: ["test"], yaml: { publish: false, }, },
+  }
+}
+//user_configuration = example_configuration3
+//#endregion EXAMPLE CONFIGURATIONS
+
+//#region SCHULE CONFIGURATIONS
+// Eine erweiterte Konfiguration, die die neuen Features:
+// 1) Foldertype mit Pfad und
+// 2) Kommunikation zwischen den Callback Funktionen.
+// verwendet.
+//
+// zu 1) Neue Notizen in XXXStutiis/Mitschriften werden mit dem Foldertype
+// stuttiismitschrift erstellt und neue Notizen in allen anderen Verzeichnissen,
+// die "Mitschriften" als Pfadbestandteil enthalten mit dem Foldertype
+// werkstattmitschrift. Die Notizen haben unterschiedliche YAML.
+//
+// zu 2) Die Callbackfunktionen haben nun einen optionalen 6. Paramter, ein
+// Objekt, in das sie Eigenschaften schreiben können oder die lesen können, die
+// andere Callback Funktionen gesetzt haben.
+// Die title_date_function cbkAskGoogleForTitle erfrägt von google books
+// eine Liste von bis zu 30 Büchern zu den vom Nutzer gegebenen Suchangaben. Der
+// Nutzer wählt davon ein Buch aus. Aus den Werten dieses ausgewählten Buches
+// sollen später in verschiedenen Callback Funktionen verschiedene YAML Einträge
+// gebildet werden. All diese Werte trägt cbkAskGoogleForTitle als Properties
+// in den 6. Parameter ein. Die anderen Callback Funktionen cbkBuchTitel,
+// cbkBuchAutor, cbkBuchVerlag lesen die Information, die sie brauchen aus
+// dem Objekt und übergeben sie ans YAML.
+// Anmerkung: Dieser Parameter ist immer da, auch wenn nicht alle Funktionen ihn
+// angeben. In Javascript kann man Parameter, die man nicht braucht weglassen.
+let schule_configuration = {
+  // General section has to be the first section
+  SECTION_GENERAL: {
+    LANGUAGE: "de", // hardcoded:FALLBACK_LANGUAGE "en"
+  },
+  SECTION_TRANSLATE: {
+    TITLE_NEW_FILE:      [ ["en", "Untitled"], ["de", "Unbenannt"] ],
+  },
+  SECTION_NOTETYPES: {
+    __SPEC: {DEFAULT: "note"},
+    defaults: {
+      __SPEC: {REPEAT: true},
+      mocstring:          {__SPEC:false, DEFAULT:"-",TYPE:"String", },
+      schoolyaml: {__SPEC: {RENDER: false,},
+                          // returns Name of the note type
+        cssclasses:       {__SPEC:false, DEFAULT: cbkFmtCssClasses, TYPE: "(Array.<String>|Function)"},
+        date_created:     {__SPEC:false, DEFAULT: cbkFmtCreated, TYPE: "(Date|Function)", },
+        // /* schule_public */  author:           {__SPEC:false, DEFAULT: "", TYPE: "String", },
+        /* schule_private */ author:           {__SPEC:false, DEFAULT: "Ueberphilosophy", TYPE: "String", },
+        publish:          {__SPEC:false, DEFAULT: true, TYPE: "Boolean", },
+        tags:             {__SPEC:false, DEFAULT: "[]", TYPE: "(String|Array.<String>|Function)",},
+      },
+      schoolshow: { __SPEC: {RENDER: true,},
+        type:             {__SPEC:false, DEFAULT: cbkNoteType, TYPE: "(String|Function)",},
+        prevlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        nextlink:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        scriptline:       {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        firstline:        {__SPEC:false, DEFAULT: cbkNoteName, TYPE: "(String|Function)",},
+        sndline:          {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        thrdline:         {__SPEC:false, DEFAULT: "", TYPE: "(String|Function)",},
+        lastline:         {__SPEC:false, DEFAULT: cbkFmtLastLine, TYPE: "(String|Function)",},
+      },
+    },
+    note:                 { // note
+      schoolyaml: { },
+      schoolshow: { },
+    },
+    diary:                { // diary
+      folders: ["Diary", ],
+      title_date_function:  cbkCalcDateTitle,
+      title_date_format: "YYYY-MM-DD",
+      schoolyaml: { publish: false, },
+      schoolshow: {
+        prevlink:  cbkPrevDateLink,
+        nextlink:  cbkNextDateLink,
+        firstline: cbkNoteName,
+        sndline:   "## ",
+      },
+    },
+    material:             { // foldernote, catalog, material
+      folders: ["Materialien", ],
+      name_prompt: "Titel_der_Vorlesung_Jahr_Institut_Speaker",
+      schoolyaml: {
+        cssclasses:   cbkMaterialCssClasses,
+        date_created: cbkMaterialDateCreated,
+        publish:      cbkMaterialPublish,
+        tags:         cbkMaterialTags,
+        ddckey:       cbkMaterialDdcKey,
+        media:        cbkMaterialMedia,
+        author:       cbkMaterialAuthor,
+      },
+      schoolshow: {
+        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```",
+        sndline:     cbkMaterialSndLine,
+        thrdline:    cbkMaterialThrdLine,
+        fourthline:  cbkMaterialFourthLine,
+        fifthline:   cbkMaterialFifthLine,
+        lastline:    cbkMaterialLastLine,
+      },
+    },
+    autor:                { // autor
+      folders: ["Autoren",],
+      name_prompt: "Autornachname",
+      name_end: " Quellen",
+      schoolyaml: {
+        ddckey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
+        gndkey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
+        gndlink: {__SPEC:false, VALUE: "", TYPE: "String", },
+        tags:    cbkAutorTag,
+      },
+      schoolshow: {
+        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```\n",
+        firstline: cbkNoteName,
+        sndline:  cbkTimeLine,
+      },
+    },
+    autorsek:             { // sekundaer
+      folders: ["Autoren-Sekundaer",],
+      name_prompt: "Autornachname",
+      name_end: " Sekundaer",
+      schoolyaml: {
+        cssclasses: "sekundaer",
+        tags:    cbkAutorTag,
+      },
+      schoolshow: {
+        scriptline: "```dataviewjs\ndv.executeJs(await dv.io.load(\"Materialien/breadcrumbs.js\"));\n```\n",
+        firstline: cbkSekundaerName,
+      },
+    },
+    feld:                 { // feld
+      folders: ["Feld"],
+      schoolyaml: {
+        publish: false,
+      },
+      schoolshow: {
+        scriptline: cbkScriptLineFeld,
+        firstline: cbkFrstLineFeld,
+        sndline:   cbkSndLineFeld,
+        thrdline:  cbkThrdLineFeld,
+        lastline:  cbkFmtLastLine,
+      },
+    },
+    stutiis:              { // studies
+      // XXXstutiis/ ist die öffentliche Version von Werkstatt/
+      // Vor der Veröffentlichung wird (priv) Werkstatt/ als .Werkstatt/ versteckt
+      // und XXXstutiis/ zu Werkstatt/ umbenannt
+      folders: ["XXXstutiis"],
+      schoolyaml: {
+        date_created: "",
+        author: "",
+        cssclasses: "studies",
+        publish: false,
+      },
+    },
+    stutiismitschrift:    { // studies @
+      folders: ["XXXstutiis/Mitschriften"],
+      marker: "@",
+      name_prompt: "Exakter Titel der Veranstaltung: Titel_der_Vorlesung_Jahr_Institut_Speaker",
+      schoolyaml: {
+        date_created: "",
+        author: "",
+        cssclasses: "studies",
+        publish: false,
+      },
+      schoolshow: {
+        firstline: "Mitschrift",
+        sndline:   cbkSndLineMitschrift,
+        thrdline:  "## Offen",
+      },
+    },
+    werkstattmitschrift : { // private: werkstatt @, public: studies @
+      folders: ["Mitschriften"],
+      marker: "@",
+      name_prompt: "Exakter Titel der Veranstaltung: Titel_der_Vorlesung_Jahr_Institut_Speaker",
+      schoolyaml: {
+        // /* schule_public */  date_created: "",
+        // /* schule_public */  cssclasses: "studies",
+        /* schule_private */ cssclasses: "werkstatt",
+        publish: false,
+      },
+      schoolshow: {
+        firstline: "Mitschrift",
+        sndline:   cbkSndLineMitschrift,
+        thrdline:  "## Offen",
+      },
+    },
+    audio:                { // audio {a}
+      folders: ["Werkstatt"],
+      marker: "{a}",
+      name_prompt: "OPTIONAL Podcast ODER Reihe - Autornachname - Audiotitel",
+    },
+    buch:                 { // buch {b}
+      folders: ["Werkstatt"],
+      marker: "{b}",
+      name_prompt: "Autornachname - Buchtitel",
+      title_date_function: cbkAskGoogleForTitle,
+      schoolyaml: {
+        tags: cbkBookAliasAsTag,
+        aliases:  cbkBookAlias,
+        buchtitel: cbkBuchTitel,
+        buchuntertitel: cbkBuchUntertitel,
+        buchautor: cbkBuchAutor,
+        buchautorv: cbkBuchAutorv,
+        buchdatum: cbkBuchDatum,
+        buchverlag: cbkBuchVerlag,
+        buchseiten: cbkBuchSeiten,
+        buchsprache: cbkBuchSprache,
+        buchisbn: cbkBuchIsbn,
+        buchisbn13: cbkBuchIsbn13,
+        buchebook: cbkBuchEbook,
+        // ungelesen, gelesen, nochmal, teilweise, aktuell, egal
+        buchstatus: [
+          "egal",
+        ],
+        xbuchstatus: [
+          "gelesen",
+          "aktuell",
+          "teilweise",
+          "nochmal",
+          "ungelesen",
+        ],
+      }
+    },
+    exzerpt:              { // exzerpt $
+      folders: ["Werkstatt"],
+      marker: "$",
+      name_prompt: "Autornachname - Buchtitel",
+    },
+    ort:                  { // ort &
+      folders: ["Werkstatt"],
+      marker: "&",
+      name_prompt: "Ortsname, Land",
+      schoolyaml: {
+        aliases: cbkFmtOneAlias,
+        gndkey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
+        gndlink: {__SPEC:false, VALUE: "", TYPE: "String", },
+      },
+    },
+    person:               { // person =
+      folders: ["Werkstatt"],
+      marker: "=",
+      name_prompt: "Personnachname, Personvorname OPTIONAL , Geburtsdatum",
+      schoolyaml: {
+        aliases: cbkFmtOneAliasSwitch,
+        gndkey:  {__SPEC:false, VALUE: "", TYPE: "Number", },
+        gndlink: {__SPEC:false, VALUE: "", TYPE: "String", },
+      },
+      schoolshow: {
+        pict: "teacher-295387_640-pixabay_2026-01-07.png", 
+        pict_width: 100,
+        firstline: cbkHeaderPerson,
+      }
+    },
+    randnotizen:           { // randnotizen @
+      folders: ["Werkstatt", "Buchmitschriften"],
+      marker: "@",
+      name_prompt: "Autornachname - Buchtitel",
+    },
+    video:                { // video {v}
+      folders: ["Werkstatt"],
+      marker: "{v}",
+      name_prompt: "OPTIONAL Reihe - OPTIONAL Autornachname - Videotitel",
+    },
+    web:                  { // web {w}
+      folders: ["Werkstatt"],
+      marker: "{w}",
+      name_prompt: "OPTIONAL Autor - Webseitentitel - OPTIONAL Datum",
+    },
+    zitat:                { // zitat °
+      folders: ["Werkstatt"],
+      marker: "°",
+      name_prompt: "Titel Autornachname",
+    },
+    zitate:               { // zitate °°
+      folders: ["Werkstatt"],
+      marker: "°°",
+      name_prompt: "Titel Autornachname",
+    },
+  },
+}
+user_configuration = schule_configuration
+//#endregion SCHULE CONFIGURATIONS
+
 //#region globals and externals
 var GLOBAL_SYMBOL_COUNTER = 0
 /**
@@ -1802,6 +1789,9 @@ class TestSuite {
   //#region member variables
   static ok = "\u2713"
   static nok = "\u2718"
+  // statik ok = "✅"
+  // statik nok = "❌"
+
   static #totalSuites = 0
   static #totalTests = 0
   static #totalCases = 0
@@ -4885,6 +4875,22 @@ class Setting extends BreadCrumbs {
     return renderYAML
   }
 
+  /** Returns all general entries of this instance and descendants
+   * besides IGNORED ones.
+   * @returns  {Object.<String.any>}
+   */
+  getGeneralYAML() {
+    let generalYAML = {}
+    for (const [key, value] of this) {
+      if (value.FLAT) {
+        if (value.RENDER == undefined && !value.IGNORE)
+          generalYAML[key] = value.VALUE
+      } else {
+        Object.assign(generalYAML, value.getGeneralYAML())
+      }
+    }
+    return generalYAML
+  }
   /** LOGS all key.VALUE pairs recursive to console
    * Functions are shortenend to String "FUNCTION"
    * @param {Number} depth

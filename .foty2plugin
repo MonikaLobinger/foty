@@ -1,13 +1,21 @@
 #! /usr/bin/env bash
 cp _scripts/foty.js _scripts/zwi.js
+################################################################################
+# Entfernen der Tests
 sed -i '/^registeredTests\.push(.*$/d' _scripts/zwi.js
 sed -i '/^  static test(outputObj) {.*$/,/^  }$/d' _scripts/zwi.js
+
+################################################################################
+# Entfernen der Kommentare
 # uglify muss installiert sein, mit:
 # npm install uglify-js -g
 # js-beautify muss man installiert haben:
 # npm -g install js-beautify
 uglifyjs _scripts/zwi.js  | js-beautify > _scripts/test.js
 rm _scripts/zwi.js
+
+#################################################################################
+# Entfernen unnötiger Funktionen und Klassen
 sed -i '/^        if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {$/,/^        }$/d' _scripts/test.js
 sed -i '/.*[( ]TESTING.*$/d' _scripts/test.js
 sed -i '/^function testGlobals(outputObj) {$/,/^}$/d' _scripts/test.js
@@ -23,9 +31,9 @@ sed -i '/^class CodingError extends FotyError {$/,/^}$/d' _scripts/test.js
 sed -i '/^class Event {$/,/^}$/d' _scripts/test.js
 sed -i '/^class Dispatcher {$/,/^}$/d' _scripts/test.js
 sed -i '/^    dbgYAML = {$/,/^    };$/d' _scripts/test.js
-sed -i '/^let user_configuration_original = {$/,/^};$/d' _scripts/test.js
-sed -i '/.*user_configuration_original.*$/d' _scripts/test.js
-sed -i '/^function aliasPerson(noteName) {$/,/^user_configuration = schule_configuration;$/d' _scripts/test.js
+
+################################################################################
+# Erstellen des PoTy Bereichs| Umbenennen des exports foty -> poty
 sed -i 's/^module.exports = foty;/module.exports = poty;\n\
 \/\/#region PLUGIN CONFIGURATION\
 poty_configuration = {\
@@ -36,7 +44,9 @@ poty_configuration = {\
     },\
   }\
 }\
-\/\/#endregion PLUGIN CONFIGURATION\
 /' _scripts/test.js
+
+sed -i 's/^let user_configuration_original = {/\/\/#endregion PLUGIN CONFIGURATION\n\
+let user_configuration_original = {/' _scripts/test.js
 sed -i 's/foty(/poty(/' _scripts/test.js
-sed -i 's/user_configuration/poty_configuration/' _scripts/test.js
+sed -i 's/let lit = user_configuration/let lit = poty_configuration/' _scripts/test.js
