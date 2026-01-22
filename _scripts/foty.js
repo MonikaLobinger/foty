@@ -1343,25 +1343,26 @@ const gray = "silver"
 //#region debug, error and test
 
 /** For debugging purpose.
- * <p>
+ *
  * Function {@link dbg} only prints out, if {@link DEBUG} is on.<br>
  * dbgYAML output of {@link foty|main function} is only shown, if  {@link DEBUG} is on.
  * @type {Boolean}
  */
 var DEBUG = false
 /** For testing purpose. If on, {@link test}s will run when script is executed.
- * <p>
+ *
  * If set, {@link DEBUG} is off
  * @type {Boolean}
  */
 var TESTING = false
 if (TESTING) DEBUG = false
 /** For checking error output.
- * <p>
+ *
  * If set, all exceptions registered in {@link registeredExceptions}  are triggered and
  * their error output is written to current node.
- * <p>
+ *
  * If set, {@link DEBUG} and {@link TESTING} are off
+ * @global
  * @type {Boolean}
  */
 var CHECK_ERROR_OUTPUT = false
@@ -1405,7 +1406,7 @@ function test(outputObj) {
 }
 
 /** Returns string with key-value pairs of {@link inp}s properties.
- * <p>
+ *
  * Does not recurse in properties of a value.
  * @param {Object} inp
  * @returns {String}
@@ -1466,7 +1467,7 @@ function areEqual(arg1, arg2, lv = 0) {
 }
 
 /** Logs all parameters colored to console, if {@link DEBUG} is set to true.
- * <p>
+ *
  * The background of output will be set to 'LightSkyBlue'.
  * @param  {...*} strs
  */
@@ -1517,7 +1518,7 @@ function aut(str, b = "yellow", c = "red") {
   }
 }
 /** Logs all parameters red on yellow to console.
- * <p>
+ *
  * colors are not configurable as they are in {@link aut}
  * @param {String} str
  * @param  {...String} strs
@@ -1557,7 +1558,7 @@ class FotyError extends Error {
   static #nl = "\n     "
   /**
    * Newline for multi line error messages
-   * <p>
+   *
    * As shorthand {@link NL} can be used.<br>
    * @type {String}
    */
@@ -1573,7 +1574,7 @@ class FotyError extends Error {
 
   /**
    * @classdesc superclass for all foty errors (but not unit test errors).
-   * <p>
+   *
    * Additionally to the parameters for {@link external:Error}
    * <code>FotyError</code> receives callers name on construction.
    * @extends external:Error
@@ -1594,14 +1595,14 @@ class FotyError extends Error {
   }
   /**
    * Puts error information formatted to {@link YAML} properties.
-   * <p>
+   *
    * If {@link cnt} is a number, {@link YAML} keys will be created using this
    * number, otherwise fully hardcoded keys will be used.
-   * <p>
+   *
    * The key which's value contains the
    * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|message&#x2348;}</code>
    * is returned.
-   *<p>
+   *
    * <b>Usage of cnt</b>
    * Frontmatter output to current note works with 'key: value'.<br>
    * In production mode no cnt argument should be given. A short key for e.name
@@ -1609,7 +1610,7 @@ class FotyError extends Error {
    * In every call always the same keys are used. This means, that only the last
    * message is contained in YAML. (In production mode this is supposed to be the
    * first and only one)
-   *<p>
+   *
    * In some testing cases an every time different cnt argument can be given.
    * Short keys are created in dependance of cnt and appended to YAML. This means,
    * that YAML can contain more than one error message. In this case a separator
@@ -1633,11 +1634,11 @@ class FotyError extends Error {
   }
   /**
    * Puts error information formatted to {@link YAML} properties.
-   * <p>
+   *
    * This static variant of {@link FotyError#errOut|FotyError.errOut} can be used
    * for output of non FotyErrors. They will be formatted same way as FotyError instance
    * errors.
-   * <p>
+   *
    * The key which's value contains the <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/message|message&#x2348;}</code>
    * of {@link e} is returned.
    * @param {Error} e
@@ -1660,7 +1661,7 @@ class FotyError extends Error {
   }
   /**
    * Creates and returns key for this instances name in dependence of value of {@link cnt}.
-   * <p>
+   *
    * Can be overridden by subclasses.
    * @param {(undefined|Number)} cnt
    * @returns {String}
@@ -1717,7 +1718,7 @@ class SettingError extends FotyError {
   usrMsg = ""
   /**
    * @classdesc User error thrown from setting tree.
-   * <p>
+   *
    * Some of the errors from setting tree for sure can only occur if entries in
    * setting input are wrong. Those are user errors. Using the 2nd parameter
    * a user specific message can be given.
@@ -1759,7 +1760,7 @@ class SettingError extends FotyError {
 
 class CodingError extends FotyError {
   /** @classdesc Programming error.
-   * <p>
+   *
    * Some errors only can occur if code is wrong. If this is for sure,
    * CodingError should be thrown.
    * @extends FotyError
@@ -2444,20 +2445,21 @@ class Gene {
 
   /**
    * @classdesc Gene is type used in this application.
-   * <p>
+   *
    * Every gene has a {@link GeneCallback} function associated with it. The default callback
    * function is '
    * <code>{@linkcode https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof|typeof&#x2348;}</code>
    * variable === {@link Gene#ident|Gene.ident}' . {@link Gene#is} calls this callback, comparing
    * variable to check against ident of {@link Gene}.
-   * <p>
+   *
    * <b>Why this name? </b>
+   *
    * Many types of types we have to deal with. Therefore another name for 'allowed
    * types' was searched for. It should be short, have a meaning near to
    * 'very basic' and it should reasonable not be used further in the code, so
    * that name is replaceable throughout whole file, if another one would be
    * chosen.
-   * <p>
+   *
    * The name has a flaw though: A real gene is something, a gene here is a
    * something definition. In other words: A real gene can be compared to another
    * real gene, e.g whether they are equal or which of them is longer. If you want
@@ -2588,20 +2590,20 @@ class GenePool {
   /**
    * @classdesc Collection of  Genes.
    *
-   * <p>
+   *
    * Stores  {@link Gene}s. The default {@link GeneCallback|callback} function for newly created
    * {@link Gene}s is '{@link cbkInstanceOf}'. (Whereas the default {@link GeneCallback}|callback)
    * function for plain {@link Gene}s is '{@link cbkTypeOf}').
    * '.
    * @constructor
    * @description Creates new instance of {@link GenePool}.
-   * <p>
+   *
    * If not set to an other value, the default {@link GeneCallback|callback} function is {@link cbkInstanceOf}.
-   * <p>
+   *
    * If first parameter is a function, it becomes the default {@link GeneCallback|callback} function.
    * All other parameters (including the first, if not a function) are registered as {@link Gene}s
    * with the default {@link GeneCallback|callback} function set as {@link GeneCallback|callback} function .
-   * <p>
+   *
    * should never throw
    * @param  {...*} params
    */
@@ -2614,10 +2616,10 @@ class GenePool {
 
   /**
    * Adds {@link ident} as new Gene with {@link cbk} as {@link GeneCallback|callback} function.
-   * <p>
+   *
    * If {@link cbk} is undefined, the newly created {@link Gene} gets default {@link GeneCallback|callback} function
    * as {@link GeneCallback|callback} function
-   * <p>
+   *
    * The newly created {@link Gene} is returned. <br>
    * If {@link ident} is already set, it is not changed, but returned at it is.
    * @param {*} ident
@@ -2653,14 +2655,14 @@ class GenePool {
   }
   /**
    * Returns whether {@link v} fulfills {@link ident}s requirements as {@link Gene}.
-   * <p>
+   *
    * Returns false, if {@link ident} is no {@link Gene} of this pool.
-   * <p>
+   *
    * {@link ident}s, which are strings, compounds {@link ident}s are possible:<br>
    * - ({@link ident1}|{@link ident2}|{@link ident3})<br>
    * - Array.&lt;{@link ident1}&gt;<br>
    * - combination of both
-   * <p>
+   *
    * <b>Remark:</b><br>
    * It is not static, because {@link v} is only compared against {@link Gene}s
    * in this {@link GenePool|pool}
@@ -2681,7 +2683,7 @@ class GenePool {
       return this.#genes[ident].is(v)
     }
   }
-  toString() {
+  toDisplayString() {
     return "°°°" + this.constructor.name
   }
 
@@ -2974,7 +2976,7 @@ class Essence extends GenePool {
     return this[Essence.#pre + "IGNORE"]
   }
   /** PARSE essence, inherited
-   * <p>
+   *
    * Only for internal use.
    * If set to false, no Essences will be added. This is the only
    * case, in which no Essences are possible. If used internally, instance has
@@ -3037,8 +3039,8 @@ class Essence extends GenePool {
    * specification key. The hardcoded default of this key is
    * {@link Essence#DEFAULT_HARDCODED_SPEC_KEY|Essence.#DEFAULT_HARDCODED_SPEC_KEY}.
    * On construction a different key can be set.
-   * <p>
-   * <p> There exists a set of predefined tokens.  Tokens can be individual or
+   *
+   * There exists a set of predefined tokens.  Tokens can be individual or
    * inherited.  After initialization of an
    * Essence instance, each token is always there.
    * Either as found in specification section or as
@@ -3049,13 +3051,13 @@ class Essence extends GenePool {
    * has wrong  {@link Gene} it will be {@link Essence#skipped|skipped} and
    * parent token value if inherited or if no parent or individual
    * hardcoded value will be used.
-   * <p>
+   *
    * Essence has to do with two {@link GenePool}s. The one that it is and that it's
    * subclasses will be. The other is the
    * {@link Essence#specificationPool|Essence.specificationPool}.
    * This one it uses to check the specification properties in the literal given
    * to it.
-   * <p>
+   *
    * All known specification properties in the literals specification object
    * are changed to invisible and unremovable properties, the tokens, of this instance,
    * which represents the literal for subclass instances.
@@ -3063,7 +3065,7 @@ class Essence extends GenePool {
    * and unremovable properties. Those can be questioned using static get functions
    * ({@link Essence.getDEFAULT} - {@link Essence.getVALUE})
    * of {@link Essence}
-   * <p>
+   *
    * This class is pure essence. Without filling some {@link Gene}s in
    * {@link Essence#specificationPool|Essence.specificationPool} it only produces
    * default token values.
@@ -3074,7 +3076,7 @@ class Essence extends GenePool {
    * @constructor
    * @description
    * Creates {@link Essence} instance.
-   * <p>
+   *
    * Adds {@link Object}, {@link Gene}, {@link GenePool} and {@link Essence}
    * to its pool as Genes with {@link GeneCallback|callback} {@link cbkInstanceOf}.
    * @param {String} spec_key - no type check, but only implemented for
@@ -3090,12 +3092,12 @@ class Essence extends GenePool {
   }
   /**
    * Creates the tokens.
-   * <p>
+   *
    * Removes {@link Essence#SPEC_KEY|this.SPEC_KEY} property from {@link literal} and
    * removes all <code class="bordered"><a href="#zweitens">
    * specification properties</a> </code> from literal if value of
    * {@link Essence#SPEC_KEY|this.SPEC_KEY} property is not of type <code>Boolean</code>.
-   * <p>
+   *
    * Adds recognized <code class="bordered"><a href="#zweitens">
    * specification properties</a> </code>
    * from {@link literal} as hidden properties (tokens)
@@ -3103,7 +3105,7 @@ class Essence extends GenePool {
    * Adds hidden properties which are not given in {@link literal}
    * with parent value (if inherited) or hardcoded default value
    * to this instance and {@link literal}.
-   * <p>
+   *
    * Values in literal with wrong type (e.g. if value of {@link Essence#IGNORE|IGNORE}
    * is <code>yes</code>) will be skipped and added to {@link skipped}.
    * <p id="zweitens">
@@ -3708,6 +3710,7 @@ class AEssence extends Essence {
   /**
    * @classdesc
    * First superclass in tree, which is foty specific.
+   *
    * @mermaid
    *  classDiagram
    *      GenePool <|-- Essence
@@ -3716,13 +3719,13 @@ class AEssence extends Essence {
    * @constructor
    * @description
    * Creates foty tokens.
-   * <p>
+   *
    * Adds self to its pool with {@link GeneCallback|default callback}}.
    * Adds {@link String}, {@link Number}, {@link Boolean},
    * {@link Function} and {@link Object} with
    * {@link GeneCallback|callback} {@link cbkTypeOfLc}
    * and {@link Date} with {@link GeneCallback|callback} {@link cbkIsDate}.
-   * <p>
+   *
    * Sets {@link Essence#SPEC_KEY|supers SPEC_KEY} to {@link AEssence.SPEC_KEY}
    * and calls {@link Essence#parse|supers parse}, which creates the tokens.
    * @param {(Undefined|Object)} literal
@@ -4053,7 +4056,7 @@ class BreadCrumbs extends AEssence {
    * @constructor
    * @description
    * Creates new BreadCrumbs instance.
-   * <p>
+   *
    * Adds {@link BreadCrumbs}
    * to its pool as Gene with {@link GeneCallback|callback} {@link cbkInstanceOf}.<br>
    * Adds <code>undefined</code>, <code>boolean</code>, <code>number</code>,
@@ -4095,7 +4098,8 @@ class BreadCrumbs extends AEssence {
     this.throwIfNotOfType(name, "name", "(string|symbol)")
     if (typeof name === "symbol")
       this.#name = "_Symbol_" + GLOBAL_SYMBOL_COUNTER++
-    this.#name = name
+    else
+      this.#name = name
     if (!this.isA(literal, "undefined"))
       this.throwIfNotOfType(literal, "literal", "object")
     this.#literal = literal
@@ -4119,7 +4123,7 @@ Skipped values are: `
    * @returns {String} string containing class name of deepest subclass and key
    *          as given in BreadCrumbs constructor.
    */
-  toString() {
+  toDisplayString() {
     if (typeof this.#name === "string")
       return "°°°" + this.constructor.name + " " + this.#name
     else if (typeof this.#name === "symbol")
@@ -4154,7 +4158,7 @@ Skipped values are: `
 
   /**
    * Throws if {@link val} is strictly undefined (null is defined).
-   *<p>
+   *
    * Does not throw on parameter type errors.
    * @param {*} val
    * @param {String} vName - becomes part of Error message
@@ -4184,7 +4188,7 @@ Skipped values are: `
 
   /**
    * Throws if val is not of type or compound type, if type is defined with string.
-   * <p>
+   *
    * Does not throw on parameters type errors.
    * @param {*} val
    * @param {String} vName
@@ -4226,7 +4230,7 @@ Skipped values are: `
       _.run(getterRootTest)
       _.run(constructorTest)
       _.run(isATest)
-      _.run(toStringTest)
+      _.run(toDisplayStringTest)
       _.run(toBreadCrumbsTest)
       _.run(throwIfUndefinedTest)
       _.run(throwIfNotOfTypeTest)
@@ -4354,11 +4358,11 @@ Skipped values are: `
       _.bassert(55,bc.isA(new BreadCrumbs(un, "BreadCrumbs:NameIsATest"),Object),"BreadCrumbs instance should be a Object")
 
     }
-    function toStringTest() {
-      let str = new BreadCrumbs(undefined, "BrRrEadCrumbs:my name11").toString()
+    function toDisplayStringTest() {
+      let str = new BreadCrumbs(undefined, "BrRrEadCrumbs:my name11").toDisplayString()
       _.bassert(1,str.includes("BrRrEadCrumbs:my name11"),"result does not contain name given on construction")
       _.bassert(2,str.includes("BreadCrumbs"),"result does not contain class name")
-      str = new BreadCrumbs({},"BreaDCrumbs:myName20").toString()
+      str = new BreadCrumbs({},"BreaDCrumbs:myName20").toDisplayString()
       _.bassert(3,str.includes("BreaDCrumbs:myName20"),"result does not contain name given on construction")
       _.bassert(4,str.includes("BreadCrumbs"),"result does not contain class name")
     }
@@ -4449,14 +4453,14 @@ class Setting extends BreadCrumbs {
   }
   /**
    * @classdesc setting parser; traverses deep literal to flat output
-   * <p>
+   *
    * Setting is the only subclass which should be constructed from outside, with
    * only literal given as argument.
-   * <p>
+   *
    * It calls the workers and traverses given literal to flat output; thereby
    * respecting worker configuration rules and removing worker literals from
    * output.
-   * <p>
+   *
    * <b>Workflow and requisites</b><br>
    * BreadCrumbs:<br>
    * - Adds undefined, boolean, number, bigint, string, symbol and function
@@ -4465,19 +4469,19 @@ class Setting extends BreadCrumbs {
    * - Adds object with callback cbkIsObjectNotNullNotArray,
    * null with callback cbkIsNull and
    * array with callback cbkIsNull to this pool.
-   *<p>
+   *
    * AEssence:<br>
    * - Adds "String", "Number", "Boolean", "Function" and "Object" to user pool
    *   as Genes with callback cbkTypeOfLc.<br>
    * - Adds "Date" to user pool as Genes with callback cbkIsDate.
-   *<p>
+   *
    * Setting:<br>
    *  #globalType =
    * "(Number|String|Boolean|Array.<Number>|Array.<String>|Array.<Boolean>)"
-   *<p>
+   *
    * <i>In German, id do not understand it in English. I suppose, other people
    * would not understand it in my English, so not translated. </i>
-   * <p>
+   *
    * AEssence:<br>
    * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
    *     Vergleicht den Typ des Wertes des SPEC_Eintrags im __SPEC Node mit
@@ -4497,7 +4501,7 @@ class Setting extends BreadCrumbs {
    *     Verwendet den ParentNode (den Node, der __SPEC enthält) als __SPEC
    *     Node.<br>
    *     Sets FLAT to true
-   *<p>
+   *
    * Setting:<br>
    * Für Nodes: (bedeutet: der Wert von __SPEC ist nicht Boolean)<br>
    *    Wie AEssence für Nodes.<br>
@@ -4513,7 +4517,7 @@ class Setting extends BreadCrumbs {
    *    Für reine Atoms: (bedeutet: der Wert ist kein Object)<br>
    *       erzeugt ein spezifiziertes Atom mit VALUE: Wert und __SPEC true
    *       (damit wird TYPE zu #globalType)
-   *<p>
+   *
    *    Dann wie AEssence für Atoms.<br>
    *    Danach wird VALUE aus der erzeugten AEssence zum Wert des Atoms.<br>
    * @mermaid
@@ -4528,12 +4532,12 @@ class Setting extends BreadCrumbs {
    * Constructs a new Setting instance.
    * Adds {@link Setting}
    * to its pool as Gene with {@link GeneCallback|callback} {@link cbkInstanceOf}.
-   * <p>
+   *
    * Recurses into {@link Object} entries and creates {@link Setting} instances
    * for them with <code>this</code> instance as parent and entry key as {@link key}.
-   * <p>
+   *
    * Creates {@link AEssence} instances for all other entries.
-   * <p>
+   *
    * Throws on wrong parameter types
    * @param {Object} literal
    * @param {(Undefined|String|Symbol)} key - if undefined, becomes root key
@@ -4645,13 +4649,13 @@ class Setting extends BreadCrumbs {
   /**
    * Returns {@link AEssence} for <code>atomic literal</code>,
    * <code>undefined</code> for <code>node literal</code>
-   * <p>
+   *
    * If value of {@link this.#SPEC_KEY|__SPEC} property
    * of {@link literal}[{@link key}] is
    * <code>undefined</code> or an {@link Object}
    * {@link literal} is <code>node literal</code>,
    * in any other case it is <code>atomic literal</code>
-   * <p>
+   *
    * For atomic literals:<br>
    * If value of {@link this.#SPEC_KEY|__SPEC} is true,
    * {@link AEssence#TYPE|TYPE} property with value  {@link type}
@@ -4661,9 +4665,9 @@ class Setting extends BreadCrumbs {
    * is created with <code>this</code> instance as parent.<br>
    * Value of {@link literal}[{@link key}] becomes {@link AEssence#VALUE|VALUE} of
    * this newly created instance.
-   * <p>
+   *
    * Returns <code>undefined</code> on wrong parameter types
-   * <p><b>Simply said:</b> Changes value of {@link literal}[{@link key}]
+   *<b>Simply said:</b> Changes value of {@link literal}[{@link key}]
    * to given {@link AEssence#VALUE|VALUE}.
    * @param {Object} literal
    * @param {*} key
@@ -4791,9 +4795,6 @@ class Setting extends BreadCrumbs {
    */
   toPlainString(indent="\n") {
     let plainString = ""
-    if(indent === "\n") {
-      plainString += "{"
-    }
     let sectionKeys = Object.keys(this.#works)
     for(const key in this.#works) {
       if(this.#works.hasOwnProperty(key)) {
@@ -4814,9 +4815,6 @@ class Setting extends BreadCrumbs {
         plainString+= indent + "}"
       }
       plainString+= ","
-    }
-    if(indent === "\n") {
-      plainString += "\n}"
     }
     return plainString
   }
@@ -4974,7 +4972,7 @@ class Setting extends BreadCrumbs {
       _.run(setterWorkersTypeForChildrenTest)
       _.run(constructorTest)
       _.run(isATest)
-      _.run(toStringTest)
+      _.run(toDisplayStringTest)
       _.run(iteratorTest)
       _.run(hasTest)
       _.run(atTest)
@@ -5099,11 +5097,11 @@ class Setting extends BreadCrumbs {
       _.bassert(8,!setting1.isA(setting1,Error), "'" + setting1 + "' should not be a " + "Error")
       _.bassert(9,!setting1.isA(setting1,Gene), "'" + setting1 + "' should not be a " + "Gene")
     }
-    function toStringTest() {
+    function toDisplayStringTest() {
       let un
-      let setting1 = new Setting({},"SetTing:toStringTest1",un)
-      _.bassert(1,setting1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,setting1.toString().includes("Setting"),"result does not contain class string"    )
+      let setting1 = new Setting({},"SetTing:toDisplayStringTest1",un)
+      _.bassert(1,setting1.toDisplayString().includes("toDisplayStringTest1"),"result does not contain name string"    )
+      _.bassert(2,setting1.toDisplayString().includes("Setting"),"result does not contain class string"    )
     }
     function iteratorTest() {
       /**********************************************************************/{
@@ -5772,7 +5770,7 @@ class GeneralWorker extends Setting {
   /**
    * Returns value of {@link key} or {@link fallback} as caller fallback
    * or undefined if none of them is found
-   * <p>
+   *
    * @param {String} key
    * @param  {...any} fallback
    * @returns {...any}
@@ -5794,7 +5792,7 @@ class GeneralWorker extends Setting {
     if(_ = new TestSuite("GeneralWorker", outputObj)) {
       _.run(constructorTest)
       _.run(isATest)
-      _.run(toStringTest)
+      _.run(toDisplayStringTest)
       _.run(getValueTest)
       _.destruct()
       _ = null
@@ -5841,10 +5839,10 @@ class GeneralWorker extends Setting {
       _.bassert(6,!dlgMan1.isA(dlgMan1,Error), "'" + dlgMan1 + "' should not be a " + "Error")
       _.bassert(7,!dlgMan1.isA(dlgMan1,Gene), "'" + dlgMan1 + "' should not be a " + "Gene")
     }
-    function toStringTest() {
-      let dlgMan1 = new GeneralWorker({},"DlgWrk:toStringTest1",new Setting({},"parent"))
-      _.bassert(1,dlgMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,dlgMan1.toString().includes("GeneralWorker"),"result does not contain class string"    )
+    function toDisplayStringTest() {
+      let dlgMan1 = new GeneralWorker({},"DlgWrk:toDisplayStringTest1",new Setting({},"parent"))
+      _.bassert(1,dlgMan1.toDisplayString().includes("toDisplayStringTest1"),"result does not contain name string"    )
+      _.bassert(2,dlgMan1.toDisplayString().includes("GeneralWorker"),"result does not contain class string"    )
     }
     function getValueTest() {
       let un
@@ -5945,16 +5943,16 @@ class LocalizationWorker extends Setting {
   /**
    * Returns translated value or value or undefined if {@link key}
    * not found
-   * <p>
+   *
    * The value can be:<br>
    * - a string<br>
    * - an array of two strings<br>
    * - an array of arrays of two strings
-   * <p>
+   *
    * If the value is a string, this is returned
-   * <p>
+   *
    * From a plain array of string the 2nd string is returned.
-   * <p>
+   *
    * The 1st string in a two string array is considered as the language
    * key. If it is equal with language string in {@link params} the 2nd
    * string of this pair is returned. <br>
@@ -6012,7 +6010,7 @@ class LocalizationWorker extends Setting {
     if(_ = new TestSuite("LocalizationWorker", outputObj)) {
       _.run(constructorTest)
       _.run(isATest)
-      _.run(toStringTest)
+      _.run(toDisplayStringTest)
       _.run(getValueTest)
       _.destruct()
       _ = null
@@ -6059,10 +6057,10 @@ class LocalizationWorker extends Setting {
       _.bassert(6,!locMan1.isA(locMan1,Error), "'" + locMan1 + "' should not be a " + "Error")
       _.bassert(7,!locMan1.isA(locMan1,Gene), "'" + locMan1 + "' should not be a " + "Gene")
     }
-    function toStringTest() {
-      let locMan1 = new LocalizationWorker({},"LocWork:toStringTest1",new Setting({},"parent"))
-      _.bassert(1,locMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,locMan1.toString().includes("LocalizationWorker"),"result does not contain class string"    )
+    function toDisplayStringTest() {
+      let locMan1 = new LocalizationWorker({},"LocWork:toDisplayStringTest1",new Setting({},"parent"))
+      _.bassert(1,locMan1.toDisplayString().includes("toDisplayStringTest1"),"result does not contain name string"    )
+      _.bassert(2,locMan1.toDisplayString().includes("LocalizationWorker"),"result does not contain class string"    )
     }
     function getValueTest() {
       let par = new Setting({},"LocalizationWorker:getValueTest:parent")
@@ -6230,7 +6228,7 @@ class DialogWorker extends Setting {
     if(_ = new TestSuite("DialogWorker", outputObj)) {
       _.run(constructorTest)
       _.run(isATest)
-      _.run(toStringTest)
+      _.run(toDisplayStringTest)
       _.run(getValueTest)
       _.destruct()
       _ = null
@@ -6277,10 +6275,10 @@ class DialogWorker extends Setting {
       _.bassert(6,!dlgMan1.isA(dlgMan1,Error), "'" + dlgMan1 + "' should not be a " + "Error")
       _.bassert(7,!dlgMan1.isA(dlgMan1,Gene), "'" + dlgMan1 + "' should not be a " + "Gene")
     }
-    function toStringTest() {
-      let dlgMan1 = new DialogWorker({},"DlgWrk:toStringTest1",new Setting({},"parent"))
-      _.bassert(1,dlgMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,dlgMan1.toString().includes("DialogWorker"),"result does not contain class string"    )
+    function toDisplayStringTest() {
+      let dlgMan1 = new DialogWorker({},"DlgWrk:toDisplayStringTest1",new Setting({},"parent"))
+      _.bassert(1,dlgMan1.toDisplayString().includes("toDisplayStringTest1"),"result does not contain name string"    )
+      _.bassert(2,dlgMan1.toDisplayString().includes("DialogWorker"),"result does not contain class string"    )
     }
     function getValueTest() {
       let par = new Setting({},"DialogWorker:getValueTest:parent")
@@ -6435,8 +6433,9 @@ class TypesWorker extends Setting {
         indentToUse=" "
       }
       TypesWorker.#plainStaticString += indentToUse + key + ": "
-      if(typeof value != "object" ||
-         Object.getOwnPropertyNames(value).length === 0) {
+      if (typeof value != "object" ||
+          Object.getOwnPropertyNames(value).length === 0 ||
+          Array.isArray(value)) {
         TypesWorker.#plainStaticString += Setting.valueString(value)
       } else {
         TypesWorker.#plainStaticString += "{"
@@ -6508,7 +6507,7 @@ class TypesWorker extends Setting {
   /**
    * Returns value of {@link key} or {@link fallback} as caller fallback
    * or undefined if none of them is found
-   * <p>
+   *
    * @param {String} key
    * @param  {...any} fallback
    * @returns {...any}
@@ -6530,7 +6529,7 @@ class TypesWorker extends Setting {
     if(_ = new TestSuite("TypesWorker", outputObj)) {
       _.run(constructorTest)
       _.run(isATest)
-      _.run(toStringTest)
+      _.run(toDisplayStringTest)
       _.run(getValueTest)
       _.destruct()
       _ = null
@@ -6577,10 +6576,10 @@ class TypesWorker extends Setting {
       _.bassert(6,!typesMan1.isA(typesMan1,Error), "'" + typesMan1 + "' should not be a " + "Error")
       _.bassert(7,!typesMan1.isA(typesMan1,Gene), "'" + typesMan1 + "' should not be a " + "Gene")
     }
-    function toStringTest() {
-      let typesMan1 = new TypesWorker({},"TypMan:toStringTest1",new Setting({},"parent"))
-      _.bassert(1,typesMan1.toString().includes("toStringTest1"),"result does not contain name string"    )
-      _.bassert(2,typesMan1.toString().includes("TypesWorker"),"result does not contain class string"    )
+    function toDisplayStringTest() {
+      let typesMan1 = new TypesWorker({},"TypMan:toDisplayStringTest1",new Setting({},"parent"))
+      _.bassert(1,typesMan1.toDisplayString().includes("toDisplayStringTest1"),"result does not contain name string"    )
+      _.bassert(2,typesMan1.toDisplayString().includes("TypesWorker"),"result does not contain class string"    )
     }
     function getValueTest() {
       let par = new Setting({},"TypesWorker:getValueTest:parent")
@@ -6960,7 +6959,7 @@ class Templater {
 }
 //#endregion Templater
 /** exported function.
- * <p>
+ *
  * Name does not matter for templater, but if named 'main' interferes with jsdoc.
  * @param {Object} tp - templater object
  * @param {Object} app - obsidian api object

@@ -17,7 +17,7 @@ rm _scripts/zwi.js
 #################################################################################
 # Entfernen unnötiger Funktionen und Klassen
 sed -i '/^        if (LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE) {$/,/^        }$/d' _scripts/test.js
-sed -i '/.*[( ]TESTING.*$/d' _scripts/test.js
+sed -i '/.* [( ]TESTING.*$/d' _scripts/test.js
 sed -i '/^function testGlobals(outputObj) {$/,/^}$/d' _scripts/test.js
 sed -i '/^function flatten(inp) {$/,/^}$/d' _scripts/test.js
 sed -i '/^function letAllThrow(YAML) {$/,/^}$/d' _scripts/test.js
@@ -39,7 +39,7 @@ sed -i 's/^module.exports = foty;/module.exports = poty;\n\
 poty_configuration = {\
   SECTION_NOTETYPES: {\
     note: {\
-      yaml: {__SPEC: {RENDER: false,},  },\
+      yaml: {__SPEC: {RENDER: false,}, date_created: cbkFmtCreated, },\
       show: {__SPEC: {RENDER: true,}, firstline: "firstline",  },\
     },\
   }\
@@ -50,3 +50,9 @@ sed -i 's/^let user_configuration_original = {/\/\/#endregion PLUGIN CONFIGURATI
 let user_configuration_original = {/' _scripts/test.js
 sed -i 's/foty(/poty(/' _scripts/test.js
 sed -i 's/let lit = user_configuration/let lit = poty_configuration/' _scripts/test.js
+echo "" >> _scripts/test.js
+echo "function giveMe() {" >> _scripts/test.js
+echo "  let xx = new Setting(poty_configuration, undefined, undefined)" >> _scripts/test.js
+echo "  return xx" >> _scripts/test.js
+echo "}" >> _scripts/test.js
+

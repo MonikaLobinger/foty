@@ -3,7 +3,7 @@
 // This can be "fixed" in a js file. (See last lines of this file.)
 // This file can not be in _scripts directory, because it is scripts folder
 // for templater in obsidian.
-// As jsdoch does not work at all for directories starting with an underscore "_",
+// As jsdoc does not work at all for directories starting with an underscore "_",
 // I had to copy the configuration file to another place before calling jsdoc.
 // This in any case, whether json config file or js config file.
 // The configuration file than fixes the problem with the underscore
@@ -13,14 +13,46 @@
 // because I am not good with git. I do not know how to move it.
 // 
 module.exports = {
-    plugins: ['plugins/markdown','jsdoc-mermaid'],
+    plugins: ['plugins/markdown','jsdoc-mermaid',
+      "node_modules/vue-x-docs",
+      //'node_modules/classy-template/plugin.js',
+      //'node_modules/jsdoc-wmf-theme/plugins/default',
+    ],
     opts: {
-      template: "node_modules/docdash/",
-      sourceType: "module",      
+      template: "node_modules/better-docs", // SEHR SEHR GUT, dreispaltig, dezent,
+      //template: "node_modules/docdash/",
+      //template: "node_modules/@etercast/jsdoc-template", // COOOL, anstrengend
+      //template: "./node_modules/jsdoc-wmf-theme", // NETT, Wikipedia eben
+      //template: "node_modules/simple-jsdoc", // COOL
+      //template: "node_modules/docolatte", // ZIEMLICH COOL, Hell/Dunkel, Seitenleiste zu lang
+      //template: "node_modules/vue-x-docs", // HÜBSCH
+      //template: "./node_modules/ink-docstrap/template", // OK
+      //template: "node_modules/minami", // Nicht so mein Fall
+      //template: "node_modules/toast-jsdoc", // Hässlich, Speicherintensiv?
+      // NICHT SO GUT template: "node_modules/classy-template/", // Dreispaltig, Keine Suche, Klassen sind verschwunden
+      // GEHT NICHT template: "./node_modules/jsdoc-rtd", // Scheitert an async 
+      // KANN NICHT MIT MERMAID template: "node_modules/clean-jsdoc-theme/",
+      // GEHT NICHT template: "node_modules/jsdoc-chameleon-template", // Problem mit underscore module
+      // GEHT NICHT template: "./node_modules/tidy-jsdoc", // Problem mit underscore module
+      // GEHT NICHT template: "./node_modules/bcmc-jsdoc-template/template",
+      // NICHT INSTALLIERBAR template: "node_modules/connect-jsdoc-theme", // Gibt es in npm nicht mehr
+      // RIESENSAUEREI template: "./node_modules/daybrush-jsdoc-template", // Zerstört jsdoc
+      sourceType: "module",
       encoding: "utf8",
       recurse: true,
       verbose: true,
-    },    
+      allowedGlobals: ["CHECK_ERROR_OUTPUT", "DEBUG", "TESTING",
+        "LOG_ESSENCE_CONSTRUCTOR_2_CONSOLE", "FrontmatterCallback",
+        "GeneCallback", "NL", "Setting.", "areEqual", "aut", "dbg", "vaut",
+        "auts", "white", "black", "cyan", "red", "rose", "pink", "blue", "yellow",
+        "lime", "green", "gray", "findSibling", "cbkCalcDateTitle", "cbkFmtAlias",
+        "cbkFmtTags", "cbkFmtCreated", "cbkFmtCssClasses", "cbkNoteType",
+        "cbkNoteName", "cbkIsObjectNotNullNotArray", "cbkIsNull", "cbkIsArray",
+        "cbkInstanceOf", "cbkTypeOf", "cbkTypeOfLc", "cbkIsDate", "cbkNextDateLink",
+        "cbkPrevDateLink", "Error", "registeredExceptions", "letAllThrow",
+        "registeredTests", "test", "flatten", "foty"
+      ],
+    },
     source: {
       includePattern: ".+\\.js(doc|x)?$",
       excludePattern: "(^|\\/|\\\\)%"
@@ -29,10 +61,16 @@ module.exports = {
       allowUnknownTags: true,
     },
     templates: {
+      default: {
+        staticFiles: {
+          include: ['./_static'],
+        },
+      },
+      "search": true,
       cleverLinks: false,
       monospaceLinks: false,
       outputSourceFiles: true,
- },
+    },
     docdash: {
       sort: false,            // [false|true] Sort the methods in the navbar
       static: true,         // [false|true] Display the static members inside the navbar      
@@ -69,5 +107,5 @@ module.exports = {
 }
 // BigInt JSON serialization.
 BigInt.prototype.toJSON = function() {
-	return this.toString() + 'n';
+  return this.toString() + 'n';
 }

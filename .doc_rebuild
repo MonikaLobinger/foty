@@ -1,0 +1,2 @@
+#! /usr/bin/env bash
+./node_modules/.bin/jsdoc -c jsdocconf.js -r _scripts/foty.md _scripts/foty.js
